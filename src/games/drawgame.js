@@ -7,7 +7,8 @@
   var EMOJI = '🎨';
 
   // ----- 闭包：绝不进入 state -----
-  var _rounds = {}; // { roundNum: { words:[], answer: null|string, segments:[], painterBonus:bool } }
+  // _rounds[round] = { words:[], answer:null, segments:[{id,color,w,s}], guessed:{}, painterScore:0 }
+  var _rounds = {};
 
   function min(a, b) { return a < b ? a : b; }
   function max(a, b) { return a > b ? a : b; }
@@ -24,9 +25,27 @@
     return s.toLowerCase();
   }
 
-  function getRD(round) {
-    if (!_rounds[round]) _rounds[round] = { words: [], answer: null, segments: [], painterBonus: false };
-    return _rounds[round];
+  /** 差一点点：少一个字 / 多一个字 / 一个错字 → 给橙色提示 */
+  function near(a, b) {
+    if (!a || !b || a === b) return false;
+    if (a.length > b.length) { var t = a; a = b; b = t; }
+    if (b.length - a.length > 1) return false;
+    if (a.length >= 2 && b.indexOf(a) === 0) return true;
+    var i = 0, j = 0, diff = 0;
+    while (i < a.length && j < b.length) {
+      if (a.charAt(i) === b.charAt(j)) { i++; j++; continue; }
+      if (++diff > 1) return false;
+      if (a.length > b.length) i++;
+      else if (b.length > a.length) j++;
+      else { i++; j++; }
+    }
+    return diff + (a.length - i) + (b.length - j) <= 1;
+  }
+
+  function getRD(r) {
+    if (!_rounds[r]) _rounds[r] = { words: [], answer: null, segments: [], guessed: {}, painterScore: 0 };
+    if (!_rounds[r].guessed) _rounds[r].guessed = {};
+    return _rounds[r];
   }
 
   /** 广播 peer 消息（画布数据，不走 state） */
@@ -34,15 +53,82 @@
     if (host.room && host.room.sendPeer) host.room.sendPeer(msg);
   }
 
+  function nameOf(host, id) {
+    var p = host.player(id);
+    return p ? p.name : '玩家';
+  }
+
+  /** 聊天记录进 state（人人可见）；答案本身绝不入内 */
+  function chat(host, k, id, name, text) {
+    var g = host.g();
+    if (!g) return;
+    if (!g.chat) g.chat = [];
+    g.chat.push({ k: k, id: id || '', name: name || '', text: String(text || ''), t: host.now() });
+    if (g.chat.length > 60) g.chat.splice(0, g.chat.length - 60);
+  }
+  function sysChat(host, text) { chat(host, 'sys', '', '', text); }
+
+  /** 提示用的洗牌（房主算，随 state 下发，客户端不必自己推） */
+  function hintOrder(seed, len) {
+    var x = (seed >>> 0) || 1, order = [], i;
+    for (i = 0; i < len; i++) order.push(i);
+    for (i = len - 1; i > 0; i--) {
+      x ^= x << 13; x >>>= 0;
+      x ^= x >> 17;
+      x ^= x << 5; x >>>= 0;
+      var j = x % (i + 1), tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+    }
+    return order;
+  }
+
+  /** 定时揭开一两个字（至少留一个字不揭） */
+  function scheduleHint(host, painter) {
+    host.clearTimer('drawgame_hint');
+    var g = host.g();
+    var rd = getRD(g.round);
+    var answer = rd.answer || '';
+    var len = answer.length;
+    if (len < 3) return;
+    var drawSec = (host.state.settings.drawgame || {}).drawSec || 90;
+    var every = max(6, Math.floor(drawSec / (len + 1)));
+    var order = hintOrder(g.round * 7919 + len * 131, len);
+    var step = 0;
+    host.every('drawgame_hint', every * 1000, function () {
+      var g2 = host.g();
+      if (!g2 || !g2.cur || g2.cur.phase !== 'draw' || g2.cur.painter !== painter) {
+        host.clearTimer('drawgame_hint');
+        return;
+      }
+      step++;
+      if (step > len - 2) { host.clearTimer('drawgame_hint'); return; }
+      var hint = {};
+      for (var i = 0; i < step; i++) hint[order[i]] = answer.charAt(order[i]);
+      g2.cur.hint = hint;
+      host.emit();
+    });
+  }
+
   /** 进入绘画阶段 */
   function startDraw(host, answer) {
     var g = host.g();
     var settings = host.state.settings.drawgame || {};
     var drawSec = settings.drawSec || 90;
+    var rd = getRD(g.round);
+
     g.cur.phase = 'draw';
     g.cur.deadline = host.now() + drawSec * 1000;
+    g.cur.wordLen = answer.length;
+    g.cur.hint = {};
+    g.cur.guessed = rd.guessed;
+    g.cur.reveal = null;
+
+    // 画家必须随时能拿回自己的词（重连 / 刷新）
+    host.sendSecret(g.cur.painter, { answer: answer, round: g.round, drawSec: drawSec });
+    sysChat(host, '第 ' + g.round + ' 回合：' + nameOf(host, g.cur.painter) + ' 来画！');
     host.event({ t: 'word_picked', painter: g.cur.painter, wordLen: answer.length });
     host.emit();
+
+    scheduleHint(host, g.cur.painter);
 
     host.after('drawgame_draw', drawSec * 1000, function () {
       var g2 = host.g();
@@ -55,41 +141,71 @@
   /** 揭示答案 */
   function doReveal(host) {
     var g = host.g();
+    if (!g || !g.cur) return;
     var rd = getRD(g.round);
     var answer = rd.answer || '???';
+    host.clearTimer('drawgame_hint');
+    host.clearTimer('drawgame_draw');
+
     g.cur.phase = 'reveal';
     g.cur.deadline = host.now() + 5000;
+    g.cur.reveal = answer;
+    g.cur.hint = null;
+
+    sysChat(host, '本轮答案：「' + answer + '」');
     host.event({ t: 'reveal', answer: answer, painter: g.cur.painter });
     host.emit();
     host.after('drawgame_reveal', 5000, function () { nextRound(host); });
   }
 
-  /** 猜中处理 */
+  /** 除画家外所有在线玩家都猜中 → 1.4 秒后提前揭晓（猜对/有人退出都要重算） */
+  function maybeEarlyReveal(host) {
+    var g = host.g();
+    if (!g || !g.cur || g.cur.phase !== 'draw') return;
+    var rd = getRD(g.round);
+    var guessed = rd.guessed || {};
+    var left = host.onlinePlayers().filter(function (p) {
+      return p.id !== g.cur.painter && !guessed[p.id];
+    });
+    if (left.length) return;
+    host.clearTimer('drawgame_draw');
+    host.after('drawgame_draw', 1400, function () {
+      var g2 = host.g();
+      if (g2.cur && g2.cur.phase === 'draw') doReveal(host);
+    });
+  }
+
+  /** 猜中处理：分数跟剩余时间挂钩，画家按被猜中次数拿分 */
   function correct(host, who, text, secLeft) {
     var g = host.g();
     var rd = getRD(g.round);
     var settings = host.state.settings.drawgame || {};
     var drawSec = settings.drawSec || 90;
-    var used = drawSec - secLeft;
-    var score = min(300, round(1000 / (5 + max(0, used))));
+    if (!rd.guessed) rd.guessed = {};
+    if (rd.guessed[who]) return;
 
+    rd.guessed[who] = true;
+    g.cur.guessed = rd.guessed;
+
+    var nth = Object.keys(rd.guessed).length;
+    var score = 50 + round(400 * max(0, secLeft) / drawSec) + (nth === 1 ? 50 : 0);
     host.addScore(who, score);
-    host.event({ t: 'correct', who: who, text: text, secLeft: secLeft, score: score });
+    chat(host, 'ok', who, nameOf(host, who), '猜中了！ +' + score);
 
-    if (!rd.painterBonus) {
-      host.addScore(g.cur.painter, 400);
-      rd.painterBonus = true;
-      host.event({ t: 'painter_bonus', painter: g.cur.painter, score: 400 });
+    if (rd.painterScore < 400) {
+      var add = min(100, 400 - rd.painterScore);
+      rd.painterScore += add;
+      host.addScore(g.cur.painter, add);
     }
 
-    var p = host.player(who);
-    host.toast('🎉 ' + (p ? p.name : who) + ' 猜对了！+ ' + score, 'good');
+    host.event({ t: 'correct', who: nameOf(host, who), text: '猜中了', secLeft: secLeft, score: score });
     host.emit();
-    doReveal(host);
+
+    maybeEarlyReveal(host);
   }
 
   /** 自动替画家选第一个词 */
-  function autoPick(host, painter) {
+  function autoPick(host) {
     var g = host.g();
     var rd = getRD(g.round);
     var picked = (rd.words && rd.words[0]) || '???';
@@ -103,6 +219,7 @@
     var s = host.state;
     var settings = s.settings.drawgame || {};
     var rounds = settings.rounds || 6;
+    host.clearTimer('drawgame_hint');
 
     if (g.round >= rounds) {
       g.cur = null;
@@ -120,13 +237,14 @@
     }
 
     g.round = (g.round || 0) + 1;
-    g.orderIdx = (g.orderIdx || -1) + 1;
+    // 注意：不能写 (g.orderIdx || -1) + 1 —— orderIdx 为 0 时 0 是 falsy，会永远停在第一个画家
+    g.orderIdx = (g.orderIdx >= 0 ? g.orderIdx : -1) + 1;
     if (g.orderIdx >= g.order.length) g.orderIdx = 0;
 
     var painter = g.order[g.orderIdx];
     var online = host.onlinePlayers();
     var onlineIds = {};
-    for (var i = 0; i < online.length; i++) onlineIds[online[i].id] = true;
+    for (var k = 0; k < online.length; k++) onlineIds[online[k].id] = true;
 
     if (!onlineIds[painter]) {
       host.after('drawgame_skip', 100, function () { nextRound(host); });
@@ -146,14 +264,19 @@
     rd.words = words;
     rd.answer = null;
     rd.segments = [];
-    rd.painterBonus = false;
+    rd.guessed = {};
+    rd.painterScore = 0;
 
     g.cur = {
       painter: painter,
       left: left,
       right: right,
       phase: 'pick',
-      deadline: host.now() + 30000
+      deadline: host.now() + 30000,
+      wordLen: 0,
+      hint: {},
+      guessed: {},
+      reveal: null
     };
 
     host.sendSecret(painter, { words: words, drawSec: (settings.drawSec || 90), round: g.round });
@@ -161,7 +284,7 @@
     host.after('drawgame_pick', 30000, function () {
       var g2 = host.g();
       if (g2.cur && g2.cur.phase === 'pick' && g2.cur.painter === painter) {
-        autoPick(host, painter);
+        autoPick(host);
       }
     });
 
@@ -197,7 +320,9 @@
         orderIdx: -1,
         cur: null,
         done: false,
-        winner: null
+        winner: null,
+        chat: [],
+        startedAt: host.now()
       };
 
       _rounds = {};
@@ -215,27 +340,41 @@
       if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
       if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
 
-      // 新玩家加入 / 重连 → 发送回放（回放走私密通道）
+      // 新玩家加入 / 重连 → 回放笔迹（回放走私密通道，顺带把词补给画家）
       if (action.t === '_joined' || action.t === 'hi' || action.t === '_replay') {
         if (g.cur && g.cur.phase === 'draw' && from) {
-          var rd = getRD(g.round);
-          if (rd.segments && rd.segments.length) {
-            host.sendSecret(from, { replay: rd.segments, round: g.round });
+          var rd0 = getRD(g.round);
+          var payload = { round: g.round };
+          if (rd0.segments && rd0.segments.length) payload.replay = rd0.segments;
+          if (from === g.cur.painter && rd0.answer) {
+            payload.answer = rd0.answer;
+            payload.drawSec = (host.state.settings.drawgame || {}).drawSec || 90;
           }
+          if (payload.replay || payload.answer) host.sendSecret(from, payload);
         }
         return;
       }
 
-      // ----- 画笔数据（peer 转发，不进 state） -----
+      // ----- 画笔数据（peer 转发，不进 state；房主留一份用于回放） -----
       if (action.t === 'peer') {
-        if (g.cur && g.cur.phase === 'draw' && action.msg && action.msg.s) {
+        var msg = action.msg;
+        if (!msg) return;
+        if (g.cur && g.cur.phase === 'draw') {
           var rd = getRD(g.round);
-          rd.segments = rd.segments.concat(action.msg.s);
+          if (msg.t === 'stroke' && msg.s && msg.s.length) {
+            rd.segments.push({ id: msg.id, color: msg.color, w: msg.w, s: msg.s });
+            while (rd.segments.length > 900) rd.segments.shift();
+          } else if (msg.t === 'undo') {
+            rd.segments = rd.segments.filter(function (c) { return c.id !== msg.id; });
+          } else if (msg.t === 'clear') {
+            rd.segments = [];
+          }
         }
-        if (action.msg) peer(host, action.msg);
+        peer(host, msg);
         return;
       }
       if (action.t === 'clear') {
+        if (g.cur && g.cur.phase === 'draw') getRD(g.round).segments = [];
         peer(host, { t: 'clear' });
         return;
       }
@@ -248,17 +387,17 @@
 
       // ----- 选词 -----
       if (action.t === 'pick' && g.cur && g.cur.phase === 'pick' && g.cur.painter === from) {
-        var rd = getRD(g.round);
+        var rd1 = getRD(g.round);
         var answer = null;
-        if (typeof action.i === 'number' && rd.words && rd.words[action.i]) {
-          answer = rd.words[action.i];
+        if (typeof action.i === 'number' && rd1.words && rd1.words[action.i]) {
+          answer = rd1.words[action.i];
         } else if (action.word) {
           answer = action.word;
-        } else if (rd.words && rd.words[0]) {
-          answer = rd.words[0];
+        } else if (rd1.words && rd1.words[0]) {
+          answer = rd1.words[0];
         }
         if (answer) {
-          rd.answer = answer;
+          rd1.answer = answer;
           host.clearTimer('drawgame_pick');
           startDraw(host, answer);
         }
@@ -267,13 +406,18 @@
 
       // ----- 猜词 -----
       if (action.t === 'guess' && g.cur && g.cur.phase === 'draw' && g.cur.painter !== from) {
-        var text = String(action.text || '');
+        var text = String(action.text || '').slice(0, 30).trim();
         if (!text) return;
-        var rd = getRD(g.round);
-        if (!rd.answer) return;
-        if (norm(text) === norm(rd.answer)) {
+        var rd2 = getRD(g.round);
+        if (!rd2.answer) return;
+        if (rd2.guessed && rd2.guessed[from]) return;
+        var nm = norm(text), na = norm(rd2.answer);
+        if (nm && nm === na) {
           var secLeft = g.cur.deadline ? round(max(0, g.cur.deadline - host.now()) / 1000) : 0;
           correct(host, from, text, secLeft);
+        } else {
+          chat(host, near(nm, na) ? 'near' : 'msg', from, nameOf(host, from), text);
+          host.emit();
         }
         return;
       }
@@ -290,9 +434,10 @@
       if (phase === 'pick') {
         host.after('drawgame_pick', remaining, function () {
           var g2 = host.g();
-          if (g2.cur && g2.cur.phase === 'pick') autoPick(host, g2.cur.painter);
+          if (g2.cur && g2.cur.phase === 'pick') autoPick(host);
         });
       } else if (phase === 'draw') {
+        scheduleHint(host, g.cur.painter);
         host.after('drawgame_draw', remaining, function () {
           var g2 = host.g();
           if (g2.cur && g2.cur.phase === 'draw') doReveal(host);
@@ -308,10 +453,14 @@
       if (g.cur.painter === id) {
         host.clearTimer('drawgame_pick');
         host.clearTimer('drawgame_draw');
+        host.clearTimer('drawgame_hint');
         host.toast('🎨 画家溜了，自动换人！', 'info');
         host.emit();
         nextRound(host);
+        return;
       }
+      // 走的是没猜出来的猜词者：剩下的人可能已经全猜中，别让大家干等
+      if (g.cur.phase === 'draw') maybeEarlyReveal(host);
     }
   };
 

@@ -41,8 +41,8 @@
     if (game && game.action) {
       var r = game.action(this, action, from);
       if (r !== undefined) this.emit();
-      return;
     }
+    // 游戏进行中也要跑全局入座/离座：否则中途加入的人不进名单（没法计分）、退出的还挂在榜上
     this._lobbyAction(action, from);
   };
 

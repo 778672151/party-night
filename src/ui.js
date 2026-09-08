@@ -72,11 +72,14 @@
     if (name !== this.screenName && PN.screens[name]) this.setScreen(name, PN.screens[name]);
     if (this.screen && this.screen.render) {
       var self = this;
+      if (this.screen.beforeRender) { try { this.screen.beforeRender.call(this); } catch (e) {} } // 清空 DOM 前抢救输入草稿/滚动位置
       this.clear();
       try {
         var sec = this.secrets[this.state.mode];
         var node = self.screen.render.call(self, this.state, (sec && sec.mine) || null); // 屏幕要的是秘密本身，不是 {mine} 包装
         if (node && node.nodeType === 1) this.root.appendChild(node); // 屏幕只负责返回节点，由这里挂载
+        this.root.classList.toggle('wide', !!(this.screen && this.screen.wide)); // 画猜用宽屏双栏
+        if (this.screen.mounted) this.screen.mounted.call(self, node); // 挂载后钩子：此时才量得到真实尺寸
       } catch (e) { console.error('render error', e); this.clear(); this.root.appendChild(this.h('<div class="card center muted">界面出错了，请刷新（' + (e && e.message) + '）</div>')); }
     }
   };
