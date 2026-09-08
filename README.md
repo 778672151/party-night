@@ -2,6 +2,8 @@
 
 单文件网页派对游戏合集，**零服务器**联机。把 `dist/party-night.html` 放到任何能打开网页的地方，群里发个链接，2–12 人立刻开玩。
 
+🎮 **在线直接玩：<https://778672151.github.io/party-night/>**（GitHub Pages，永久链接，手机浏览器直接点开）
+
 ## 四个游戏
 
 | 游戏 | 人数 | 一句话玩法 |
@@ -38,7 +40,7 @@
 只有一个文件，任何静态托管都行：
 
 - **Cloudflare Pages / Netlify / Vercel**：把 `dist/party-night.html` 改名 `index.html`，拖进控制台即可
-- **GitHub Pages**：推一个仓库，开启 Pages
+- **GitHub Pages**：推一个仓库、开启 Pages（本仓库即如此，见顶部在线地址）
 - **临时应急**：`ssh -R 80:localhost:8080 localhost.run`（免注册，链接随进程存活）
 
 注意：**必须用 https 或 localhost 打开**才有 `crypto.subtle`（端到端加密）；http 下会降级。
