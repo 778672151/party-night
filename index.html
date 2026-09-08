@@ -1,0 +1,3830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e1a">
+<title>群友派对之夜</title>
+<style id="pncss">/* ===== 群友派对之夜：手机优先、派对感深色主题 ===== */
+:root{
+  --bg:#0b0e1a; --bg2:#12162b; --card:#181d38; --card2:#1f2547;
+  --ink:#eef1ff; --ink2:#9aa3c7; --line:rgba(255,255,255,.08);
+  --acc:#ffd166; --acc2:#ff6b6b; --good:#52e3a4; --bad:#ff7b9c;
+  --blue:#6ea8ff; --r:18px; --r2:12px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:"PingFang SC","HarmonyOS Sans SC","MiSans","Noto Sans SC",system-ui,sans-serif;
+  height:100%;overscroll-behavior:none}
+body{
+  background:radial-gradient(1200px 600px at 50% -10%, #27306b 0%, transparent 60%),
+             radial-gradient(800px 500px at 90% 110%, #3b1d4f 0%, transparent 55%), var(--bg);
+}
+#pn-root{max-width:640px;margin:0 auto;min-height:100%;padding:env(safe-area-inset-top) 14px calc(env(safe-area-inset-bottom)+70px)}
+button{font:inherit;color:inherit;border:none;cursor:pointer;background:none}
+input{font:inherit}
+.hidden{display:none!important}
+
+/* 顶部栏 */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;
+  padding:10px 2px;backdrop-filter:blur(10px);background:rgba(11,14,26,.72)}
+.topbar .logo{font-size:20px}
+.topbar .title{font-weight:800;font-size:17px;letter-spacing:.5px}
+.topbar .spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;
+  background:var(--card);border:1px solid var(--line);font-size:12.5px;color:var(--ink2)}
+.chip b{color:var(--ink);font-family:ui-monospace,Menlo,monospace;letter-spacing:1.5px}
+.chip:active{transform:scale(.96)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ink2);display:inline-block}
+.dot.ok{background:var(--good);box-shadow:0 0 8px var(--good)}
+.dot.warn{background:var(--acc)}
+
+/* 落地页 */
+.land{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:12vh}
+.biglogo{font-size:64px;animation:pop 1.6s ease infinite}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.12) rotate(-6deg)}}
+.land h1{margin:12px 0 4px;font-size:26px;letter-spacing:1px}
+.land .sub{color:var(--ink2);font-size:13px;margin-bottom:28px}
+.field{width:100%;max-width:340px;margin:0 auto 14px;text-align:left}
+.field label{display:block;font-size:12px;color:var(--ink2);margin-bottom:6px}
+.field input{width:100%;padding:13px 14px;border-radius:var(--r2);border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:16px;outline:none}
+.field input:focus{border-color:var(--blue)}
+.emoji-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:4px 0 10px}
+.emoji-row .e{font-size:22px;padding:8px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.emoji-row .e.sel{border-color:var(--acc);background:var(--card2);box-shadow:0 0 0 2px rgba(255,209,102,.25)}
+
+/* 通用卡片/按钮 */
+.card{background:linear-gradient(160deg,var(--card),var(--bg2));border:1px solid var(--line);
+  border-radius:var(--r);padding:16px;margin-bottom:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 18px;
+  border-radius:var(--r2);background:var(--card2);border:1px solid var(--line);font-weight:700;font-size:15px}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2200;border:none;
+  box-shadow:0 6px 20px rgba(255,159,67,.28)}
+.btn.ghost{background:transparent}
+.btn.warn{background:rgba(255,123,156,.14);border-color:rgba(255,123,156,.4);color:var(--bad)}
+.btn.block{width:100%}
+.btn.sm{padding:8px 12px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.4;pointer-events:none}
+.row{display:flex;gap:10px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mt8{margin-top:8px}.mt16{margin-top:16px}
+
+/* 大厅 */
+.roomcode{display:flex;align-items:center;gap:10px;padding:6px}
+.roomcode .code{font-size:34px;font-weight:900;letter-spacing:10px;font-family:ui-monospace,Menlo,monospace;
+  color:var(--acc);text-shadow:0 0 24px rgba(255,209,102,.35)}
+.players{display:flex;flex-wrap:wrap;gap:10px}
+.player{width:calc(20% - 8px);min-width:64px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px 6px;border-radius:var(--r2);background:var(--card2);border:1px solid var(--line);position:relative}
+.player .em{font-size:26px}
+.player .nm{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player .sc{font-size:10px;color:var(--ink2)}
+.player.me{border-color:var(--acc)}
+.player.host:after{content:"房主";position:absolute;top:-7px;right:-4px;font-size:9px;padding:2px 6px;
+  border-radius:999px;background:var(--acc);color:#3a2200;font-weight:800}
+.player.off{opacity:.38;filter:grayscale(.8)}
+.modegrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modecard{position:relative;padding:16px 14px;border-radius:var(--r);background:linear-gradient(165deg,var(--card),var(--bg2));
+  border:1px solid var(--line);text-align:left;overflow:hidden}
+.modecard .ico{font-size:30px}
+.modecard .nm{font-weight:800;font-size:16px;margin-top:6px}
+.modecard .blurb{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.5}
+.modecard .go{margin-top:10px}
+.settings{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.settings.open{display:block}
+.setrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:13px;color:var(--ink2)}
+.setrow .val{color:var(--acc);font-weight:700}
+.seg{display:flex;gap:4px;background:var(--bg2);padding:3px;border-radius:10px}
+.seg button{padding:6px 10px;font-size:12px;border-radius:8px;color:var(--ink2)}
+.seg button.on{background:var(--card2);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+input[type=range]{width:120px;accent-color:var(--acc)}
+
+/* 通用游戏屏 */
+.ghead{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 0 6px;gap:4px}
+.gh-title{font-size:22px;font-weight:900}
+.gh-phase{font-size:13px;color:var(--ink2)}
+.pill{display:inline-flex;padding:4px 10px;border-radius:999px;background:var(--card2);border:1px solid var(--line);
+  font-size:12px;color:var(--ink2)}
+.timer{font-variant-numeric:tabular-nums;color:var(--acc);font-weight:800}
+.bigword{font-size:38px;font-weight:900;letter-spacing:4px;text-align:center;color:var(--acc);
+  text-shadow:0 0 30px rgba(255,209,102,.35);margin:10px 0}
+.center{text-align:center}
+.muted{color:var(--ink2);font-size:13px}
+.players-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.pickable{padding:12px 14px;border-radius:var(--r2);background:var(--card2);border:2px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;gap:3px;font-size:14px}
+.pickable.sel{border-color:var(--acc);background:rgba(255,209,102,.12)}
+.pickable .em{font-size:24px}
+.dead{opacity:.35;filter:grayscale(1);text-decoration:line-through}
+
+/* 日志/公告 */
+.toasts{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;
+  gap:8px;align-items:center;pointer-events:none;width:min(92vw,560px)}
+.toast{background:var(--card2);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-size:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,.45);animation:slidein .25s ease}
+.toast.good{border-color:var(--good)}.toast.bad{border-color:var(--bad)}
+@keyframes slidein{from{opacity:0;transform:translateY(-8px)}to{opacity:1}}
+
+/* 描述/投票列表 */
+.list{display:flex;flex-direction:column;gap:10px}
+.listitem{background:var(--card2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px}
+.listitem .who{font-size:12px;color:var(--ink2);margin-bottom:4px}
+.listitem .what{font-size:15px;line-height:1.5;word-break:break-word}
+
+/* 输入条 */
+.inputbar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 12px calc(env(safe-area-inset-bottom)+10px);
+  background:linear-gradient(transparent,rgba(11,14,26,.92) 30%);max-width:640px;margin:0 auto;display:flex;gap:8px}
+.inputbar input{flex:1;padding:13px 16px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:16px;outline:none}
+.inputbar .btn{border-radius:999px}
+
+/* 波长 */
+.wave-bar{position:relative;height:56px;border-radius:16px;margin:18px 4px;
+  background:linear-gradient(90deg,#3ec1ff,#8f7bff 40%,#ff7b9c 75%,#ffb03a)}
+.wave-track{position:absolute;inset:0;touch-action:none}
+.wave-knob{position:absolute;top:50%;width:34px;height:34px;transform:translate(-50%,-50%);
+  border-radius:50%;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#111}
+.wave-labels{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);padding:0 2px}
+.wave-labels b{color:var(--ink);font-size:15px}
+.marker{position:absolute;top:-10px;bottom:-10px;width:4px;border-radius:2px;background:#fff;transform:translateX(-50%);
+  box-shadow:0 0 10px #fff}
+
+/* 画猜 */
+.drawwrap{position:relative;width:100%;aspect-ratio:1/1;background:#fff;border-radius:var(--r);
+  overflow:hidden;touch-action:none;margin-top:10px}
+.drawwrap canvas{position:absolute;inset:0;width:100%;height:100%}
+.dtray{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.swatch{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.2)}
+.swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--acc)}
+
+/* 弹窗 */
+.overlay{position:fixed;inset:0;background:rgba(5,7,16,.72);backdrop-filter:blur(4px);z-index:60;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;width:100%;max-width:420px}
+
+/* 计分板 */
+.scoreboard{display:flex;flex-direction:column;gap:8px}
+.sbrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r2);background:var(--card2);
+  border:1px solid var(--line)}
+.sbrow .rank{font-weight:900;color:var(--acc);width:20px}
+.sbrow .em{font-size:20px}
+.sbrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbrow .pts{font-weight:800;font-variant-numeric:tabular-nums}
+.sbrow.top{background:rgba(255,209,102,.12);border-color:rgba(255,209,102,.4)}
+
+@media (max-width:360px){ .player{width:calc(25% - 8px)} .modegrid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div id="pn-root">
+  <div class="loading"><div class="logo">🎉</div><div>群友派对之夜</div><div class="sub">正在连线…</div></div>
+</div>
+<script>
+window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌面","tag":"食物","level":1},{"a":"饺子","b":"馄饨","tag":"食物","level":2},{"a":"薯条","b":"薯片","tag":"食物","level":1},{"a":"火锅","b":"麻辣烫","tag":"食物","level":3},{"a":"烧烤","b":"铁板烧","tag":"食物","level":3},{"a":"蛋挞","b":"泡芙","tag":"食物","level":2},{"a":"粽子","b":"青团","tag":"食物","level":3},{"a":"月饼","b":"绿豆糕","tag":"食物","level":3},{"a":"煎饼","b":"手抓饼","tag":"食物","level":1},{"a":"豆腐脑","b":"豆花","tag":"食物","level":2},{"a":"酸辣粉","b":"螺蛳粉","tag":"食物","level":3},{"a":"冰糖葫芦","b":"糖雪球","tag":"食物","level":3},{"a":"珍珠奶茶","b":"椰果奶茶","tag":"饮品","level":1},{"a":"可乐","b":"雪碧","tag":"饮品","level":1},{"a":"拿铁","b":"摩卡","tag":"饮品","level":3},{"a":"柠檬茶","b":"冰红茶","tag":"饮品","level":2},{"a":"酸奶","b":"乳酸菌","tag":"饮品","level":3},{"a":"豆浆","b":"豆奶","tag":"饮品","level":2},{"a":"果汁","b":"果茶","tag":"饮品","level":3},{"a":"矿泉水","b":"纯净水","tag":"饮品","level":3},{"a":"热可可","b":"热巧克力","tag":"饮品","level":3},{"a":"奶昔","b":"冰沙","tag":"饮品","level":3},{"a":"气泡水","b":"苏打水","tag":"饮品","level":3},{"a":"鸳鸯","b":"丝袜奶茶","tag":"饮品","level":3},{"a":"牙刷","b":"牙膏","tag":"日用","level":1},{"a":"毛巾","b":"浴巾","tag":"日用","level":2},{"a":"雨伞","b":"遮阳伞","tag":"日用","level":2},{"a":"纸巾","b":"湿巾","tag":"日用","level":1},{"a":"保温杯","b":"玻璃杯","tag":"日用","level":3},{"a":"台灯","b":"壁灯","tag":"日用","level":3},{"a":"拖鞋","b":"凉鞋","tag":"日用","level":1},{"a":"闹钟","b":"计时器","tag":"日用","level":3},{"a":"镜子","b":"玻璃","tag":"日用","level":3},{"a":"梳子","b":"刷子","tag":"日用","level":3},{"a":"保鲜膜","b":"锡纸","tag":"日用","level":3},{"a":"插排","b":"转换器","tag":"日用","level":3},{"a":"微信","b":"QQ","tag":"数码","level":1},{"a":"手机","b":"平板","tag":"数码","level":2},{"a":"耳机","b":"耳塞","tag":"数码","level":2},{"a":"笔记本","b":"台式机","tag":"数码","level":2},{"a":"蓝牙","b":"WiFi","tag":"数码","level":3},{"a":"充电宝","b":"充电器","tag":"数码","level":3},{"a":"键盘","b":"鼠标","tag":"数码","level":1},{"a":"U盘","b":"移动硬盘","tag":"数码","level":3},{"a":"微博","b":"朋友圈","tag":"数码","level":3},{"a":"抖音","b":"快手","tag":"数码","level":1},{"a":"网盘","b":"云盘","tag":"数码","level":2},{"a":"美颜","b":"滤镜","tag":"数码","level":3},{"a":"电影","b":"电视剧","tag":"影视","level":1},{"a":"综艺","b":"真人秀","tag":"影视","level":2},{"a":"动漫","b":"动画","tag":"影视","level":1},{"a":"预告片","b":"花絮","tag":"影视","level":3},{"a":"导演","b":"编剧","tag":"影视","level":3},{"a":"主角","b":"配角","tag":"影视","level":1},{"a":"配音","b":"原声","tag":"影视","level":3},{"a":"字幕","b":"弹幕","tag":"影视","level":3},{"a":"票房","b":"收视率","tag":"影视","level":2},{"a":"喜剧","b":"小品","tag":"影视","level":3},{"a":"科幻","b":"奇幻","tag":"影视","level":2},{"a":"悬疑","b":"惊悚","tag":"影视","level":2},{"a":"说唱","b":"喊麦","tag":"音乐","level":2},{"a":"摇滚","b":"重金属","tag":"音乐","level":2},{"a":"民谣","b":"流行","tag":"音乐","level":2},{"a":"演唱会","b":"音乐会","tag":"音乐","level":2},{"a":"专辑","b":"单曲","tag":"音乐","level":1},{"a":"作词","b":"作曲","tag":"音乐","level":3},{"a":"吉他","b":"贝斯","tag":"音乐","level":2},{"a":"钢琴","b":"电子琴","tag":"音乐","level":2},{"a":"鼓手","b":"吉他手","tag":"音乐","level":2},{"a":"音乐节","b":"演唱会","tag":"音乐","level":2},{"a":"古风","b":"国风","tag":"音乐","level":3},{"a":"高音","b":"低音","tag":"音乐","level":3},{"a":"猫咪","b":"小狗","tag":"动物","level":1},{"a":"熊猫","b":"考拉","tag":"动物","level":2},{"a":"金毛","b":"拉布拉多","tag":"动物","level":3},{"a":"企鹅","b":"海豹","tag":"动物","level":2},{"a":"蝴蝶","b":"蜻蜓","tag":"动物","level":2},{"a":"蜜蜂","b":"黄蜂","tag":"动物","level":3},{"a":"海豚","b":"鲸鱼","tag":"动物","level":2},{"a":"乌龟","b":"甲鱼","tag":"动物","level":3},{"a":"兔子","b":"仓鼠","tag":"动物","level":2},{"a":"松鼠","b":"花栗鼠","tag":"动物","level":3},{"a":"孔雀","b":"火鸡","tag":"动物","level":2},{"a":"蜥蜴","b":"壁虎","tag":"动物","level":3},{"a":"便利店","b":"超市","tag":"地点","level":2},{"a":"图书馆","b":"自习室","tag":"地点","level":2},{"a":"电影院","b":"剧院","tag":"地点","level":1},{"a":"健身房","b":"体育馆","tag":"地点","level":2},{"a":"咖啡馆","b":"茶楼","tag":"地点","level":2},{"a":"机场","b":"火车站","tag":"地点","level":2},{"a":"地铁","b":"公交","tag":"地点","level":1},{"a":"学校","b":"公司","tag":"地点","level":2},{"a":"商场","b":"步行街","tag":"地点","level":2},{"a":"酒吧","b":"清吧","tag":"地点","level":2},{"a":"沙滩","b":"泳池","tag":"地点","level":2},{"a":"公园","b":"植物园","tag":"地点","level":2},{"a":"老师","b":"教授","tag":"职业","level":2},{"a":"医生","b":"护士","tag":"职业","level":1},{"a":"程序员","b":"产品经理","tag":"职业","level":2},{"a":"记者","b":"主播","tag":"职业","level":2},{"a":"厨师","b":"甜品师","tag":"职业","level":2},{"a":"律师","b":"法官","tag":"职业","level":2},{"a":"设计师","b":"摄影师","tag":"职业","level":2},{"a":"会计","b":"出纳","tag":"职业","level":3},{"a":"编辑","b":"校对","tag":"职业","level":3},{"a":"导游","b":"领队","tag":"职业","level":2},{"a":"保安","b":"警察","tag":"职业","level":1},{"a":"空姐","b":"模特","tag":"职业","level":2},{"a":"班主任","b":"辅导员","tag":"校园","level":2},{"a":"班长","b":"学习委员","tag":"校园","level":2},{"a":"作业","b":"考试","tag":"校园","level":1},{"a":"选修","b":"必修","tag":"校园","level":1},{"a":"军训","b":"体育课","tag":"校园","level":2},{"a":"宿舍","b":"公寓","tag":"校园","level":2},{"a":"食堂","b":"餐厅","tag":"校园","level":2},{"a":"早自习","b":"晚自习","tag":"校园","level":3},{"a":"毕业照","b":"证件照","tag":"校园","level":2},{"a":"录取通知书","b":"毕业证","tag":"校园","level":3},{"a":"课代表","b":"小组长","tag":"校园","level":3},{"a":"黑板","b":"白板","tag":"校园","level":3},{"a":"实习生","b":"试用期","tag":"职场","level":2},{"a":"面试","b":"笔试","tag":"职场","level":2},{"a":"简历","b":"作品集","tag":"职场","level":2},{"a":"辞职","b":"辞退","tag":"职场","level":2},{"a":"加班","b":"值班","tag":"职场","level":1},{"a":"工资","b":"奖金","tag":"职场","level":1},{"a":"年假","b":"调休","tag":"职场","level":2},{"a":"出差","b":"旅游","tag":"职场","level":2},{"a":"会议","b":"培训","tag":"职场","level":1},{"a":"KPI","b":"OKR","tag":"职场","level":3},{"a":"甲方","b":"乙方","tag":"职场","level":2},{"a":"入职","b":"转正","tag":"职场","level":2},{"a":"足球","b":"篮球","tag":"体育","level":1},{"a":"羽毛球","b":"乒乓球","tag":"体育","level":1},{"a":"游泳","b":"潜水","tag":"体育","level":2},{"a":"跑步","b":"竞走","tag":"体育","level":3},{"a":"瑜伽","b":"普拉提","tag":"体育","level":3},{"a":"滑板","b":"轮滑","tag":"体育","level":2},{"a":"拳击","b":"散打","tag":"体育","level":2},{"a":"跳高","b":"跳远","tag":"体育","level":2},{"a":"滑雪","b":"滑冰","tag":"体育","level":2},{"a":"马拉松","b":"越野跑","tag":"体育","level":2},{"a":"体操","b":"艺术体操","tag":"体育","level":3},{"a":"举重","b":"力量举","tag":"体育","level":3},{"a":"王者荣耀","b":"英雄联盟","tag":"游戏","level":2},{"a":"吃鸡","b":"和平精英","tag":"游戏","level":2},{"a":"原神","b":"星穹铁道","tag":"游戏","level":2},{"a":"单机","b":"联机","tag":"游戏","level":2},{"a":"手游","b":"端游","tag":"游戏","level":1},{"a":"皮肤","b":"装备","tag":"游戏","level":2},{"a":"排位","b":"匹配","tag":"游戏","level":2},{"a":"副本","b":"任务","tag":"游戏","level":2},{"a":"主播","b":"代练","tag":"游戏","level":2},{"a":"氪金","b":"肝游戏","tag":"游戏","level":2},{"a":"开黑","b":"面基","tag":"游戏","level":2},{"a":"攻略","b":"教程","tag":"游戏","level":2},{"a":"网速","b":"延迟","tag":"网络","level":2},{"a":"流量","b":"套餐","tag":"网络","level":1},{"a":"点赞","b":"关注","tag":"网络","level":1},{"a":"评论","b":"弹幕","tag":"网络","level":2},{"a":"直播","b":"录播","tag":"网络","level":2},{"a":"表情包","b":"斗图","tag":"网络","level":2},{"a":"热搜","b":"话题","tag":"网络","level":1},{"a":"好友","b":"粉丝","tag":"网络","level":2},{"a":"群聊","b":"私聊","tag":"网络","level":2},{"a":"网名","b":"昵称","tag":"网络","level":2},{"a":"头像","b":"壁纸","tag":"网络","level":2},{"a":"扫码","b":"支付","tag":"网络","level":2},{"a":"暗恋","b":"单恋","tag":"情感","level":3},{"a":"相亲","b":"约会","tag":"情感","level":1},{"a":"恋爱","b":"暧昧","tag":"情感","level":2},{"a":"分手","b":"拉黑","tag":"情感","level":2},{"a":"闺蜜","b":"兄弟","tag":"情感","level":1},{"a":"前任","b":"现任","tag":"情感","level":1},{"a":"表白","b":"求婚","tag":"情感","level":2},{"a":"吃醋","b":"生气","tag":"情感","level":2},{"a":"感动","b":"心动","tag":"情感","level":2},{"a":"撒娇","b":"卖萌","tag":"情感","level":2},{"a":"冷战","b":"吵架","tag":"情感","level":2},{"a":"网恋","b":"异地恋","tag":"情感","level":2},{"a":"春节","b":"元旦","tag":"节日","level":1},{"a":"中秋节","b":"元宵节","tag":"节日","level":3},{"a":"情人节","b":"七夕","tag":"节日","level":1},{"a":"圣诞节","b":"平安夜","tag":"节日","level":1},{"a":"国庆节","b":"劳动节","tag":"节日","level":3},{"a":"端午节","b":"清明节","tag":"节日","level":3},{"a":"教师节","b":"母亲节","tag":"节日","level":1},{"a":"生日","b":"纪念日","tag":"节日","level":1},{"a":"红包","b":"礼物","tag":"节日","level":1},{"a":"跨年","b":"守岁","tag":"节日","level":3},{"a":"万圣节","b":"愚人节","tag":"节日","level":2},{"a":"光棍节","b":"情人节","tag":"节日","level":2},{"a":"地铁","b":"轻轨","tag":"交通","level":1},{"a":"公交","b":"大巴","tag":"交通","level":1},{"a":"出租车","b":"网约车","tag":"交通","level":1},{"a":"高铁","b":"动车","tag":"交通","level":3},{"a":"电动车","b":"自行车","tag":"交通","level":1},{"a":"私家车","b":"共享汽车","tag":"交通","level":2},{"a":"火车","b":"地铁","tag":"交通","level":3},{"a":"轮船","b":"快艇","tag":"交通","level":2},{"a":"飞机","b":"直升机","tag":"交通","level":2},{"a":"驾照","b":"身份证","tag":"交通","level":3},{"a":"红绿灯","b":"斑马线","tag":"交通","level":2},{"a":"天桥","b":"隧道","tag":"交通","level":3},{"a":"近视","b":"散光","tag":"身体","level":3},{"a":"感冒","b":"流感","tag":"身体","level":1},{"a":"发烧","b":"发炎","tag":"身体","level":2},{"a":"头痛","b":"头晕","tag":"身体","level":1},{"a":"咳嗽","b":"打喷嚏","tag":"身体","level":3},{"a":"过敏","b":"湿疹","tag":"身体","level":3},{"a":"骨折","b":"扭伤","tag":"身体","level":2},{"a":"牙疼","b":"长智齿","tag":"身体","level":2},{"a":"失眠","b":"熬夜","tag":"身体","level":1},{"a":"晕车","b":"晕船","tag":"身体","level":3},{"a":"打嗝","b":"放屁","tag":"身体","level":1},{"a":"心跳","b":"脉搏","tag":"身体","level":3},{"a":"羽绒服","b":"棉袄","tag":"服饰","level":1},{"a":"高跟鞋","b":"坡跟鞋","tag":"服饰","level":2},{"a":"帽子","b":"头巾","tag":"服饰","level":2},{"a":"围巾","b":"丝巾","tag":"服饰","level":1},{"a":"手套","b":"袜子","tag":"服饰","level":1},{"a":"牛仔裤","b":"休闲裤","tag":"服饰","level":1},{"a":"裙子","b":"连衣裙","tag":"服饰","level":2},{"a":"运动鞋","b":"板鞋","tag":"服饰","level":2},{"a":"西装","b":"马甲","tag":"服饰","level":2},{"a":"睡衣","b":"家居服","tag":"服饰","level":1},{"a":"墨镜","b":"眼镜","tag":"服饰","level":1},{"a":"耳环","b":"耳钉","tag":"服饰","level":3},{"a":"沙发","b":"椅子","tag":"家居","level":1},{"a":"单人床","b":"沙发床","tag":"家居","level":2},{"a":"窗帘","b":"百叶窗","tag":"家居","level":1},{"a":"冰箱","b":"冰柜","tag":"家居","level":1},{"a":"空调","b":"电扇","tag":"家居","level":1},{"a":"洗衣机","b":"烘干机","tag":"家居","level":2},{"a":"微波炉","b":"烤箱","tag":"家居","level":2},{"a":"地毯","b":"地垫","tag":"家居","level":2},{"a":"花瓶","b":"花盆","tag":"家居","level":3},{"a":"枕头","b":"抱枕","tag":"家居","level":1},{"a":"垃圾桶","b":"收纳盒","tag":"家居","level":3},{"a":"拖把","b":"扫帚","tag":"家居","level":1}]},"wavelength":{"version":1,"spectrums":[{"left":"简单","right":"复杂","tag":"生活"},{"left":"省事","right":"折腾","tag":"生活"},{"left":"懒人","right":"勤快","tag":"生活"},{"left":"早起","right":"熬夜","tag":"生活"},{"left":"整洁","right":"邋遢","tag":"生活"},{"left":"安静","right":"热闹","tag":"生活"},{"left":"独处","right":"群居","tag":"生活"},{"left":"规律","right":"随性","tag":"生活"},{"left":"节俭","right":"奢侈","tag":"生活"},{"left":"实用","right":"颜值","tag":"生活"},{"left":"保守","right":"冒险","tag":"生活"},{"left":"快","right":"慢","tag":"生活"},{"left":"轻","right":"重","tag":"生活"},{"left":"软","right":"硬","tag":"生活"},{"left":"计划","right":"随缘","tag":"生活"},{"left":"脏","right":"干净","tag":"生活"},{"left":"暖","right":"冷","tag":"生活"},{"left":"早睡","right":"晚睡","tag":"生活"},{"left":"收纳","right":"随手","tag":"生活"},{"left":"难吃","right":"好吃","tag":"食物"},{"left":"清淡","right":"重口","tag":"食物"},{"left":"热","right":"冰","tag":"食物"},{"left":"家常","right":"精致","tag":"食物"},{"left":"便宜","right":"昂贵","tag":"食物"},{"left":"健康","right":"垃圾","tag":"食物"},{"left":"干","right":"湿","tag":"食物"},{"left":"脆","right":"软","tag":"食物"},{"left":"浓","right":"淡","tag":"食物"},{"left":"辣","right":"不辣","tag":"食物"},{"left":"饱","right":"饿","tag":"食物"},{"left":"新鲜","right":"隔夜","tag":"食物"},{"left":"热","right":"凉","tag":"食物"},{"left":"熟","right":"生","tag":"食物"},{"left":"清淡","right":"油腻","tag":"食物"},{"left":"酸","right":"甜","tag":"食物"},{"left":"社恐","right":"社牛","tag":"人际"},{"left":"内向","right":"外向","tag":"人际"},{"left":"冷漠","right":"热情","tag":"人际"},{"left":"客气","right":"随意","tag":"人际"},{"left":"记仇","right":"大度","tag":"人际"},{"left":"粘人","right":"独立","tag":"人际"},{"left":"严肃","right":"幽默","tag":"人际"},{"left":"毒舌","right":"温柔","tag":"人际"},{"left":"慢热","right":"自来熟","tag":"人际"},{"left":"敏感","right":"迟钝","tag":"人际"},{"left":"靠谱","right":"离谱","tag":"人际"},{"left":"抠门","right":"大方","tag":"人际"},{"left":"话少","right":"话多","tag":"人际"},{"left":"冷场","right":"话痨","tag":"人际"},{"left":"心机","right":"单纯","tag":"人际"},{"left":"冷门","right":"大众","tag":"网络"},{"left":"过气","right":"流行","tag":"网络"},{"left":"小众","right":"出圈","tag":"网络"},{"left":"土","right":"潮","tag":"网络"},{"left":"抽象","right":"正经","tag":"网络"},{"left":"长","right":"短","tag":"网络"},{"left":"原创","right":"搬运","tag":"网络"},{"left":"刷屏","right":"沉底","tag":"网络"},{"left":"真实","right":"摆拍","tag":"网络"},{"left":"考古","right":"追新","tag":"网络"},{"left":"白嫖","right":"付费","tag":"网络"},{"left":"潜水","right":"活跃","tag":"网络"},{"left":"跟风","right":"清流","tag":"网络"},{"left":"老","right":"新","tag":"网络"},{"left":"烂片","right":"神作","tag":"影视"},{"left":"无聊","right":"刺激","tag":"影视"},{"left":"催泪","right":"搞笑","tag":"影视"},{"left":"文艺","right":"商业","tag":"影视"},{"left":"配音","right":"原声","tag":"影视"},{"left":"老剧","right":"新剧","tag":"影视"},{"left":"短剧","right":"长剧","tag":"影视"},{"left":"经典","right":"流行","tag":"影视"},{"left":"小众","right":"爆款","tag":"影视"},{"left":"被高估","right":"被低估","tag":"影视"},{"left":"快进","right":"不舍得看完","tag":"影视"},{"left":"倍速","right":"原速","tag":"影视"},{"left":"催泪","right":"爆笑","tag":"影视"},{"left":"轻松","right":"沉重","tag":"影视"},{"left":"开心","right":"难过","tag":"情绪"},{"left":"焦虑","right":"放松","tag":"情绪"},{"left":"愤怒","right":"平和","tag":"情绪"},{"left":"兴奋","right":"疲惫","tag":"情绪"},{"left":"自信","right":"自卑","tag":"情绪"},{"left":"乐观","right":"悲观","tag":"情绪"},{"left":"佛系","right":"卷","tag":"情绪"},{"left":"躺平","right":"奋斗","tag":"情绪"},{"left":"上头","right":"下头","tag":"情绪"},{"left":"治愈","right":"致郁","tag":"情绪"},{"left":"尴尬","right":"从容","tag":"情绪"},{"left":"怀疑","right":"信任","tag":"情绪"},{"left":"无聊","right":"有趣","tag":"情绪"},{"left":"紧张","right":"松弛","tag":"情绪"},{"left":"安心","right":"不安","tag":"情绪"},{"left":"好看","right":"难看","tag":"审美"},{"left":"可爱","right":"可怕","tag":"审美"},{"left":"丑","right":"帅","tag":"审美"},{"left":"土气","right":"洋气","tag":"审美"},{"left":"简约","right":"繁复","tag":"审美"},{"left":"复古","right":"现代","tag":"审美"},{"left":"素颜","right":"化妆","tag":"审美"},{"left":"顺眼","right":"辣眼","tag":"审美"},{"left":"日常","right":"仪式感","tag":"审美"},{"left":"保守","right":"前卫","tag":"审美"},{"left":"廉价","right":"高级","tag":"审美"},{"left":"幼稚","right":"成熟","tag":"审美"},{"left":"小清新","right":"重口味","tag":"审美"},{"left":"柔和","right":"硬朗","tag":"审美"},{"left":"可爱","right":"性感","tag":"审美"},{"left":"旧","right":"新","tag":"科技"},{"left":"卡顿","right":"丝滑","tag":"科技"},{"left":"入门","right":"专业","tag":"科技"},{"left":"本地","right":"云端","tag":"科技"},{"left":"实用","right":"黑科技","tag":"科技"},{"left":"有线","right":"无线","tag":"科技"},{"left":"大屏","right":"小屏","tag":"科技"},{"left":"低配","right":"高配","tag":"科技"},{"left":"机械","right":"触控","tag":"科技"},{"left":"像素","right":"流畅","tag":"科技"},{"left":"早买","right":"等等党","tag":"科技"},{"left":"开源","right":"封闭","tag":"科技"},{"left":"二手","right":"全新","tag":"科技"},{"left":"摸鱼","right":"卷王","tag":"职场"},{"left":"学渣","right":"学霸","tag":"职场"},{"left":"挂科","right":"满分","tag":"职场"},{"left":"实习","right":"全职","tag":"职场"},{"left":"上班","right":"放假","tag":"职场"},{"left":"通勤","right":"居家","tag":"职场"},{"left":"单休","right":"双休","tag":"职场"},{"left":"稳定","right":"跳槽","tag":"职场"},{"left":"划水","right":"全勤","tag":"职场"},{"left":"吐槽","right":"画饼","tag":"职场"},{"left":"低调","right":"凡尔赛","tag":"职场"},{"left":"理性","right":"感性","tag":"综合"},{"left":"独来独往","right":"抱团","tag":"综合"},{"left":"手残","right":"大神","tag":"综合"},{"left":"平替","right":"贵替","tag":"综合"},{"left":"收藏","right":"断舍离","tag":"综合"},{"left":"路痴","right":"活地图","tag":"综合"},{"left":"秒回","right":"轮回","tag":"综合"},{"left":"脆弱","right":"强壮","tag":"综合"},{"left":"日常","right":"舞台","tag":"综合"}]},"mostlikely":{"version":1,"prompts":["最有可能凌晨三点在群里发疯的人","最有可能在群里发60秒语音方阵的人","最有可能在群里发自己表情包的人","最有可能把群聊当树洞吐槽的人","最有可能在群里只发表情不说话的","最有可能在群里@所有人的人","最有可能群聊已读不回的人","最有可能半夜在群里分享emo歌的人","最有可能在群里发自己猫猫照片的人","最有可能在群里和人吵起来的人","最有可能把群聊记录截图发朋友圈的人","最有可能在群里发拼多多砍一刀的人","最有可能在群里写小作文的人","最有可能抢到红包只发谢谢老板的人","最有可能在群里问有人吗然后消失的人","最有可能吃火锅点全辣锅的人","最有可能吃饭前先拍照消毒的人","最有可能半夜点外卖的人","最有可能喝奶茶不加糖的人","最有可能吃香菜吃到天荒地老的人","最有可能一个人吃火锅的人","最有可能为了奶茶排两个小时队的人","最有可能吃薯条不蘸番茄酱的人","最有可能把泡面吃出满汉全席仪式感的人","最有可能吃螺蛳粉被邻居嫌弃的人","最有可能自称吃货但饭量小鸟胃的人","最有可能把饮料瓶盖拧回去再喝的人","最有可能在朋友圈发深夜放毒的人","最有可能吃烧烤只点烤韭菜的人","最有可能在麦当劳点KFC外送的人","最有可能说晚安之后继续刷手机的人","最有可能熬夜到天亮然后说再也不熬了的人","最有可能熬夜追剧到天亮的人","最有可能凌晨四点还在打游戏的人","最有可能熬夜不是有事只是不想睡的人","最有可能睡前刷短视频刷到三点的人","最有可能熬夜敷最贵的面膜的人","最有可能通宵赶DDL的人","最有可能在床上玩手机砸到脸的人","最有可能熬夜看小说到天亮的人","最有可能说马上就到然后半小时才出门的人","最有可能在DDL前一小时开始拼命的人","最有可能把作业拖到最后一刻的人","最有可能列了计划但从不执行的人","最有可能说明天开始减肥说了一百次的人","最有可能回消息稍等然后等到第二天的人","最有可能闹钟响了按掉继续睡的人","最有可能出门前磨蹭让别人等的人","最有可能办了健身卡只去过一次的人","最有可能把衣服堆在椅子上等发霉了再洗的人","最有可能为爱情放弃事业的人","最有可能恋爱后人间蒸发的人","最有可能分手后发伤感文学的人","最有可能给对象写千字小作文的人","最有可能恋爱脑到被朋友骂醒的人","最有可能在朋友圈发对象照片刷屏的人","最有可能分手后还留着聊天记录反复看的人","最有可能在恋爱中失去自我的人","最有可能母单到三十岁的人","最有可能网恋奔现翻车的人","最有可能旅游非要打卡网红店的人","最有可能旅游不做攻略走到哪算哪的人","最有可能在景区被坑还觉得赚了的人","最有可能旅游时把酒店当网吧的人","最有可能说走就走的人","最有可能旅游拍照两小时走路十分钟的人","最有可能在景点排队排到崩溃的人","最有可能迷路但不肯问路的人","最有可能旅游把身份证丢了的人","最有可能爬山坐缆车还喊累的人","最有可能打游戏怒摔手机的人","最有可能打游戏遇到队友开麦骂人的人","最有可能打游戏打到手机没电还插着充电器玩的人","最有可能为了抽卡氪光生活费的人","最有可能打游戏时突然挂机的人","最有可能在游戏里当社交恐怖分子的人","最有可能玩游戏只玩简单模式的人","最有可能打游戏连跪十把还不肯下的人","最有可能玩游戏充钱后被自己菜到退游的人","最有可能上班摸鱼被老板抓到的人","最有可能开会时偷偷打哈欠的人","最有可能上课睡觉被老师点名的人","最有可能下班后秒变失踪人口的人","最有可能在周报里编工作内容的人","最有可能上班踩点进公司的人","最有可能在会议上提出离谱建议的人","最有可能把工作群消息当没看见的人","最有可能上班带薪拉屎半小时的人","最有可能周一早上起不来请病假的人","最有可能把宠物当儿子女儿养的人","最有可能给宠物过生日的人","最有可能手机相册全是宠物照片的人","最有可能给宠物穿衣服的人","最有可能和宠物说话超过和人类说话的人","最有可能在朋友圈晒宠物比晒自己多的人","最有可能养植物都能养死的人","最有可能云吸猫但家里没猫的人","最有可能给宠物买比自己衣服还贵的衣服的人","最有可能被猫抓了还笑着说它只是饿了的人","最有可能双十一买了又后悔的人","最有可能快递到了忘了自己买过什么的人","最有可能因为凑单买了一堆不需要的东西的人","最有可能买完东西发现更便宜的人","最有可能在直播间冲动消费的人","最有可能买了东西不拆包装放到过期的人","最有可能为了包邮凑单结果花得更多的人","最有可能在闲鱼上挂了一堆但一件没卖出去的人","最有可能买了新衣服马上就穿的人","最有可能购物车加了一堆但一个都不买的人","最有可能发消息发错群的人","最有可能走路看手机撞到玻璃门的人","最有可能在电梯里放屁被人发现的人","最有可能把前任名字喊成现任名字的人","最有可能在公共场合社死的人","最有可能喝醉酒后疯狂打电话的人","最有可能认错人还跟人家聊了半天的人","最有可能在街上把别人认成明星要签名的人","最有可能在餐厅吃出头发还默默继续吃的人","最有可能上厕所忘带纸的人","最有可能第一个财富自由的人","最有可能突然中彩票五百万的人","最有可能三十五岁提前退休的人","最有可能当上CEO走上人生巅峰的人","最有可能被星探发现的人","最有可能成为百万粉丝网红的人","最有可能出版自己的书的人","最有可能开一家自己的小店的人","最有可能去南极旅游的人","最有可能攒够钱提前退休环游世界的人","最有可能下雨天不打伞的人","最有可能出门忘带钥匙被锁门外的人","最有可能夏天不开空调硬扛的人","最有可能在超市排队时换到最短队伍的人","最有可能在朋友圈发鸡汤然后秒删的人","最有可能说我没事然后偷偷哭的人","最有可能假装听懂然后点头的人","最有可能在KTV当麦霸的人","最有可能约饭永远约不出来的人","最有可能一个人去看电影的人","最有可能在电影院剧透的人","最有可能看了恐怖片不敢一个人睡的人","最有可能周末在家躺两天不出门的人","最有可能在浴室唱歌的人","最有可能在朋友圈发九宫格自拍的人","最有可能用表情包回复所有消息的人","最有可能袜子穿了两只不一样的人","最有可能穿睡衣出门拿外卖的人","最有可能在歌单里存了一百首老歌的人","最有可能因为一首歌单曲循环一整天的人","最有可能在洗澡时思考人生的人","最有可能看到感人电影哭得稀里哗啦的人","最有可能在社交平台上发小作文的人","最有可能在电梯里和陌生人尬聊的人","最有可能在朋友圈发自拍配文今天素颜的人","最有可能对奶茶上瘾每天一杯的人","最有可能一边熬夜一边养生的人","最有可能在备忘录里记了所有密码但还是忘了的人","最有可能把手机屏幕摔碎还继续用的人","最有可能在阳台种菜但不成功的人","最有可能在公司冰箱里放了一年的饭的人","最有可能在朋友圈打卡健身但只坚持了三天的人","最有可能天气预报说下雨但死活不带伞的人","最有可能看电影非要等到出字幕的人","最有可能用手机拍月亮但拍出来像灯泡的人","最有可能在朋友圈发长文纪念恋爱周年的人","最有可能把手机当手电筒用的人","最有可能在群里发红包但只发一分钱的人","最有可能被朋友拉去当伴娘伴郎的人","最有可能在朋友圈发今天也是精致的一天的人","最有可能把咖啡当水喝的人","最有可能在朋友圈发求推荐但从不采纳的人","最有可能走路听歌并跟着唱出来的人","最有可能在地铁上坐过站的人","最有可能给朋友当情感导师但自己单身的人","最有可能在朋友圈晒猫狗超过晒娃的人","最有可能在公司年会上表演离谱节目的人","最有可能在朋友圈发英文装逼然后被识破的人","最有可能半夜饿了爬起来煮泡面的人","最有可能把手机解锁又关掉反复十次的人","最有可能点了外卖然后忘记取的人","最有可能在朋友圈发打卡照但实际没去的人","最有可能把假期全部用来躺平的人","最有可能在朋友圈发长文吐槽同事的人","最有可能沉迷短视频刷到凌晨的人","最有可能在朋友圈发自己做的菜然后说是外卖的人"]},"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"tag":"动物"},{"w":"大象","level":1,"tag":"动物"},{"w":"企鹅","level":1,"tag":"动物"},{"w":"熊猫","level":1,"tag":"动物"},{"w":"猫","level":1,"tag":"动物"},{"w":"狗","level":1,"tag":"动物"},{"w":"兔子","level":1,"tag":"动物"},{"w":"老虎","level":1,"tag":"动物"},{"w":"狮子","level":1,"tag":"动物"},{"w":"猴子","level":1,"tag":"动物"},{"w":"蛇","level":1,"tag":"动物"},{"w":"鱼","level":1,"tag":"动物"},{"w":"鸟","level":1,"tag":"动物"},{"w":"蝴蝶","level":1,"tag":"动物"},{"w":"蜗牛","level":1,"tag":"动物"},{"w":"鲨鱼","level":1,"tag":"动物"},{"w":"海豚","level":1,"tag":"动物"},{"w":"鲸鱼","level":1,"tag":"动物"},{"w":"螃蟹","level":1,"tag":"动物"},{"w":"乌龟","level":1,"tag":"动物"},{"w":"青蛙","level":1,"tag":"动物"},{"w":"孔雀","level":1,"tag":"动物"},{"w":"老鹰","level":1,"tag":"动物"},{"w":"鹦鹉","level":1,"tag":"动物"},{"w":"蜜蜂","level":1,"tag":"动物"},{"w":"蚂蚁","level":1,"tag":"动物"},{"w":"蜻蜓","level":1,"tag":"动物"},{"w":"瓢虫","level":1,"tag":"动物"},{"w":"蜘蛛","level":1,"tag":"动物"},{"w":"壁虎","level":1,"tag":"动物"},{"w":"考拉","level":1,"tag":"动物"},{"w":"北极熊","level":1,"tag":"动物"},{"w":"梅花鹿","level":1,"tag":"动物"},{"w":"松鼠","level":1,"tag":"动物"},{"w":"刺猬","level":1,"tag":"动物"},{"w":"河马","level":1,"tag":"动物"},{"w":"犀牛","level":1,"tag":"动物"},{"w":"骆驼","level":1,"tag":"动物"},{"w":"斑马","level":1,"tag":"动物"},{"w":"鳄鱼","level":1,"tag":"动物"},{"w":"苹果","level":1,"tag":"食物"},{"w":"西瓜","level":1,"tag":"食物"},{"w":"草莓","level":1,"tag":"食物"},{"w":"香蕉","level":1,"tag":"食物"},{"w":"葡萄","level":1,"tag":"食物"},{"w":"菠萝","level":1,"tag":"食物"},{"w":"樱桃","level":1,"tag":"食物"},{"w":"冰淇淋","level":1,"tag":"食物"},{"w":"蛋糕","level":1,"tag":"食物"},{"w":"汉堡","level":1,"tag":"食物"},{"w":"披萨","level":1,"tag":"食物"},{"w":"面条","level":1,"tag":"食物"},{"w":"饺子","level":1,"tag":"食物"},{"w":"包子","level":1,"tag":"食物"},{"w":"月饼","level":1,"tag":"食物"},{"w":"粽子","level":1,"tag":"食物"},{"w":"糖葫芦","level":1,"tag":"食物"},{"w":"火锅","level":1,"tag":"食物"},{"w":"寿司","level":1,"tag":"食物"},{"w":"热狗","level":1,"tag":"食物"},{"w":"鸡腿","level":1,"tag":"食物"},{"w":"薯条","level":1,"tag":"食物"},{"w":"爆米花","level":1,"tag":"食物"},{"w":"棉花糖","level":1,"tag":"食物"},{"w":"棒棒糖","level":1,"tag":"食物"},{"w":"鸡蛋","level":1,"tag":"食物"},{"w":"牛奶","level":1,"tag":"食物"},{"w":"面包","level":1,"tag":"食物"},{"w":"饼干","level":1,"tag":"食物"},{"w":"巧克力","level":1,"tag":"食物"},{"w":"雨伞","level":1,"tag":"物品"},{"w":"手机","level":1,"tag":"物品"},{"w":"电脑","level":1,"tag":"物品"},{"w":"眼镜","level":1,"tag":"物品"},{"w":"帽子","level":1,"tag":"物品"},{"w":"钥匙","level":1,"tag":"物品"},{"w":"剪刀","level":1,"tag":"物品"},{"w":"牙刷","level":1,"tag":"物品"},{"w":"闹钟","level":1,"tag":"物品"},{"w":"灯泡","level":1,"tag":"物品"},{"w":"镜子","level":1,"tag":"物品"},{"w":"椅子","level":1,"tag":"物品"},{"w":"桌子","level":1,"tag":"物品"},{"w":"书包","level":1,"tag":"物品"},{"w":"信封","level":1,"tag":"物品"},{"w":"蜡烛","level":1,"tag":"物品"},{"w":"气球","level":1,"tag":"物品"},{"w":"风筝","level":1,"tag":"物品"},{"w":"吉他","level":1,"tag":"物品"},{"w":"钢琴","level":1,"tag":"物品"},{"w":"相机","level":1,"tag":"物品"},{"w":"日历","level":1,"tag":"物品"},{"w":"地图","level":1,"tag":"物品"},{"w":"地球仪","level":1,"tag":"物品"},{"w":"自行车","level":1,"tag":"交通"},{"w":"汽车","level":1,"tag":"交通"},{"w":"飞机","level":1,"tag":"交通"},{"w":"火车","level":1,"tag":"交通"},{"w":"轮船","level":1,"tag":"交通"},{"w":"火箭","level":1,"tag":"交通"},{"w":"热气球","level":1,"tag":"交通"},{"w":"摩托车","level":1,"tag":"交通"},{"w":"公交车","level":1,"tag":"交通"},{"w":"直升机","level":1,"tag":"交通"},{"w":"地铁","level":1,"tag":"交通"},{"w":"电动车","level":1,"tag":"交通"},{"w":"太阳","level":1,"tag":"自然"},{"w":"月亮","level":1,"tag":"自然"},{"w":"星星","level":1,"tag":"自然"},{"w":"彩虹","level":1,"tag":"自然"},{"w":"雪花","level":1,"tag":"自然"},{"w":"山","level":1,"tag":"自然"},{"w":"眼睛","level":1,"tag":"身体"},{"w":"耳朵","level":1,"tag":"身体"},{"w":"手","level":1,"tag":"身体"},{"w":"脚","level":1,"tag":"身体"},{"w":"牙齿","level":1,"tag":"身体"},{"w":"头发","level":1,"tag":"身体"},{"w":"医生","level":1,"tag":"职业"},{"w":"警察","level":1,"tag":"职业"},{"w":"厨师","level":1,"tag":"职业"},{"w":"消防员","level":1,"tag":"职业"},{"w":"教师","level":1,"tag":"职业"},{"w":"宇航员","level":1,"tag":"职业"},{"w":"堵车","level":2,"tag":"场景"},{"w":"下雨","level":2,"tag":"场景"},{"w":"下雪","level":2,"tag":"场景"},{"w":"日出","level":2,"tag":"场景"},{"w":"日落","level":2,"tag":"场景"},{"w":"流星","level":2,"tag":"场景"},{"w":"火灾","level":2,"tag":"场景"},{"w":"雪人","level":2,"tag":"场景"},{"w":"沙滩","level":2,"tag":"场景"},{"w":"瀑布","level":2,"tag":"场景"},{"w":"火山爆发","level":2,"tag":"场景"},{"w":"海底世界","level":2,"tag":"场景"},{"w":"游乐园","level":2,"tag":"场景"},{"w":"动物园","level":2,"tag":"场景"},{"w":"演唱会","level":2,"tag":"场景"},{"w":"电影院","level":2,"tag":"场景"},{"w":"图书馆","level":2,"tag":"场景"},{"w":"超市","level":2,"tag":"场景"},{"w":"菜市场","level":2,"tag":"场景"},{"w":"地铁站","level":2,"tag":"场景"},{"w":"火车站","level":2,"tag":"场景"},{"w":"机场","level":2,"tag":"场景"},{"w":"医院","level":2,"tag":"场景"},{"w":"学校","level":2,"tag":"场景"},{"w":"公园","level":2,"tag":"场景"},{"w":"游泳池","level":2,"tag":"场景"},{"w":"篮球场","level":2,"tag":"场景"},{"w":"滑雪场","level":2,"tag":"场景"},{"w":"海边","level":2,"tag":"场景"},{"w":"露营","level":2,"tag":"场景"},{"w":"野餐","level":2,"tag":"场景"},{"w":"烧烤","level":2,"tag":"场景"},{"w":"咖啡店","level":2,"tag":"场景"},{"w":"健身房","level":2,"tag":"场景"},{"w":"电梯","level":2,"tag":"场景"},{"w":"楼梯","level":2,"tag":"场景"},{"w":"隧道","level":2,"tag":"场景"},{"w":"桥","level":2,"tag":"场景"},{"w":"摩天轮","level":2,"tag":"场景"},{"w":"旋转木马","level":2,"tag":"场景"},{"w":"过山车","level":2,"tag":"场景"},{"w":"刷牙","level":2,"tag":"动作"},{"w":"洗脸","level":2,"tag":"动作"},{"w":"洗澡","level":2,"tag":"动作"},{"w":"梳头","level":2,"tag":"动作"},{"w":"化妆","level":2,"tag":"动作"},{"w":"刮胡子","level":2,"tag":"动作"},{"w":"做饭","level":2,"tag":"动作"},{"w":"洗碗","level":2,"tag":"动作"},{"w":"扫地","level":2,"tag":"动作"},{"w":"拖地","level":2,"tag":"动作"},{"w":"洗衣服","level":2,"tag":"动作"},{"w":"晾衣服","level":2,"tag":"动作"},{"w":"叠被子","level":2,"tag":"动作"},{"w":"系鞋带","level":2,"tag":"动作"},{"w":"打伞","level":2,"tag":"动作"},{"w":"跳绳","level":2,"tag":"运动"},{"w":"踢毽子","level":2,"tag":"运动"},{"w":"打篮球","level":2,"tag":"运动"},{"w":"踢足球","level":2,"tag":"运动"},{"w":"打乒乓球","level":2,"tag":"运动"},{"w":"游泳","level":2,"tag":"运动"},{"w":"跑步","level":2,"tag":"运动"},{"w":"钓鱼","level":2,"tag":"动作"},{"w":"爬山","level":2,"tag":"运动"},{"w":"拍照","level":2,"tag":"动作"},{"w":"自拍","level":2,"tag":"动作"},{"w":"唱歌","level":2,"tag":"动作"},{"w":"跳舞","level":2,"tag":"动作"},{"w":"弹吉他","level":2,"tag":"动作"},{"w":"弹钢琴","level":2,"tag":"动作"},{"w":"打游戏","level":2,"tag":"动作"},{"w":"看手机","level":2,"tag":"动作"},{"w":"看书","level":2,"tag":"动作"},{"w":"写字","level":2,"tag":"动作"},{"w":"画画","level":2,"tag":"动作"},{"w":"打电话","level":2,"tag":"动作"},{"w":"遛狗","level":2,"tag":"动作"},{"w":"喂猫","level":2,"tag":"动作"},{"w":"种花","level":2,"tag":"动作"},{"w":"浇花","level":2,"tag":"动作"},{"w":"排队","level":2,"tag":"场景"},{"w":"考试","level":2,"tag":"场景"},{"w":"考试作弊","level":2,"tag":"动作"},{"w":"睡觉","level":2,"tag":"动作"},{"w":"做梦","level":2,"tag":"动作"},{"w":"起床","level":2,"tag":"动作"},{"w":"上班","level":2,"tag":"场景"},{"w":"下班","level":2,"tag":"场景"},{"w":"迟到","level":2,"tag":"场景"},{"w":"加班","level":2,"tag":"场景"},{"w":"熬夜","level":2,"tag":"动作"},{"w":"煮面","level":2,"tag":"动作"},{"w":"煎蛋","level":2,"tag":"动作"},{"w":"泡茶","level":2,"tag":"动作"},{"w":"喝咖啡","level":2,"tag":"动作"},{"w":"吃火锅","level":2,"tag":"动作"},{"w":"吃烧烤","level":2,"tag":"动作"},{"w":"旅游","level":2,"tag":"动作"},{"w":"购物","level":2,"tag":"场景"},{"w":"散步","level":2,"tag":"动作"},{"w":"打喷嚏","level":2,"tag":"动作"},{"w":"打哈欠","level":2,"tag":"动作"},{"w":"伸懒腰","level":2,"tag":"动作"},{"w":"滑雪","level":2,"tag":"运动"},{"w":"滑冰","level":2,"tag":"运动"},{"w":"冲浪","level":2,"tag":"运动"},{"w":"潜水","level":2,"tag":"运动"},{"w":"跳伞","level":2,"tag":"运动"},{"w":"蹦极","level":2,"tag":"运动"},{"w":"画蛇添足","level":3,"tag":"成语"},{"w":"守株待兔","level":3,"tag":"成语"},{"w":"掩耳盗铃","level":3,"tag":"成语"},{"w":"亡羊补牢","level":3,"tag":"成语"},{"w":"井底之蛙","level":3,"tag":"成语"},{"w":"对牛弹琴","level":3,"tag":"成语"},{"w":"杯弓蛇影","level":3,"tag":"成语"},{"w":"鹤立鸡群","level":3,"tag":"成语"},{"w":"鸡飞狗跳","level":3,"tag":"成语"},{"w":"虎头蛇尾","level":3,"tag":"成语"},{"w":"狼吞虎咽","level":3,"tag":"成语"},{"w":"龙飞凤舞","level":3,"tag":"成语"},{"w":"马到成功","level":3,"tag":"成语"},{"w":"鸟语花香","level":3,"tag":"成语"},{"w":"鱼目混珠","level":3,"tag":"成语"},{"w":"鼠目寸光","level":3,"tag":"成语"},{"w":"狐假虎威","level":3,"tag":"成语"},{"w":"叶公好龙","level":3,"tag":"成语"},{"w":"一箭双雕","level":3,"tag":"成语"},{"w":"三心二意","level":3,"tag":"成语"},{"w":"七上八下","level":3,"tag":"成语"},{"w":"九牛一毛","level":3,"tag":"成语"},{"w":"十全十美","level":3,"tag":"成语"},{"w":"百发百中","level":3,"tag":"成语"},{"w":"千军万马","level":3,"tag":"成语"},{"w":"鸡犬升天","level":3,"tag":"成语"},{"w":"画龙点睛","level":3,"tag":"成语"},{"w":"坐井观天","level":3,"tag":"成语"},{"w":"人山人海","level":3,"tag":"成语"},{"w":"惊天动地","level":3,"tag":"成语"},{"w":"emo了","level":3,"tag":"网络"},{"w":"破防了","level":3,"tag":"网络"},{"w":"躺平","level":3,"tag":"网络"},{"w":"内卷","level":3,"tag":"网络"},{"w":"摆烂","level":3,"tag":"网络"},{"w":"摸鱼","level":3,"tag":"网络"},{"w":"上头","level":3,"tag":"网络"},{"w":"无语","level":3,"tag":"网络"},{"w":"社死","level":3,"tag":"网络"},{"w":"社恐","level":3,"tag":"网络"},{"w":"吃瓜","level":3,"tag":"网络"},{"w":"自闭","level":3,"tag":"网络"},{"w":"凡尔赛","level":3,"tag":"网络"},{"w":"我酸了","level":3,"tag":"网络"},{"w":"划水","level":3,"tag":"网络"},{"w":"卷王","level":3,"tag":"网络"},{"w":"吐槽","level":3,"tag":"网络"},{"w":"点赞","level":3,"tag":"网络"},{"w":"关注","level":3,"tag":"网络"},{"w":"转发","level":3,"tag":"网络"},{"w":"加好友","level":3,"tag":"网络"},{"w":"发朋友圈","level":3,"tag":"网络"},{"w":"刷视频","level":3,"tag":"网络"},{"w":"弹幕","level":3,"tag":"网络"},{"w":"表情包","level":3,"tag":"网络"},{"w":"拍一拍","level":3,"tag":"网络"},{"w":"冒泡","level":3,"tag":"网络"},{"w":"告辞","level":3,"tag":"网络"},{"w":"厉害了","level":3,"tag":"网络"},{"w":"玩手机","level":2,"tag":"动作"},{"w":"戴耳机","level":2,"tag":"动作"},{"w":"晒太阳","level":2,"tag":"动作"},{"w":"吹蜡烛","level":2,"tag":"动作"},{"w":"放烟花","level":2,"tag":"场景"},{"w":"打雪仗","level":2,"tag":"运动"},{"w":"走马观花","level":3,"tag":"成语"}]}};
+/* ===== src/data.js ===== */
+/* ===== 词库（构建时由 build.mjs 注入，测试可替换） ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  PN.BANKS = PN.BANKS || {};
+  // 构建时注入（单文件内联）；无注入时留空
+  var injected = (typeof window !== 'undefined' && window.__PN_BANKS__) || (root.__PN_BANKS__);
+  if (injected) { PN.BANKS.undercover = injected.undercover || PN.BANKS.undercover; PN.BANKS.wavelength = injected.wavelength || PN.BANKS.wavelength; PN.BANKS.mostlikely = injected.mostlikely || PN.BANKS.mostlikely; PN.BANKS.draw = injected.draw || PN.BANKS.draw; }
+  PN.Banks = {
+    undercoverPairs: function () { return (PN.BANKS.undercover && PN.BANKS.undercover.pairs) || []; },
+    spectrums: function () { return (PN.BANKS.wavelength && PN.BANKS.wavelength.spectrums) || []; },
+    prompts: function () { return (PN.BANKS.mostlikely && PN.BANKS.mostlikely.prompts) || []; },
+    words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; }
+  };
+  function rnd(n) { return Math.floor(Math.random() * n); }
+  function sample(arr, n, exclude) {
+    var pool = arr.slice();
+    if (exclude && exclude.length) {
+      var seen = {};
+      for (var i = 0; i < exclude.length; i++) seen[exclude[i]] = true;
+      pool = pool.filter(function (x) { return !seen[x]; });
+    }
+    var out = [], idx;
+    if (n >= pool.length) return pool.slice();
+    while (out.length < n && pool.length) {
+      idx = rnd(pool.length);
+      out.push(pool.splice(idx, 1)[0]);
+    }
+    return out;
+  }
+  PN.pick = {
+    rnd: rnd,
+    sample: sample,
+    undercoverPair: function (used) {
+      var pool = PN.Banks.undercoverPairs();
+      if (used && used.length) {
+        var seen = {};
+        for (var i = 0; i < used.length; i++) seen[used[i]] = true;
+        pool = pool.filter(function (p) { return !seen[p.a + '|' + p.b]; });
+      }
+      if (!pool.length) pool = PN.Banks.undercoverPairs();
+      return pool[rnd(pool.length)];
+    },
+    spectrum: function (used) {
+      var pool = PN.Banks.spectrums();
+      if (used && used.length) {
+        var seen = {};
+        for (var i = 0; i < used.length; i++) seen[used[i]] = true;
+        pool = pool.filter(function (s) { return !seen[s.left + '|' + s.right]; });
+      }
+      if (!pool.length) pool = PN.Banks.spectrums();
+      return pool[rnd(pool.length)];
+    },
+    prompt: function (used) {
+      var pool = PN.Banks.prompts();
+      if (used && used.length) {
+        var seen = {};
+        for (var i = 0; i < used.length; i++) seen[used[i]] = true;
+        pool = pool.filter(function (p) { return !seen[p]; });
+      }
+      if (!pool.length) pool = PN.Banks.prompts();
+      return pool[rnd(pool.length)];
+    },
+    drawWords: function (used, n) {
+      var pool = PN.Banks.words();
+      if (used && used.length) {
+        var seen = {};
+        for (var i = 0; i < used.length; i++) seen[used[i]] = true;
+        pool = pool.filter(function (w) { return !seen[w.w]; });
+      }
+      return sample(pool, n || 3).map(function (w) { return w.w; });
+    }
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/crypto.js ===== */
+/* ===== 轻量加密层：房间混淆 XOR + 可选 ECDH 端到端私密信封 ===== */
+(function (root) {
+  'use strict';
+  var TE = new TextEncoder(), TD = new TextDecoder();
+
+  function h32(s) {
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h >>> 0;
+  }
+  function keystream(seed, len) {
+    var x = h32(seed) || 0x9e3779b9, out = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      x ^= (x << 13); x >>>= 0; x ^= (x >>> 17); x ^= (x << 5); x >>>= 0;
+      out[i] = (x ^ (i * 167)) & 0xff;
+    }
+    return out;
+  }
+  function xor(bytes, seed) {
+    var ks = keystream(seed, bytes.length), out = new Uint8Array(bytes.length);
+    for (var i = 0; i < bytes.length; i++) out[i] = bytes[i] ^ ks[i];
+    return out;
+  }
+  function b64e(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+  }
+  function b64d(s) {
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  var subtle = (typeof crypto !== 'undefined' && crypto.subtle) ? crypto.subtle : null;
+
+  /* 私密信封：优先 ECDH-P256 + AES-GCM（https 环境）；否则退化为共享口令 XOR（file:// 环境） */
+  function Box() {
+    this.mode = 'xor';
+    this.secret = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+    this.pub = 'x:' + this.secret;
+    this._priv = null;
+    this._cache = {};
+  }
+  Box.prototype.init = function () {
+    var self = this;
+    if (!subtle) return Promise.resolve(self);
+    return subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits'])
+      .then(function (kp) {
+        self._priv = kp.privateKey;
+        return subtle.exportKey('raw', kp.publicKey);
+      })
+      .then(function (raw) { self.mode = 'ecdh'; self.pub = 'e:' + b64e(new Uint8Array(raw)); return self; })
+      .catch(function () { return self; });
+  };
+  Box.prototype._key = function (peerPub) {
+    var self = this;
+    if (self._cache[peerPub]) return self._cache[peerPub];
+    var p = subtle.importKey('raw', b64d(peerPub.slice(2)), { name: 'ECDH', namedCurve: 'P-256' }, false, [])
+      .then(function (pk) { return subtle.deriveBits({ name: 'ECDH', public: pk }, self._priv, 256); })
+      .then(function (bits) { return subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']); });
+    self._cache[peerPub] = p;
+    return p;
+  };
+  Box.prototype._pairSeed = function (peerPub) {
+    var a = this.pub.slice(2), b = peerPub.slice(2);
+    return (a < b ? a + '|' + b : b + '|' + a);
+  };
+  /** 返回 Promise<{n?:string,c:string}> */
+  Box.prototype.seal = function (peerPub, obj) {
+    var data = TE.encode(JSON.stringify(obj));
+    if (this.mode !== 'ecdh' || !peerPub || peerPub.charAt(0) !== 'e') {
+      return Promise.resolve({ c: b64e(xor(data, this._pairSeed(peerPub || 'x:none'))) });
+    }
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return this._key(peerPub)
+      .then(function (k) { return subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, data); })
+      .then(function (ct) { return { n: b64e(iv), c: b64e(new Uint8Array(ct)) }; });
+  };
+  /** 返回 Promise<any|null> */
+  Box.prototype.open = function (peerPub, env) {
+    var self = this;
+    if (!env || !env.c) return Promise.resolve(null);
+    if (!env.n || self.mode !== 'ecdh' || !peerPub || peerPub.charAt(0) !== 'e') {
+      try { return Promise.resolve(JSON.parse(TD.decode(xor(b64d(env.c), self._pairSeed(peerPub || 'x:none'))))); }
+      catch (e) { return Promise.resolve(null); }
+    }
+    return self._key(peerPub)
+      .then(function (k) { return subtle.decrypt({ name: 'AES-GCM', iv: b64d(env.n) }, k, b64d(env.c)); })
+      .then(function (pt) { return JSON.parse(TD.decode(new Uint8Array(pt))); })
+      .catch(function () { return null; });
+  };
+
+  root.PN = root.PN || {};
+  root.PN.Crypt = { h32: h32, xor: xor, keystream: keystream, b64e: b64e, b64d: b64d, Box: Box, hasSubtle: !!subtle };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/mqtt.js ===== */
+/* ===== 极简 MQTT 3.1.1 over WebSocket 客户端（零依赖，浏览器/Node 通用） ===== */
+(function (root) {
+  'use strict';
+  var TE = new TextEncoder();
+  var TD = new TextDecoder();
+
+  function concat(parts) {
+    var n = 0, i;
+    for (i = 0; i < parts.length; i++) n += parts[i].length;
+    var out = new Uint8Array(n), off = 0;
+    for (i = 0; i < parts.length; i++) { out.set(parts[i], off); off += parts[i].length; }
+    return out;
+  }
+  function varint(len) {
+    var out = [];
+    do { var b = len % 128; len = Math.floor(len / 128); if (len > 0) b |= 0x80; out.push(b); } while (len > 0);
+    return new Uint8Array(out);
+  }
+  function str(s) {
+    var b = TE.encode(s);
+    var out = new Uint8Array(b.length + 2);
+    out[0] = (b.length >> 8) & 0xff; out[1] = b.length & 0xff; out.set(b, 2);
+    return out;
+  }
+  function u16(n) { return new Uint8Array([(n >> 8) & 0xff, n & 0xff]); }
+  function pack(type, flags, parts) {
+    var body = concat(parts);
+    var vl = varint(body.length);
+    var out = new Uint8Array(1 + vl.length + body.length);
+    out[0] = (type << 4) | flags;
+    out.set(vl, 1); out.set(body, 1 + vl.length);
+    return out;
+  }
+  function toBytes(x) { return typeof x === 'string' ? TE.encode(x) : (x instanceof Uint8Array ? x : new Uint8Array(x)); }
+
+  /**
+   * opts: { urls:[wss...], clientId, keepalive, will:{topic,payload,retain},
+   *         onConnect(), onMessage(topic, bytes, retained), onStatus(status, detail) }
+   */
+  function MqttClient(opts) {
+    this.urls = opts.urls.slice();
+    this.urlIndex = 0;
+    this.clientId = opts.clientId || ('pn_' + Math.random().toString(36).slice(2, 12));
+    this.keepalive = opts.keepalive || 45;
+    this.will = opts.will || null;
+    this.onConnect = opts.onConnect || function () {};
+    this.onMessage = opts.onMessage || function () {};
+    this.onStatus = opts.onStatus || function () {};
+    this.ws = null;
+    this.buf = new Uint8Array(0);
+    this.connected = false;
+    this.closed = false;
+    this.pid = 1;
+    this.retries = 0;
+    this.outbox = [];
+    this.subs = [];
+    this._pingTimer = null;
+    this._reconnectTimer = null;
+    this._lastIn = 0;
+  }
+
+  MqttClient.prototype.status = function (s, d) { this.onStatus(s, d); };
+
+  MqttClient.prototype.connect = function () {
+    var self = this;
+    if (self.closed) return;
+    var url = self.urls[self.urlIndex % self.urls.length];
+    self.status('connecting', url);
+    var ws;
+    try { ws = new WebSocket(url, 'mqtt'); } catch (e) { self._scheduleReconnect(); return; }
+    ws.binaryType = 'arraybuffer';
+    self.ws = ws;
+    self.buf = new Uint8Array(0);
+    var opened = false;
+    var guard = setTimeout(function () { if (!opened) { try { ws.close(); } catch (e) {} } }, 9000);
+
+    ws.onopen = function () {
+      opened = true; clearTimeout(guard);
+      var flags = 0x02; // clean session
+      var payload = [str(self.clientId)];
+      if (self.will) {
+        flags |= 0x04; // will flag, qos0
+        if (self.will.retain) flags |= 0x20;
+        payload.push(str(self.will.topic));
+        var wp = toBytes(self.will.payload || '');
+        payload.push(u16(wp.length)); payload.push(wp);
+      }
+      var head = [str('MQTT'), new Uint8Array([4, flags]), u16(self.keepalive)];
+      self._send(pack(1, 0, head.concat(payload)));
+    };
+    ws.onmessage = function (ev) {
+      self._lastIn = Date.now();
+      var chunk = new Uint8Array(ev.data);
+      var merged = new Uint8Array(self.buf.length + chunk.length);
+      merged.set(self.buf, 0); merged.set(chunk, self.buf.length);
+      self.buf = merged;
+      self._parse();
+    };
+    ws.onerror = function () { /* close 会跟着来 */ };
+    ws.onclose = function () {
+      clearTimeout(guard);
+      var was = self.connected;
+      self.connected = false;
+      if (self._pingTimer) { clearInterval(self._pingTimer); self._pingTimer = null; }
+      if (self.closed) return;
+      self.status('disconnected', was ? 'lost' : 'failed');
+      if (!was) self.urlIndex++; // 连不上就换下一个 broker
+      self._scheduleReconnect();
+    };
+  };
+
+  MqttClient.prototype._scheduleReconnect = function () {
+    var self = this;
+    if (self.closed || self._reconnectTimer) return;
+    var wait = Math.min(800 * Math.pow(1.7, Math.min(self.retries, 5)), 8000);
+    self.retries++;
+    self._reconnectTimer = setTimeout(function () { self._reconnectTimer = null; self.connect(); }, wait);
+  };
+
+  MqttClient.prototype._send = function (bytes) {
+    try {
+      if (this.ws && this.ws.readyState === 1) { this.ws.send(bytes); return true; }
+    } catch (e) {}
+    return false;
+  };
+
+  MqttClient.prototype._parse = function () {
+    while (this.buf.length >= 2) {
+      var mult = 1, len = 0, i = 1, byte;
+      do {
+        if (i >= this.buf.length) return; // 长度还没收全
+        byte = this.buf[i];
+        len += (byte & 127) * mult;
+        mult *= 128; i++;
+        if (i > 5) { this.buf = new Uint8Array(0); return; }
+      } while ((byte & 128) !== 0);
+      var total = i + len;
+      if (this.buf.length < total) return;
+      var head = this.buf[0];
+      var body = this.buf.subarray(i, total);
+      this.buf = this.buf.slice(total);
+      this._handle(head >> 4, head & 0x0f, body);
+    }
+  };
+
+  MqttClient.prototype._handle = function (type, flags, body) {
+    var self = this;
+    if (type === 2) { // CONNACK
+      if (body.length >= 2 && body[1] !== 0) { self.status('error', 'CONNACK=' + body[1]); try { self.ws.close(); } catch (e) {} return; }
+      self.connected = true; self.retries = 0;
+      self.status('connected', self.urls[self.urlIndex % self.urls.length]);
+      if (self._pingTimer) clearInterval(self._pingTimer);
+      self._pingTimer = setInterval(function () {
+        if (!self.connected) return;
+        self._send(new Uint8Array([0xc0, 0x00]));
+        if (Date.now() - self._lastIn > (self.keepalive * 1000 + 15000)) { try { self.ws.close(); } catch (e) {} }
+      }, Math.max(5000, self.keepalive * 500));
+      var pending = self.outbox; self.outbox = [];
+      if (self.subs.length) self._doSubscribe(self.subs.slice());
+      self.onConnect();
+      for (var k = 0; k < pending.length; k++) self.publish(pending[k].t, pending[k].p, pending[k].o);
+      return;
+    }
+    if (type === 3) { // PUBLISH
+      var qos = (flags >> 1) & 3;
+      var tl = (body[0] << 8) | body[1];
+      var topic = TD.decode(body.subarray(2, 2 + tl));
+      var off = 2 + tl;
+      if (qos > 0) {
+        var mid = (body[off] << 8) | body[off + 1]; off += 2;
+        if (qos === 1) self._send(pack(4, 0, [u16(mid)]));
+      }
+      self.onMessage(topic, body.subarray(off), (flags & 1) === 1);
+      return;
+    }
+    if (type === 13) return; // PINGRESP
+  };
+
+  MqttClient.prototype._doSubscribe = function (topics) {
+    var parts = [u16(this.pid++ & 0xffff)];
+    for (var i = 0; i < topics.length; i++) { parts.push(str(topics[i])); parts.push(new Uint8Array([0])); }
+    this._send(pack(8, 2, parts));
+  };
+
+  MqttClient.prototype.subscribe = function (topics) {
+    var add = [];
+    for (var i = 0; i < topics.length; i++) if (this.subs.indexOf(topics[i]) < 0) { this.subs.push(topics[i]); add.push(topics[i]); }
+    if (add.length && this.connected) this._doSubscribe(add);
+  };
+
+  MqttClient.prototype.publish = function (topic, payload, opts) {
+    opts = opts || {};
+    var bytes = toBytes(payload);
+    if (!this.connected) {
+      if (opts.queue !== false) { this.outbox.push({ t: topic, p: bytes, o: opts }); if (this.outbox.length > 60) this.outbox.shift(); }
+      return false;
+    }
+    var flags = opts.retain ? 1 : 0;
+    return this._send(pack(3, flags, [str(topic), bytes]));
+  };
+
+  MqttClient.prototype.end = function () {
+    this.closed = true;
+    if (this._pingTimer) clearInterval(this._pingTimer);
+    if (this._reconnectTimer) clearTimeout(this._reconnectTimer);
+    try { this._send(new Uint8Array([0xe0, 0x00])); this.ws.close(); } catch (e) {}
+    this.connected = false;
+  };
+
+  root.PN = root.PN || {};
+  root.PN.MqttClient = MqttClient;
+  root.PN.bytes = { concat: concat, str: str, toBytes: toBytes, TE: TE, TD: TD };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/room.js ===== */
+/* ===== 房间层：主题编码 / 成员心跳 / 房主选举 / 私密下发 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var TE = new TextEncoder(), TD = new TextDecoder();
+
+  var BROKERS = [
+    { id: 'A', url: 'wss://broker.emqx.io:8084/mqtt', name: 'EMQX 公共' },
+    { id: 'B', url: 'wss://broker.hivemq.com:8884/mqtt', name: 'HiveMQ 公共' }
+  ];
+  var ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var NS = 'pn3';
+  var BEAT_MS = 4000;      // 心跳间隔
+  var OFFLINE_MS = 13000;  // 超过判定掉线
+  var DEAD_ROOM_MS = 6 * 3600 * 1000;
+  var PM_RETRY_MS = 1200;  // 私密消息未确认重传间隔（公共 broker QoS0 会丢包）
+  var PM_MAX_TRIES = 9;    // 约 15 秒内持续重传
+  var PM_WAIT_MS = 4000;   // 对端未就绪时等待其上线的最长时间
+  var ACT_RETRY_MS = 1500; // 动作未回执重传间隔
+  var ACT_MAX_TRIES = 5;
+
+  function randCode(n) {
+    var s = '';
+    for (var i = 0; i < (n || 4); i++) s += ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length));
+    return s;
+  }
+  function now() { return Date.now(); }
+
+  /**
+   * opts: { code, identity:{id,name,emoji}, brokerIndex,
+   *         onRoster(list), onHost(isHost, hostId), onState(state), onAction(action, from),
+   *         onEvent(ev), onPeer(msg, from), onPrivate(obj), onStatus(s, d) }
+   */
+  function Room(opts) {
+    this.code = String(opts.code || '').toUpperCase();
+    this.me = opts.identity;
+    this.brokerIndex = opts.brokerIndex || 0;
+    this.base = NS + '/' + this.code;
+    this.seed = 'PN|' + this.code + '|v3';
+    this.cb = opts;
+    this.box = new PN.Crypt.Box();
+    this.peers = {};        // id -> {id,name,emoji,pub,lastSeen}
+    this.hostId = null;
+    this.meta = null;
+    this.isHost = false;
+    this.lastState = null;
+    this.mqtt = null;
+    this._beat = null;
+    this._elect = null;
+    this._claimAt = 0;
+    this._joinedAt = 0;
+    this._pmSeq = 0;
+    this._pending = {};     // mid -> {to,env,mid,tries,timer}  待确认的私密消息
+    this._seen = {};        // mid -> ts  已投递过的私密消息（去重）
+    this.ready = false;
+  }
+
+  Room.prototype.topic = function (k) { return this.base + '/' + k; };
+
+  Room.prototype._enc = function (obj) {
+    return PN.Crypt.xor(TE.encode(JSON.stringify(obj)), this.seed);
+  };
+  Room.prototype._dec = function (bytes) {
+    if (!bytes || !bytes.length) return null;
+    try { return JSON.parse(TD.decode(PN.Crypt.xor(bytes, this.seed))); } catch (e) { return null; }
+  };
+
+  Room.prototype.start = function () {
+    var self = this;
+    return self.box.init().then(function () {
+      self.me.pub = self.box.pub;
+      var urls = [BROKERS[self.brokerIndex % BROKERS.length].url];
+      for (var i = 0; i < BROKERS.length; i++) if (i !== (self.brokerIndex % BROKERS.length)) urls.push(BROKERS[i].url);
+      self.mqtt = new PN.MqttClient({
+        urls: urls,
+        clientId: 'pn_' + self.me.id + '_' + Math.random().toString(36).slice(2, 7),
+        keepalive: 45,
+        will: { topic: self.topic('a'), payload: self._enc({ t: 'bye', id: self.me.id }) },
+        onStatus: function (s, d) { self.cb.onStatus && self.cb.onStatus(s, d); },
+        onConnect: function () {
+          self.mqtt.subscribe([self.base + '/#']);
+          self._beacon();
+          self.ready = true;
+        },
+        onMessage: function (t, bytes, retained) { self._onMessage(t, bytes, retained); }
+      });
+      self._joinedAt = now();
+      self.mqtt.connect();
+      self._beat = setInterval(function () { self._beacon(); self._sweep(); self._election(); }, BEAT_MS);
+      return self;
+    });
+  };
+
+  Room.prototype._beacon = function () {
+    this.publishRaw('a', { t: 'hi', id: this.me.id, name: this.me.name, emoji: this.me.emoji, pub: this.me.pub, ts: now() });
+  };
+
+  Room.prototype.publishRaw = function (k, obj, retain) {
+    if (!this.mqtt) return;
+    this.mqtt.publish(this.topic(k), this._enc(obj), { retain: !!retain, queue: k === 'a' });
+  };
+
+  Room.prototype._onMessage = function (topic, bytes, retained) {
+    var self = this;
+    var k = topic.slice(self.base.length + 1);
+    var msg = self._dec(bytes);
+    if (!msg) { if (k === 'm' && (!bytes || !bytes.length)) self.meta = null; return; }
+
+    if (k === 'a') {
+      if (msg.t === 'hi') {
+        var was = self.peers[msg.id];
+        self.peers[msg.id] = { id: msg.id, name: msg.name, emoji: msg.emoji, pub: msg.pub, lastSeen: now() };
+        if (!was && msg.id !== self.me.id) self.cb.onRoster && self.cb.onRoster(self.roster(), 'join', msg.id);
+        else self.cb.onRoster && self.cb.onRoster(self.roster());
+        if (self.isHost && !was && msg.id !== self.me.id) {
+          // 房主的 hi 不保留，晚到者学不到房主 → 收到新人 hi 时重播一次
+          self.publishRaw('a', { t: 'hi', id: self.me.id, name: self.me.name, emoji: self.me.emoji, pub: self.me.pub, ts: now() });
+          self.cb.onAction && self.cb.onAction({ t: '_joined', id: msg.id }, msg.id);
+        }
+        return;
+      }
+      if (msg.t === 'bye') {
+        delete self.peers[msg.id];
+        self.cb.onRoster && self.cb.onRoster(self.roster(), 'leave', msg.id);
+        if (self.isHost) self.cb.onAction && self.cb.onAction({ t: '_left', id: msg.id }, msg.id);
+        return;
+      }
+      if (self.peers[msg.from]) self.peers[msg.from].lastSeen = now();
+      if (msg.mid && self.isHost) {
+        // 房主回执 + 去重：动作丢包时客户端会重传，重复包只确认不重复执行
+        self.publishRaw('k', { to: msg.from, from: self.me.id, mid: msg.mid });
+        if (self._seen[msg.mid]) return;
+        self._seen[msg.mid] = now();
+        self._trimSeen();
+      }
+      if (self.isHost) self.cb.onAction && self.cb.onAction(msg, msg.from);
+      return;
+    }
+    if (k === 's') {
+      self.lastState = msg;
+      if (msg.hostId) {
+        var hp = null;
+        if (msg.players) for (var pi = 0; pi < msg.players.length; pi++) if (msg.players[pi].id === msg.hostId) hp = msg.players[pi];
+        self._noteHost(msg.hostId, hp && hp.name, hp && hp.emoji);
+      }
+      if (!self.isHost || (msg.hostId && msg.hostId !== self.me.id)) self.cb.onState && self.cb.onState(msg, retained);
+      return;
+    }
+    if (k === 'm') {
+      // 双抢收敛：谁的 meta 更新谁说了算，旧的那方主动让位并重播自己（避免互相让位导致无房主）
+      var mine = self.meta && self.meta.host === self.me.id ? self.meta : null;
+      if (mine && (msg.ts || 0) < (mine.ts || 0)) { self.publishRaw('m', mine, true); return; }
+      self.meta = msg;
+      self._noteHost(msg.host, msg.hostName);
+      if (msg.host !== self.hostId) { self.hostId = msg.host; self._applyHost(); }
+      return;
+    }
+    if (k === 'e') { if (msg.from !== self.me.id) self.cb.onEvent && self.cb.onEvent(msg); return; }
+    if (k === 'x') { if (msg.from !== self.me.id) self.cb.onPeer && self.cb.onPeer(msg, msg.from); return; }
+    if (k === 'k') {
+      if (msg.to !== self.me.id) return;
+      var pd = self._pending[msg.mid];
+      if (pd) { clearTimeout(pd.timer); delete self._pending[msg.mid]; }
+      return;
+    }
+    if (k === 'p') {
+      if (msg.to !== self.me.id) return;
+      if (msg.mid) {
+        // 先回执再投递：重传的重复包只确认不重复触发
+        self.publishRaw('k', { to: msg.from, from: self.me.id, mid: msg.mid });
+        if (self._seen[msg.mid]) return;
+        self._seen[msg.mid] = now();
+        self._trimSeen();
+      }
+      var sender = self.peers[msg.from];
+      self.box.open(sender ? sender.pub : (msg.pub || null), msg.env).then(function (obj) {
+        if (obj) self.cb.onPrivate && self.cb.onPrivate(obj, msg.from);
+      });
+      return;
+    }
+  };
+
+  Room.prototype._applyHost = function () {
+    var self = this;
+    var host = this.hostId === this.me.id;
+    var was = this.isHost;
+    this.isHost = host;
+    this.cb.onHost && this.cb.onHost(host, this.hostId);
+    // 新当选/接管：把已知成员补发给状态机，否则"先到的人"在房主上任前发过 hi，会永远进不了名单
+    if (host && !was) {
+      var list = this.roster();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id !== self.me.id) self.cb.onAction && self.cb.onAction({ t: '_joined', id: list[i].id }, list[i].id);
+      }
+    }
+  };
+
+  /** 从保留的 meta/state 里发现房主：晚到者收不到房主的历史 hi，必须靠这两处补上，
+   *  否则名单缺房主、且会误判房主掉线而抢主 */
+  Room.prototype._noteHost = function (id, name, emoji) {
+    if (!id || id === this.me.id) return;
+    var p = this.peers[id];
+    if (!p) {
+      this.peers[id] = { id: id, name: name || '房主', emoji: emoji || '😎', pub: null, lastSeen: now() };
+      this.cb.onRoster && this.cb.onRoster(this.roster(), 'join', id);
+    } else {
+      p.lastSeen = now();
+      if (name && p.name !== name) p.name = name;
+      if (emoji && p.emoji !== emoji) p.emoji = emoji;
+    }
+  };
+
+  Room.prototype.roster = function () {
+    var out = [], t = now();
+    this.peers[this.me.id] = { id: this.me.id, name: this.me.name, emoji: this.me.emoji, pub: this.me.pub, lastSeen: t };
+    for (var k in this.peers) if (Object.prototype.hasOwnProperty.call(this.peers, k)) {
+      var p = this.peers[k];
+      out.push({ id: p.id, name: p.name, emoji: p.emoji, pub: p.pub, online: (t - p.lastSeen) < OFFLINE_MS, lastSeen: p.lastSeen });
+    }
+    out.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+    return out;
+  };
+
+  Room.prototype._sweep = function () {
+    var t = now(), changed = false;
+    for (var k in this.peers) if (Object.prototype.hasOwnProperty.call(this.peers, k)) {
+      if (k !== this.me.id && t - this.peers[k].lastSeen > OFFLINE_MS * 6) { delete this.peers[k]; changed = true; }
+    }
+    if (changed) this.cb.onRoster && this.cb.onRoster(this.roster());
+  };
+
+  /** 房主选举：meta 缺失 / 房主掉线 → 在线 id 最小者接管 */
+  Room.prototype._election = function () {
+    if (!this.mqtt || !this.mqtt.connected) return;
+    var t = now();
+    var alive = this.roster().filter(function (p) { return p.online; }).map(function (p) { return p.id; }).sort();
+    if (!alive.length) return;
+    var hp = this.hostId ? this.peers[this.hostId] : null;
+    var hostAlive = !!(hp && (t - hp.lastSeen) < OFFLINE_MS * 2);
+    var metaDead = this.meta && this.meta.ts && (t - this.meta.ts > DEAD_ROOM_MS);
+    // 已知房主但还没收到它心跳（刚进房）→ 先观察一个心跳周期，别急着抢
+    if (this.hostId && !hostAlive && (t - this._joinedAt) < BEAT_MS * 2) return;
+    if (hostAlive && !metaDead) return;
+    if (alive[0] !== this.me.id) return;
+    if (t - this._claimAt < 6000) return;
+    this._claimAt = t;
+    this.claimHost();
+  };
+
+  Room.prototype.claimHost = function () {
+    this.hostId = this.me.id;
+    this.meta = { code: this.code, host: this.me.id, hostName: this.me.name, ts: now(), ver: 3 };
+    this.publishRaw('m', this.meta, true);
+    this._applyHost();
+    if (this.lastState) this.publishState(this.lastState);
+  };
+
+  Room.prototype.publishState = function (state) {
+    state.hostId = this.me.id;
+    state.ts = now();
+    this.lastState = state;
+    this.publishRaw('s', state, true);
+  };
+  Room.prototype._sendAct = function (rec) {
+    var self = this;
+    if (!self._pending[rec.mid]) return;
+    rec.tries++;
+    var out = {}, k;
+    for (k in rec.payload) out[k] = rec.payload[k];
+    out.mid = rec.mid;
+    self.publishRaw('a', out);
+    if (rec.tries >= ACT_MAX_TRIES) { delete self._pending[rec.mid]; return; }
+    clearTimeout(rec.timer);
+    rec.timer = setTimeout(function () { self._sendAct(rec); }, ACT_RETRY_MS);
+  };
+
+  Room.prototype.sendAction = function (action) {
+    action.from = this.me.id;
+    action.ts = now();
+    if (this.isHost) { this.cb.onAction && this.cb.onAction(action, this.me.id); return; }
+    var mid = this.me.id + ':' + (++this._pmSeq) + ':' + Math.random().toString(36).slice(2, 6);
+    var rec = { payload: action, mid: mid, tries: 0, timer: null };
+    this._pending[mid] = rec;
+    this._sendAct(rec);
+  };
+  Room.prototype.sendEvent = function (ev) { ev.from = this.me.id; this.publishRaw('e', ev); };
+  Room.prototype.sendPeer = function (msg) { msg.from = this.me.id; this.publishRaw('x', msg); };
+  Room.prototype._trimSeen = function () {
+    var keys = Object.keys(this._seen);
+    if (keys.length <= 300) return;
+    keys.sort(function (a, b) { return this._seen[a] - this._seen[b]; }.bind(this));
+    for (var i = 0; i < keys.length - 150; i++) delete this._seen[keys[i]];
+  };
+
+  /** 重传直到收到对端回执（'k'）；对端去重，故重传安全 */
+  Room.prototype._sendPriv = function (rec) {
+    var self = this;
+    if (!self._pending[rec.mid]) return;
+    rec.tries++;
+    self.publishRaw('p', { to: rec.to, from: self.me.id, pub: self.me.pub, mid: rec.mid, env: rec.env });
+    if (rec.tries >= PM_MAX_TRIES) { delete self._pending[rec.mid]; return; }
+    clearTimeout(rec.timer);
+    rec.timer = setTimeout(function () { self._sendPriv(rec); }, PM_RETRY_MS * (rec.tries >= 3 ? 2 : 1));
+  };
+
+  /** 等对端出现在花名册（加入稍晚于建房时不要静默丢弃） */
+  Room.prototype._waitPeer = function (pid, ms) {
+    var self = this, t0 = now();
+    return new Promise(function (resolve) {
+      (function poll() {
+        if (self.peers[pid]) return resolve(self.peers[pid]);
+        if (now() - t0 >= ms) return resolve(null);
+        setTimeout(poll, 250);
+      })();
+    });
+  };
+
+  Room.prototype.sendPrivate = function (pid, obj) {
+    var self = this;
+    if (pid === self.me.id) { self.cb.onPrivate && self.cb.onPrivate(obj, self.me.id); return Promise.resolve(); }
+    return self._waitPeer(pid, PM_WAIT_MS).then(function (peer) {
+      if (!peer) return null;
+      var mid = self.me.id + ':' + (++self._pmSeq) + ':' + Math.random().toString(36).slice(2, 6);
+      return self.box.seal(peer.pub, obj).then(function (env) {
+        var rec = { to: pid, mid: mid, env: env, tries: 0, timer: null };
+        self._pending[mid] = rec;
+        self._sendPriv(rec);
+        return mid;
+      });
+    });
+  };
+
+  Room.prototype.leave = function (disband) {
+    if (this._beat) clearInterval(this._beat);
+    for (var mid in this._pending) clearTimeout(this._pending[mid].timer);
+    this._pending = {};
+    this.publishRaw('a', { t: 'bye', id: this.me.id });
+    if (disband && this.isHost) {
+      this.mqtt.publish(this.topic('m'), new Uint8Array(0), { retain: true });
+      this.mqtt.publish(this.topic('s'), new Uint8Array(0), { retain: true });
+    }
+    var m = this.mqtt;
+    setTimeout(function () { try { m.end(); } catch (e) {} }, 250);
+  };
+
+  /** 探测房间是否已存在（用于建房防撞号 / 加入前校验）：Promise<meta|null> */
+  Room.probe = function (code, brokerIndex, ms) {
+    return new Promise(function (resolve) {
+      var base = NS + '/' + code.toUpperCase();
+      var seed = 'PN|' + code.toUpperCase() + '|v3';
+      var done = false;
+      var c = new PN.MqttClient({
+        urls: [BROKERS[(brokerIndex || 0) % BROKERS.length].url],
+        clientId: 'pn_probe_' + Math.random().toString(36).slice(2, 9),
+        onConnect: function () { c.subscribe([base + '/m']); },
+        onMessage: function (t, bytes) {
+          if (done) return;
+          var meta = null;
+          try { meta = JSON.parse(new TextDecoder().decode(PN.Crypt.xor(bytes, seed))); } catch (e) {}
+          if (meta) { done = true; try { c.end(); } catch (e) {} resolve(meta); }
+        }
+      });
+      c.connect();
+      setTimeout(function () { if (!done) { done = true; try { c.end(); } catch (e) {} resolve(null); } }, ms || 2500);
+    });
+  };
+
+  PN.Room = Room;
+  PN.BROKERS = BROKERS;
+  PN.randCode = randCode;
+  PN.NS = NS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/host.js ===== */
+/* ===== 房主权威状态机：公共 reducer + 计时器 + 私密下发 =====
+ * state 结构：
+ * {
+ *   v: 3, mode: 'lobby'|'undercover'|'wavelength'|'mostlikely'|'drawgame',
+ *   phase: 'lobby'|'wait'|'setup'|'round'|'over'|...（游戏自定义）,
+ *   players: [{id,name,emoji,score,streak,host,online}],
+ *   settings: { maxPlayers, language, ...mode 配置 },
+ *   log: [{t, kind, text}],
+ *   g: {}   —— 游戏自定义（注意：绝不能包含任何玩家秘密）
+ *   hostId, ts
+ * }
+ * 秘密（词、角色）只通过 host.sendSecret(id, obj) 私密下发，不进 state。
+ */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  PN.games = {};
+
+  function Host(room, onStateChange) {
+    this.room = room;
+    this.onStateChange = onStateChange || function () {};
+    this.state = null;
+    this.timers = {};        // name -> timeoutId
+    this.secrets = {};       // pid -> { ...游戏私密数据 }
+    this.secretCache = {};   // pid -> 已下发的最简缓存（重发用）
+  }
+
+  Host.prototype.stateForUI = function () {
+    return this.state ? JSON.parse(JSON.stringify(this.state)) : null;
+  };
+  Host.prototype.g = function () { return this.state ? this.state.g : {}; };
+
+  Host.prototype.now = function () { return Date.now(); };
+
+  Host.prototype.dispatch = function (action, from) {
+    if (!this.state) return;
+    // 「回大厅」是全局导航：游戏只在 over 阶段自己处理，进行中直接由大厅层接管
+    if (action.t === 'lobby') return this._lobbyAction(action, from);
+    var game = this.state.mode && this.state.mode !== 'lobby' ? PN.games[this.state.mode] : null;
+    if (game && game.action) {
+      var r = game.action(this, action, from);
+      if (r !== undefined) this.emit();
+      return;
+    }
+    this._lobbyAction(action, from);
+  };
+
+  Host.prototype._lobbyAction = function (action, from) {
+    var s = this.state;
+    if (!from) return;
+    if (action.t === '_joined' || action.t === 'hi') {
+      this.upsertPlayer(from);
+      this.emit();
+      return;
+    }
+    if (action.t === '_left') {
+      this.removePlayer(from);
+      this.emit();
+      return;
+    }
+    if (action.t === 'setName') {
+      this.upsertPlayer(from, { name: String(action.name || '').slice(0, 16), emoji: String(action.emoji || '🙂').slice(0, 4) });
+      this.emit();
+      return;
+    }
+    if (action.t === 'setProfile' && this.state.phase === 'lobby') {
+      this.upsertPlayer(from, { name: String(action.name || '').slice(0, 16), emoji: String(action.emoji || '🙂').slice(0, 4) });
+      this.emit();
+      return;
+    }
+    if (!this.amHost(from)) return;
+    if (action.t === 'start') {
+      var mode = action.mode;
+      var game = PN.games[mode];
+      if (!game) return;
+      var players = this.state.players.filter(function (p) { return p.online; });
+      if (players.length < (game.minPlayers || 2)) { this.toast('人数不够：' + game.name + ' 至少 ' + game.minPlayers + ' 人'); return; }
+      this.state.mode = mode;
+      game.init(this);
+      this.emit();
+      return;
+    }
+    if (action.t === 'lobby') { this.goLobby(); return; }
+    if (action.t === 'settings') {
+      for (var k in action.values) if (Object.prototype.hasOwnProperty.call(action.values, k)) {
+        this.state.settings[k] = this.coerce(this.state.settings[k], action.values[k]);
+      }
+      this.emit();
+      return;
+    }
+    if (action.t === 'kick') { this.removePlayer(action.id); this.emit(); return; }
+    if (action.t === 'resetScores') {
+      this.state.players.forEach(function (p) { p.score = 0; p.streak = 0; });
+      this.emit();
+      return;
+    }
+  };
+
+  Host.prototype.coerce = function (cur, val) {
+    if (typeof cur === 'number') { var n = Number(val); return isNaN(n) ? cur : n; }
+    if (typeof cur === 'boolean') return !!val;
+    return val;
+  };
+
+  Host.prototype.amHost = function (id) { return id === this.state.hostId; };
+  Host.prototype.isHost = function () { return this.room.isHost; };
+
+  Host.prototype.fresh = function (hostPid, hostName, hostEmoji) {
+    this.state = {
+      v: 3,
+      mode: 'lobby',
+      phase: 'lobby',
+      players: [],
+      settings: {
+        roomName: '',
+        undercover: { numUnder: 1, blank: false, textMode: true, roundSec: 180 },
+        wavelength: { rounds: 6 },
+        mostlikely: { rounds: 8, eachSec: 30 },
+        drawgame: { rounds: 6, drawSec: 90, roundsPerSet: 3 }
+      },
+      log: [],
+      g: {},
+      hostId: hostPid,
+      ts: this.now()
+    };
+    this.upsertPlayer(hostPid, { name: hostName, emoji: hostEmoji });
+    this.emit();
+    return this.state;
+  };
+
+  Host.prototype.upsertPlayer = function (id, patch) {
+    var s = this.state, found = null;
+    for (var i = 0; i < s.players.length; i++) if (s.players[i].id === id) { found = s.players[i]; break; }
+    if (!found) {
+      var p = this.room.peers[id];
+      found = { id: id, name: (p && p.name) || '玩家', emoji: (p && p.emoji) || '🙂', score: 0, streak: 0, host: id === s.hostId, online: true, wins: 0 };
+      s.players.push(found);
+    }
+    if (patch) {
+      if (patch.name !== undefined) found.name = patch.name;
+      if (patch.emoji !== undefined) found.emoji = patch.emoji;
+    }
+    found.online = true;
+    return found;
+  };
+
+  Host.prototype.removePlayer = function (id) {
+    var s = this.state;
+    s.players = s.players.filter(function (p) { return p.id !== id; });
+    var g = PN.games[s.mode];
+    if (g && g.onLeave) g.onLeave(this, id);
+  };
+
+  Host.prototype.player = function (id) {
+    if (!this.state) return null;
+    for (var i = 0; i < this.state.players.length; i++) if (this.state.players[i].id === id) return this.state.players[i];
+    return null;
+  };
+  Host.prototype.onlinePlayers = function () {
+    return this.state.players.filter(function (p) { return p.online; });
+  };
+
+  Host.prototype.emit = function () {
+    this.state.ts = this.now();
+    this.room.publishState(this.state);
+    this.onStateChange(this.stateForUI());
+  };
+  Host.prototype.emitSoon = function (ms) {
+    var self = this;
+    setTimeout(function () { self.emit(); }, ms || 30);
+  };
+
+  Host.prototype.addScore = function (id, delta) {
+    var p = this.player(id);
+    if (p) { p.score = (p.score || 0) + delta; }
+  };
+
+  Host.prototype.toast = function (text, kind) {
+    this.state.log.push({ t: this.now(), kind: kind || 'info', text: text });
+    if (this.state.log.length > 40) this.state.log.shift();
+  };
+  Host.prototype.event = function (ev) { this.room.sendEvent(ev); };
+
+  Host.prototype.after = function (name, ms, fn) {
+    this.clearTimer(name);
+    var self = this;
+    this.timers[name] = setTimeout(function () { delete self.timers[name]; fn(); }, ms);
+  };
+  Host.prototype.every = function (name, ms, fn) {
+    this.clearTimer(name);
+    var self = this;
+    this.timers[name] = setInterval(function () { fn(); }, ms);
+  };
+  Host.prototype.clearTimer = function (name) {
+    if (this.timers[name]) { clearTimeout(this.timers[name]); clearInterval(this.timers[name]); delete this.timers[name]; }
+  };
+  Host.prototype.clearAll = function () {
+    for (var k in this.timers) if (Object.prototype.hasOwnProperty.call(this.timers, k)) { clearTimeout(this.timers[k]); clearInterval(this.timers[k]); }
+    this.timers = {};
+  };
+
+  Host.prototype.sendSecret = function (pid, obj) {
+    this.secretCache[pid] = obj;
+    this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: obj });
+  };
+  Host.prototype.resendSecret = function (pid) {
+    if (this.secretCache[pid]) this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: this.secretCache[pid] });
+  };
+  Host.prototype.revealAll = function (obj) {
+    var self = this, s = this.state;
+    s.players.forEach(function (p) {
+      self.room.sendPrivate(p.id, { kind: 'reveal', mode: s.mode, obj: obj });
+    });
+  };
+
+  Host.prototype.goLobby = function () {
+    this.clearAll();
+    var self = this;
+    var scores = {};
+    this.state.players.forEach(function (p) { scores[p.id] = p.score; });
+    this.state.mode = 'lobby';
+    this.state.phase = 'lobby';
+    this.state.g = {};
+    this.state.players.forEach(function (p) {
+      p.score = scores[p.id] || 0; p.streak = 0; p.wins = 0; p.online = !!self.room.peers[p.id];
+    });
+    this.emit();
+  };
+
+  /** 借宿到已有 state（新当选房主继续游戏） */
+  Host.prototype.adopt = function (state) {
+    this.clearAll();
+    this.state = JSON.parse(JSON.stringify(state));
+    this.state.hostId = this.room.me.id;
+    var game = PN.games[this.state.mode];
+    if (game && game.resume) game.resume(this);
+    this.emit();
+  };
+  Host.prototype.destroy = function () { this.clearAll(); };
+
+  PN.Host = Host;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/games/drawgame.js ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var ID = 'drawgame';
+  var NAME = '你画我猜';
+  var EMOJI = '🎨';
+
+  // ----- 闭包：绝不进入 state -----
+  var _rounds = {}; // { roundNum: { words:[], answer: null|string, segments:[], painterBonus:bool } }
+
+  function min(a, b) { return a < b ? a : b; }
+  function max(a, b) { return a > b ? a : b; }
+  function round(n) { return Math.round(n); }
+
+  /** 归一化猜测文本 */
+  function norm(s) {
+    s = String(s || '');
+    s = s.replace(/[\uFF01-\uFF5E]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    });
+    s = s.replace(/\s+/g, '');
+    s = s.replace(/[，。！？、；：""''（）【】《》\.,!?;:'"()\[\]{}<>\/\\\-_=+~`@#$%^&*|]/g, '');
+    return s.toLowerCase();
+  }
+
+  function getRD(round) {
+    if (!_rounds[round]) _rounds[round] = { words: [], answer: null, segments: [], painterBonus: false };
+    return _rounds[round];
+  }
+
+  /** 广播 peer 消息（画布数据，不走 state） */
+  function peer(host, msg) {
+    if (host.room && host.room.sendPeer) host.room.sendPeer(msg);
+  }
+
+  /** 进入绘画阶段 */
+  function startDraw(host, answer) {
+    var g = host.g();
+    var settings = host.state.settings.drawgame || {};
+    var drawSec = settings.drawSec || 90;
+    g.cur.phase = 'draw';
+    g.cur.deadline = host.now() + drawSec * 1000;
+    host.event({ t: 'word_picked', painter: g.cur.painter, wordLen: answer.length });
+    host.emit();
+
+    host.after('drawgame_draw', drawSec * 1000, function () {
+      var g2 = host.g();
+      if (g2.cur && g2.cur.phase === 'draw' && g2.cur.painter === g.cur.painter) {
+        doReveal(host);
+      }
+    });
+  }
+
+  /** 揭示答案 */
+  function doReveal(host) {
+    var g = host.g();
+    var rd = getRD(g.round);
+    var answer = rd.answer || '???';
+    g.cur.phase = 'reveal';
+    g.cur.deadline = host.now() + 5000;
+    host.event({ t: 'reveal', answer: answer, painter: g.cur.painter });
+    host.emit();
+    host.after('drawgame_reveal', 5000, function () { nextRound(host); });
+  }
+
+  /** 猜中处理 */
+  function correct(host, who, text, secLeft) {
+    var g = host.g();
+    var rd = getRD(g.round);
+    var settings = host.state.settings.drawgame || {};
+    var drawSec = settings.drawSec || 90;
+    var used = drawSec - secLeft;
+    var score = min(300, round(1000 / (5 + max(0, used))));
+
+    host.addScore(who, score);
+    host.event({ t: 'correct', who: who, text: text, secLeft: secLeft, score: score });
+
+    if (!rd.painterBonus) {
+      host.addScore(g.cur.painter, 400);
+      rd.painterBonus = true;
+      host.event({ t: 'painter_bonus', painter: g.cur.painter, score: 400 });
+    }
+
+    var p = host.player(who);
+    host.toast('🎉 ' + (p ? p.name : who) + ' 猜对了！+ ' + score, 'good');
+    host.emit();
+    doReveal(host);
+  }
+
+  /** 自动替画家选第一个词 */
+  function autoPick(host, painter) {
+    var g = host.g();
+    var rd = getRD(g.round);
+    var picked = (rd.words && rd.words[0]) || '???';
+    rd.answer = picked;
+    startDraw(host, picked);
+  }
+
+  /** 进入下一回合 / 结束 */
+  function nextRound(host) {
+    var g = host.g();
+    var s = host.state;
+    var settings = s.settings.drawgame || {};
+    var rounds = settings.rounds || 6;
+
+    if (g.round >= rounds) {
+      g.cur = null;
+      g.done = true;
+      var players = host.state.players;
+      var winner = null, maxScore = -1;
+      for (var i = 0; i < players.length; i++) {
+        if (players[i].score > maxScore) { maxScore = players[i].score; winner = players[i].id; }
+      }
+      g.winner = winner;
+      host.event({ t: 'gameover', players: players.map(function (p) { return { id: p.id, name: p.name, score: p.score }; }) });
+      host.toast('🎨 游戏结束！' + (winner ? host.player(winner).name : '??') + ' 画成了全场最佳！', 'good');
+      host.emit();
+      return;
+    }
+
+    g.round = (g.round || 0) + 1;
+    g.orderIdx = (g.orderIdx || -1) + 1;
+    if (g.orderIdx >= g.order.length) g.orderIdx = 0;
+
+    var painter = g.order[g.orderIdx];
+    var online = host.onlinePlayers();
+    var onlineIds = {};
+    for (var i = 0; i < online.length; i++) onlineIds[online[i].id] = true;
+
+    if (!onlineIds[painter]) {
+      host.after('drawgame_skip', 100, function () { nextRound(host); });
+      return;
+    }
+
+    var pi = g.order.indexOf(painter);
+    var left = g.order[(pi - 1 + g.order.length) % g.order.length];
+    var right = g.order[(pi + 1) % g.order.length];
+
+    var words = PN.pick.drawWords(g.used, 3);
+    for (var wi = 0; wi < words.length; wi++) {
+      if (g.used.indexOf(words[wi]) === -1) g.used.push(words[wi]);
+    }
+
+    var rd = getRD(g.round);
+    rd.words = words;
+    rd.answer = null;
+    rd.segments = [];
+    rd.painterBonus = false;
+
+    g.cur = {
+      painter: painter,
+      left: left,
+      right: right,
+      phase: 'pick',
+      deadline: host.now() + 30000
+    };
+
+    host.sendSecret(painter, { words: words, drawSec: (settings.drawSec || 90), round: g.round });
+
+    host.after('drawgame_pick', 30000, function () {
+      var g2 = host.g();
+      if (g2.cur && g2.cur.phase === 'pick' && g2.cur.painter === painter) {
+        autoPick(host, painter);
+      }
+    });
+
+    host.emit();
+  }
+
+  // ===== 游戏模块 =====
+  var game = {
+    id: ID,
+    name: NAME,
+    emoji: EMOJI,
+    blurb: '你画我猜，灵魂画手集合！🎨',
+    minPlayers: 2,
+    maxPlayers: 12,
+
+    init: function (host) {
+      var s = host.state;
+      var settings = s.settings.drawgame || (s.settings.drawgame = { rounds: 6, drawSec: 90 });
+      s.phase = 'round';
+
+      var online = host.onlinePlayers();
+      var order = [];
+      for (var i = 0; i < online.length; i++) order.push(online[i].id);
+      for (var i = order.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+      }
+
+      s.g = {
+        round: 0,
+        used: [],
+        order: order,
+        orderIdx: -1,
+        cur: null,
+        done: false,
+        winner: null
+      };
+
+      _rounds = {};
+
+      host.toast('🎨 你画我猜开始！第一位画家即将诞生...', 'good');
+      host.emit();
+      nextRound(host);
+    },
+
+    action: function (host, action, from) {
+      var g = host.g();
+      if (!g) return;
+
+      // 房主控制
+      if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
+      if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
+
+      // 新玩家加入 / 重连 → 发送回放（回放走私密通道）
+      if (action.t === '_joined' || action.t === 'hi' || action.t === '_replay') {
+        if (g.cur && g.cur.phase === 'draw' && from) {
+          var rd = getRD(g.round);
+          if (rd.segments && rd.segments.length) {
+            host.sendSecret(from, { replay: rd.segments, round: g.round });
+          }
+        }
+        return;
+      }
+
+      // ----- 画笔数据（peer 转发，不进 state） -----
+      if (action.t === 'peer') {
+        if (g.cur && g.cur.phase === 'draw' && action.msg && action.msg.s) {
+          var rd = getRD(g.round);
+          rd.segments = rd.segments.concat(action.msg.s);
+        }
+        if (action.msg) peer(host, action.msg);
+        return;
+      }
+      if (action.t === 'clear') {
+        peer(host, { t: 'clear' });
+        return;
+      }
+      if (action.t === 'style') {
+        peer(host, { t: 'style', color: action.color, w: action.w });
+        return;
+      }
+
+      if (!from) return;
+
+      // ----- 选词 -----
+      if (action.t === 'pick' && g.cur && g.cur.phase === 'pick' && g.cur.painter === from) {
+        var rd = getRD(g.round);
+        var answer = null;
+        if (typeof action.i === 'number' && rd.words && rd.words[action.i]) {
+          answer = rd.words[action.i];
+        } else if (action.word) {
+          answer = action.word;
+        } else if (rd.words && rd.words[0]) {
+          answer = rd.words[0];
+        }
+        if (answer) {
+          rd.answer = answer;
+          host.clearTimer('drawgame_pick');
+          startDraw(host, answer);
+        }
+        return;
+      }
+
+      // ----- 猜词 -----
+      if (action.t === 'guess' && g.cur && g.cur.phase === 'draw' && g.cur.painter !== from) {
+        var text = String(action.text || '');
+        if (!text) return;
+        var rd = getRD(g.round);
+        if (!rd.answer) return;
+        if (norm(text) === norm(rd.answer)) {
+          var secLeft = g.cur.deadline ? round(max(0, g.cur.deadline - host.now()) / 1000) : 0;
+          correct(host, from, text, secLeft);
+        }
+        return;
+      }
+    },
+
+    resume: function (host) {
+      var g = host.g();
+      if (!g || !g.cur) return;
+
+      var now = host.now();
+      var remaining = max(0, g.cur.deadline - now);
+      var phase = g.cur.phase;
+
+      if (phase === 'pick') {
+        host.after('drawgame_pick', remaining, function () {
+          var g2 = host.g();
+          if (g2.cur && g2.cur.phase === 'pick') autoPick(host, g2.cur.painter);
+        });
+      } else if (phase === 'draw') {
+        host.after('drawgame_draw', remaining, function () {
+          var g2 = host.g();
+          if (g2.cur && g2.cur.phase === 'draw') doReveal(host);
+        });
+      } else if (phase === 'reveal') {
+        host.after('drawgame_reveal', remaining, function () { nextRound(host); });
+      }
+    },
+
+    onLeave: function (host, id) {
+      var g = host.g();
+      if (!g || !g.cur) return;
+      if (g.cur.painter === id) {
+        host.clearTimer('drawgame_pick');
+        host.clearTimer('drawgame_draw');
+        host.toast('🎨 画家溜了，自动换人！', 'info');
+        host.emit();
+        nextRound(host);
+      }
+    }
+  };
+
+  PN.games[ID] = game;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+/* ===== src/games/mostlikely.js ===== */
+/* ===== 谁最有可能：投票选出最符合描述的玩家 =====
+ * 每回合：出题 → 投票 → 结算 → 下一回合
+ * 秘密：无（所有信息公开）
+ * g 字段：{ round, used, cur, last, done, winner, settings }
+ */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var M = {
+    id: 'mostlikely',
+    name: '谁最有可能',
+    emoji: '🎯',
+    blurb: '读题后投票，选出最符合描述的人',
+    minPlayers: 3,
+    maxPlayers: 12
+  };
+
+  function getSettings(host) {
+    var s = host.state.settings.mostlikely || {};
+    return {
+      rounds: s.rounds || 8,
+      eachSec: s.eachSec || 30
+    };
+  }
+
+  function nextRound(host) {
+    var g = host.g();
+    var settings = g.settings;
+    g.round++;
+
+    if (g.round > settings.rounds) {
+      endGame(host);
+      return;
+    }
+
+    // 抽题（去重键就是题目本身）
+    var q = PN.pick.prompt(g.used);
+    g.used.push(q);
+
+    g.cur = {
+      q: q,
+      votes: {},
+      deadline: host.now() + settings.eachSec * 1000
+    };
+    g.last = null;
+    host.state.phase = 'vote';
+
+    host.event({ t: 'question', q: q, round: g.round, total: settings.rounds });
+    host.emit();
+
+    // 倒计时自动结算
+    host.after('vote', settings.eachSec * 1000, function () {
+      settleRound(host);
+    });
+  }
+
+  function settleRound(host) {
+    host.clearTimer('vote');
+
+    var g = host.g();
+    if (!g.cur) { host.emit(); return; }
+
+    var votes = g.cur.votes || {};
+
+    // 只统计在线玩家获得的票
+    var onlinePlayers = host.onlinePlayers();
+    var online = {};
+    for (var i = 0; i < onlinePlayers.length; i++) {
+      online[onlinePlayers[i].id] = true;
+    }
+
+    var counts = {};
+    var totalVotes = 0;
+    for (var voterId in votes) {
+      if (Object.prototype.hasOwnProperty.call(votes, voterId)) {
+        var targetId = votes[voterId];
+        if (online[targetId]) {
+          counts[targetId] = (counts[targetId] || 0) + 1;
+          totalVotes++;
+        }
+      }
+    }
+
+    // 找最高票
+    var maxVotes = 0;
+    for (var id in counts) {
+      if (Object.prototype.hasOwnProperty.call(counts, id)) {
+        if (counts[id] > maxVotes) maxVotes = counts[id];
+      }
+    }
+
+    var winners = [];
+    if (maxVotes > 0) {
+      for (var id2 in counts) {
+        if (Object.prototype.hasOwnProperty.call(counts, id2)) {
+          if (counts[id2] === maxVotes) {
+            winners.push(id2);
+            host.addScore(id2, 3 * maxVotes);
+          }
+        }
+      }
+    }
+
+    g.last = {
+      counts: JSON.parse(JSON.stringify(counts)),
+      winners: winners.slice()
+    };
+    g.cur = null;
+    host.state.phase = 'reveal';
+
+    if (winners.length > 0) {
+      host.event({ t: 'reveal', counts: counts, winners: winners, maxVotes: maxVotes });
+    } else {
+      host.toast('这回合没人投票，大家太羞涩了😳', 'info');
+      host.event({ t: 'reveal', counts: {}, winners: [], maxVotes: 0 });
+    }
+
+    host.emit();
+
+    // 短暂展示后自动下一回合
+    host.after('next', 3000, function () {
+      nextRound(host);
+    });
+  }
+
+  function endGame(host) {
+    host.clearTimer('next');
+
+    var g = host.g();
+    g.done = true;
+    host.state.phase = 'over';
+
+    // 计算全场最高分
+    var players = host.state.players;
+    var topScore = 0;
+    var topPlayer = null;
+    var tie = false;
+    for (var i = 0; i < players.length; i++) {
+      if (players[i].score > topScore) {
+        topScore = players[i].score;
+        topPlayer = players[i];
+        tie = false;
+      } else if (players[i].score === topScore && topScore > 0) {
+        tie = true;
+      }
+    }
+
+    if (topPlayer && !tie) {
+      topPlayer.wins = (topPlayer.wins || 0) + 1;
+      g.winner = topPlayer.id;
+    } else {
+      g.winner = null;
+    }
+
+    var playerScores = players.map(function (p) {
+      return { id: p.id, name: p.name, score: p.score };
+    });
+    host.event({ t: 'gameover', winner: g.winner, players: playerScores });
+    host.emit();
+  }
+
+  M.init = function (host) {
+    var g = host.g();
+    var settings = getSettings(host);
+    host.state.phase = 'round';
+    g.round = 0;
+    g.used = [];
+    g.cur = null;
+    g.last = null;
+    g.done = false;
+    g.winner = null;
+    g.settings = settings;
+    host.emit();
+    nextRound(host);
+  };
+
+  M.action = function (host, action, from) {
+    var g = host.g();
+
+    // 投票
+    if (action.t === 'vote') {
+      if (host.state.phase !== 'vote' || !g.cur) return;
+      var targetId = action.id;
+      var target = host.player(targetId);
+      if (!target) return;
+
+      // 记录投票（允许改票覆盖）
+      g.cur.votes[from] = targetId;
+
+      // 检查是否所有在线玩家都投了
+      var online = host.onlinePlayers();
+      var voted = 0;
+      for (var i = 0; i < online.length; i++) {
+        if (g.cur.votes[online[i].id] !== undefined) voted++;
+      }
+      if (voted >= online.length && online.length > 0) {
+        // 全员投票，提前结算
+        settleRound(host);
+      } else {
+        host.emitSoon(50);
+      }
+      return;
+    }
+
+    // 房主：再来一局
+    if (action.t === 'again') {
+      if (!host.isHost()) return;
+      host.state.phase = 'round';
+      g.round = 0;
+      g.used = [];
+      g.cur = null;
+      g.last = null;
+      g.done = false;
+      g.winner = null;
+      host.emit();
+      nextRound(host);
+      return;
+    }
+
+    // 房主：回大厅
+    if (action.t === 'lobby') {
+      if (!host.isHost()) return;
+      host.goLobby();
+      return;
+    }
+  };
+
+  M.resume = function (host) {
+    var g = host.g();
+    if (!g.settings) {
+      g.settings = getSettings(host);
+    }
+
+    // 根据当前 phase 重建计时器
+    if (host.state.phase === 'vote' && g.cur && g.cur.deadline) {
+      var remaining = g.cur.deadline - host.now();
+      if (remaining > 0) {
+        host.after('vote', remaining, function () {
+          settleRound(host);
+        });
+      } else {
+        settleRound(host);
+      }
+    } else if (host.state.phase === 'reveal') {
+      host.after('next', 3000, function () {
+        nextRound(host);
+      });
+    } else if (host.state.phase === 'over') {
+      // 游戏结束，无需计时器
+    }
+  };
+
+  M.onLeave = function (host, id) {
+    var g = host.g();
+    if (!g.cur) return;
+
+    // 移除离开玩家的投票
+    if (g.cur.votes && g.cur.votes[id] !== undefined) {
+      delete g.cur.votes[id];
+    }
+
+    // 检查剩余在线玩家是否已全部投票
+    if (host.state.phase === 'vote') {
+      var online = host.onlinePlayers();
+      var voted = 0;
+      for (var i = 0; i < online.length; i++) {
+        if (g.cur.votes[online[i].id] !== undefined) voted++;
+      }
+      if (voted >= online.length && online.length > 0) {
+        settleRound(host);
+      }
+    }
+  };
+
+  PN.games['mostlikely'] = M;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/games/undercover.js ===== */
+/* ===== 谁是卧底 =====
+ * 词、角色只通过 host.sendSecret 下发；卧底名单存在模块闭包（绝不进 state.g）
+ * 流程：setup(房主选边) → describe → vote/revote → (blankGuess) → 下一轮/over
+ */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var M = {};
+  M.id = 'undercover';
+  M.name = '谁是卧底';
+  M.emoji = '🕵️';
+  M.blurb = '每人拿到一个词，找出卧底，或者骗过所有人！';
+  M.minPlayers = 3;
+  M.maxPlayers = 12;
+
+  var _priv = new WeakMap(); // host -> { under:[ids], blankId, side, civilWord, underWord, pair }
+
+  function priv(host) {
+    if (!_priv.has(host)) _priv.set(host, {});
+    return _priv.get(host);
+  }
+  function alive(host) { return host.g().alive; }
+
+  M.init = function (host) {
+    var s = host.state;
+    var st = s.settings.undercover || {};
+    s.g = {
+      phase: 'setup',
+      side: 'random',
+      round: 0,
+      used: [],
+      alive: [],
+      dead: [],
+      desc: [],
+      descCount: 0,
+      votes: {},
+      counts: {},
+      revotePool: null,
+      blankEliminated: false,
+      blankGuess: null,
+      winner: null,
+      scores: {},
+      textMode: st.textMode !== false,
+      numUnder: st.numUnder === 2 ? 2 : 1,
+      blank: !!st.blank,
+      deadline: 0,
+      recovering: false
+    };
+    _priv.set(host, {});
+    host.toast('🕵️ 谁是卧底 准备就绪，房主开局！', 'info');
+    host.emit();
+  };
+
+  function deal(host) {
+    var g = host.g();
+    var s = host.state;
+    var st = s.settings.undercover || {};
+    var numUnder = st.numUnder === 2 ? 2 : 1;
+    var blank = !!st.blank;
+    var textMode = st.textMode !== false;
+    var roundSec = st.roundSec || 180;
+
+    var players = host.onlinePlayers();
+    var total = players.length;
+    if (numUnder + (blank ? 1 : 0) >= total || total < 3) {
+      host.toast('人数不够：至少需要 ' + (numUnder + (blank ? 1 : 0) + 1) + ' 人', 'bad');
+      return;
+    }
+
+    var pair = PN.pick.undercoverPair(g.used);
+    var key = pair.a + '|' + pair.b;
+    if (g.used.indexOf(key) === -1) g.used.push(key);
+
+    var side = g.side === 'a' || g.side === 'b' ? g.side : (Math.random() < 0.5 ? 'a' : 'b');
+    var underWord = side === 'a' ? pair.a : pair.b;
+    var civilWord = side === 'a' ? pair.b : pair.a;
+
+    var ids = players.map(function (p) { return p.id; });
+    for (var i = ids.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+    }
+    var underIds = ids.slice(0, numUnder);
+    var blankId = blank ? ids[numUnder] : null;
+    var civilIds = blank ? ids.slice(numUnder + 1) : ids.slice(numUnder);
+
+    priv(host).under = underIds;
+    priv(host).blankId = blankId;
+    priv(host).side = side;
+    priv(host).underWord = underWord;
+    priv(host).civilWord = civilWord;
+    priv(host).pair = pair;
+
+    g.round = 1;
+    g.alive = ids.slice();
+    g.dead = [];
+    g.desc = [];
+    g.descCount = 0;
+    g.votes = {};
+    g.counts = {};
+    g.revotePool = null;
+    g.blankEliminated = false;
+    g.blankGuess = null;
+    g.winner = null;
+    g.scores = {};
+    g.textMode = textMode;
+    g.numUnder = numUnder;
+    g.blank = blank;
+    g.phase = 'describe';
+    g.deadline = host.now() + roundSec * 1000;
+    g.recovering = false;
+
+    var base = { round: g.round, underCount: numUnder, blank: false, textMode: textMode };
+    for (var c = 0; c < civilIds.length; c++) host.sendSecret(civilIds[c], { word: civilWord, role: 'civil', round: 1, underCount: numUnder, blank: false, textMode: textMode });
+    for (var u = 0; u < underIds.length; u++) host.sendSecret(underIds[u], { word: underWord, role: 'under', round: 1, underCount: numUnder, blank: false, textMode: textMode });
+    if (blankId) host.sendSecret(blankId, { word: null, role: 'blank', round: 1, underCount: numUnder, blank: true, textMode: textMode });
+
+    host.after('describe', roundSec * 1000, function () { advanceVote(host); });
+    host.toast('🕵️ 词已私发！卧底请藏好自己', 'info');
+    host.event({ t: 'round', msg: '第 1 轮：大家来' + (textMode ? '打字' : '开口') + '描述吧' });
+    host.emit();
+  }
+
+  M.action = function (host, action, from) {
+    var g = host.g();
+    if (!g || !g.phase) return;
+    switch (action.t) {
+      case 'start':
+        if (host.amHost(from) && g.phase === 'setup') deal(host);
+        break;
+      case 'pickSide':
+        if (host.amHost(from) && g.phase === 'setup') {
+          g.side = action.side === 'a' || action.side === 'b' ? action.side : 'random';
+          host.emit();
+        }
+        break;
+      case 'desc':
+        if (g.phase === 'describe' && g.textMode) handleDesc(host, action, from);
+        break;
+      case 'vote':
+        if (g.phase === 'vote' || g.phase === 'revote') handleVote(host, action, from);
+        break;
+      case 'blankGuess':
+        if (g.phase === 'blankGuess' && priv(host).blankId === from && !g.blankGuess) handleBlankGuess(host, action, from);
+        break;
+      case 'recover':
+        recoverFrom(host, from, action);
+        break;
+      case 'again':
+        if (host.amHost(from) && g.phase === 'over') M.init(host);
+        break;
+      case 'lobby':
+        if (host.amHost(from)) host.goLobby();
+        break;
+    }
+  };
+
+  function recoverFrom(host, from, action) {
+    var g = host.g();
+    if (g.alive.indexOf(from) === -1) return;
+    if (!host.secretCache[from]) {
+      host.secretCache[from] = {
+        word: action.word == null ? null : action.word,
+        role: action.role || 'civil',
+        round: g.round,
+        underCount: g.numUnder,
+        blank: action.role === 'blank',
+        textMode: g.textMode
+      };
+    }
+    if (g.recovering) {
+      var done = g.alive.every(function (id) { return !!host.secretCache[id]; });
+      if (done) {
+        host.clearTimer('recover');
+        g.recovering = false;
+        host.emit();
+      }
+    }
+  }
+
+  M.resume = function (host) {
+    var g = host.g();
+    if (!g || !g.phase) return;
+    if (g.phase === 'describe' && g.deadline) host.after('describe', Math.max(0, g.deadline - host.now()), function () { advanceVote(host); });
+    if (g.phase === 'vote' && g.deadline) host.after('vote', Math.max(0, g.deadline - host.now()), function () { tallyVotes(host); });
+    if (g.phase === 'revote' && g.deadline) host.after('revote', Math.max(0, g.deadline - host.now()), function () { tallyVotes(host); });
+    if (g.phase === 'blankGuess' && g.deadline) host.after('blankGuess', Math.max(0, g.deadline - host.now()), function () { blankGuessTimeout(host); });
+    // 新房主没有缓存 → 让玩家上报重建
+    if (g.phase !== 'setup' && g.phase !== 'over') {
+      var need = g.alive.filter(function (id) { return !host.secretCache[id]; });
+      if (need.length) {
+        g.recovering = true;
+        for (var i = 0; i < need.length; i++) host.sendSecret(need[i], { recover: true, round: g.round });
+        host.after('recover', 10000, function () { var g2 = host.g(); if (g2) { g2.recovering = false; host.emit(); } });
+      }
+    }
+  };
+
+  M.onLeave = function (host, id) {
+    var g = host.g();
+    if (!g || !g.phase) return;
+    var idx = g.alive.indexOf(id);
+    if (idx !== -1) g.alive.splice(idx, 1);
+    if (g.phase === 'describe') {
+      for (var i = g.desc.length - 1; i >= 0; i--) if (g.desc[i].id === id) { g.desc.splice(i, 1); g.descCount = Math.max(0, g.descCount - 1); }
+    }
+    if (g.phase === 'vote' || g.phase === 'revote') delete g.votes[id];
+    if (g.phase !== 'setup' && g.phase !== 'over') checkWin(host);
+  };
+
+  function handleDesc(host, action, from) {
+    var g = host.g();
+    if (alive(host).indexOf(from) === -1) return;
+    for (var i = 0; i < g.desc.length; i++) if (g.desc[i].id === from) return;
+    var p = host.player(from);
+    var text = String(action.text || '').slice(0, 200);
+    if (!text) return;
+    g.desc.push({ id: from, name: p ? p.name : '??', text: text });
+    g.descCount++;
+    if (g.descCount >= alive(host).length) {
+      host.clearTimer('describe');
+      advanceVote(host);
+    } else host.emit();
+  }
+
+  function advanceVote(host) {
+    var g = host.g();
+    host.event({ t: 'descAll', descs: g.desc.map(function (d) { return { name: d.name, text: d.text }; }) });
+    g.phase = 'vote';
+    g.votes = {};
+    g.counts = {};
+    g.revotePool = null;
+    g.deadline = host.now() + 60000;
+    host.after('vote', 60000, function () { tallyVotes(host); });
+    host.toast('🗳️ 描述完毕，开始投票！', 'info');
+    host.emit();
+  }
+
+  function handleVote(host, action, from) {
+    var g = host.g();
+    if (alive(host).indexOf(from) === -1) return;
+    if (g.votes[from] !== undefined) return;
+    var target = action.id;
+    if (!target || target === from) return;
+    if (alive(host).indexOf(target) === -1) return;
+    if (g.phase === 'revote' && g.revotePool && g.revotePool.indexOf(target) === -1) return;
+    g.votes[from] = target;
+    var voted = 0;
+    for (var k in g.votes) if (Object.prototype.hasOwnProperty.call(g.votes, k)) voted++;
+    if (voted >= alive(host).length) {
+      host.clearTimer(g.phase === 'vote' ? 'vote' : 'revote');
+      tallyVotes(host);
+    } else host.emit();
+  }
+
+  function tallyVotes(host) {
+    var g = host.g();
+    var counts = {};
+    for (var voter in g.votes) if (Object.prototype.hasOwnProperty.call(g.votes, voter)) {
+      var t = g.votes[voter];
+      counts[t] = (counts[t] || 0) + 1;
+    }
+    var maxCount = 0, topIds = [];
+    for (var id in counts) if (Object.prototype.hasOwnProperty.call(counts, id)) {
+      if (counts[id] > maxCount) { maxCount = counts[id]; topIds = [id]; }
+      else if (counts[id] === maxCount) topIds.push(id);
+    }
+    g.counts = counts;
+    host.event({ t: 'voteResult', counts: counts });
+    if (topIds.length > 1 && maxCount > 0) {
+      if (g.phase === 'revote') {
+        host.toast('🤝 再次平票，本轮无人出局', 'info');
+        startNewRound(host);
+      } else {
+        g.phase = 'revote';
+        g.revotePool = topIds;
+        g.votes = {};
+        g.deadline = host.now() + 60000;
+        host.after('revote', 60000, function () { tallyVotes(host); });
+        host.toast('⚖️ 平票！请在平票者里重投', 'info');
+        host.emit();
+      }
+      return;
+    }
+    if (topIds.length === 1) eliminatePlayer(host, topIds[0]);
+    else {
+      host.toast('😶 无人投票，进入下一轮', 'info');
+      startNewRound(host);
+    }
+  }
+
+  function eliminatePlayer(host, id) {
+    var g = host.g();
+    var p = priv(host);
+    var idx = alive(host).indexOf(id);
+    if (idx !== -1) { alive(host).splice(idx, 1); if (g.dead.indexOf(id) === -1) g.dead.push(id); }
+    var pl = host.player(id);
+    host.event({ t: 'eliminated', id: id, name: pl ? pl.name : '??' });
+    if (p.blankId === id && !g.blankEliminated) {
+      g.blankEliminated = true;
+      g.phase = 'blankGuess';
+      g.deadline = host.now() + 30000;
+      host.sendSecret(id, { guess: true });
+      host.after('blankGuess', 30000, function () { blankGuessTimeout(host); });
+      host.toast('🃏 白板被投出，有一次猜词机会！', 'info');
+      host.emit();
+      return;
+    }
+    checkWin(host);
+  }
+
+  function blankGuessTimeout(host) {
+    var g = host.g();
+    if (g.phase !== 'blankGuess') return;
+    g.blankGuess = '__timeout__';
+    host.toast('⏰ 白板超时，视为猜错', 'info');
+    checkWin(host);
+  }
+
+  function handleBlankGuess(host, action, from) {
+    var g = host.g();
+    var p = priv(host);
+    if (p.blankId !== from || g.phase !== 'blankGuess') return;
+    host.clearTimer('blankGuess');
+    var guess = String(action.word || '').trim();
+    if (!guess) return;
+    g.blankGuess = guess;
+    if (guess === p.civilWord) {
+      g.winner = [from];
+      host.toast('🎉 白板猜对了！白板个人获胜！', 'good');
+      endGame(host);
+    } else {
+      host.toast('❌ 白板猜错了，已被淘汰', 'info');
+      checkWin(host);
+    }
+  }
+
+  function checkWin(host) {
+    var g = host.g();
+    var p = priv(host);
+    if (alive(host).length <= 1) {
+      g.winner = alive(host).length && p.under.indexOf(alive(host)[0]) !== -1 ? 'under' : 'civil';
+      endGame(host);
+      return;
+    }
+    var underAlive = 0;
+    for (var i = 0; i < alive(host).length; i++) if (p.under.indexOf(alive(host)[i]) !== -1) underAlive++;
+    var civilAlive = alive(host).length - underAlive;
+    if (underAlive > 0 && civilAlive <= underAlive) { g.winner = 'under'; endGame(host); return; }
+    if (underAlive === 0) { g.winner = 'civil'; endGame(host); return; }
+    startNewRound(host);
+  }
+
+  function startNewRound(host) {
+    var g = host.g();
+    var st = host.state.settings.undercover || {};
+    var roundSec = st.roundSec || 180;
+    g.round++;
+    g.phase = 'describe';
+    g.desc = [];
+    g.descCount = 0;
+    g.votes = {};
+    g.counts = {};
+    g.revotePool = null;
+    g.deadline = host.now() + roundSec * 1000;
+    var p = priv(host);
+    if (p.blankId && alive(host).indexOf(p.blankId) !== -1) {
+      host.sendSecret(p.blankId, { word: null, role: 'blank', round: g.round, underCount: g.numUnder, blank: true, textMode: g.textMode });
+    }
+    host.after('describe', roundSec * 1000, function () { advanceVote(host); });
+    host.toast('🔄 第 ' + g.round + ' 轮开始！', 'info');
+    host.event({ t: 'round', msg: '第 ' + g.round + ' 轮：继续描述' });
+    host.emit();
+  }
+
+  function endGame(host) {
+    var g = host.g();
+    var p = priv(host);
+    g.phase = 'over';
+    g.deadline = 0;
+    host.clearTimer('describe'); host.clearTimer('vote'); host.clearTimer('revote'); host.clearTimer('blankGuess'); host.clearTimer('recover');
+    var players = host.state.players;
+    for (var i = 0; i < alive(host).length; i++) {
+      var pid = alive(host)[i];
+      host.addScore(pid, p.under.indexOf(pid) !== -1 ? 2 : 1);
+    }
+    if (g.winner === 'under') for (var u = 0; u < p.under.length; u++) host.addScore(p.under[u], 2);
+    else if (g.winner === 'civil') for (var c = 0; c < players.length; c++) if (p.under.indexOf(players[c].id) === -1 && players[c].id !== p.blankId) host.addScore(players[c].id, 2);
+    else if (Array.isArray(g.winner)) host.addScore(g.winner[0], 2);
+    var maxScore = -1, mvpId = null;
+    for (var s = 0; s < players.length; s++) if ((players[s].score || 0) > maxScore) { maxScore = players[s].score; mvpId = players[s].id; }
+    if (mvpId) host.addScore(mvpId, 2);
+    g.scores = {};
+    for (var sc = 0; sc < players.length; sc++) g.scores[players[sc].id] = players[sc].score;
+    var pair = p.pair || { a: '词A', b: '词B' };
+    host.revealAll({ words: [pair.a, pair.b], underWord: p.underWord, winner: g.winner });
+    host.event({ t: 'gameover', winner: g.winner, msg: g.winner === 'under' ? '卧底赢了！' : (Array.isArray(g.winner) ? '白板猜词获胜！' : '平民赢了！'), players: players.map(function (x) { return { id: x.id, name: x.name, score: x.score }; }) });
+    host.toast('🏁 游戏结束！', 'info');
+    host.emit();
+  }
+
+  PN.games['undercover'] = {
+    id: M.id, name: M.name, emoji: M.emoji, blurb: M.blurb,
+    minPlayers: M.minPlayers, maxPlayers: M.maxPlayers,
+    init: M.init, action: M.action, resume: M.resume, onLeave: M.onLeave
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/games/wavelength.js ===== */
+/* ===== 心有灵犀·波长 🌊 =====
+ * 通灵者看到靶心（8-92），给出线索，其他人猜位置
+ * 越近分越高，波段大师额外奖金
+ * 秘密：target 只通过 host.sendSecret 下发，不进 state.g
+ */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  /* ---- fallback 光谱词库 ---- */
+  var FALLBACK = [
+    { left: '简单', right: '复杂', tag: '默认' },
+    { left: '冷', right: '热', tag: '默认' },
+    { left: '轻', right: '重', tag: '默认' },
+    { left: '快', right: '慢', tag: '默认' },
+    { left: '软', right: '硬', tag: '默认' },
+    { left: '安静', right: '热闹', tag: '默认' },
+    { left: '保守', right: '冒险', tag: '默认' },
+    { left: '早睡', right: '熬夜', tag: '默认' },
+    { left: '清淡', right: '重口', tag: '默认' },
+    { left: '便宜', right: '昂贵', tag: '默认' },
+    { left: '实用', right: '颜值', tag: '默认' },
+    { left: '节约', right: '浪费', tag: '默认' },
+    { left: '规律', right: '随性', tag: '默认' },
+    { left: '独处', right: '群居', tag: '默认' },
+    { left: '干', right: '湿', tag: '默认' },
+    { left: '浓', right: '淡', tag: '默认' },
+    { left: '简', right: '繁', tag: '默认' },
+    { left: '脏', right: '干净', tag: '默认' },
+    { left: '难', right: '易', tag: '默认' },
+    { left: '甜', right: '咸', tag: '默认' },
+    { left: '快', right: '慢', tag: '默认' },
+    { left: '热', right: '冰', tag: '默认' },
+    { left: '脆', right: '软', tag: '默认' },
+    { left: '深', right: '浅', tag: '默认' },
+    { left: '宽', right: '窄', tag: '默认' },
+    { left: '高', right: '低', tag: '默认' },
+    { left: '大', right: '小', tag: '默认' },
+    { left: '甜', right: '辣', tag: '默认' },
+    { left: '酸', right: '甜', tag: '默认' },
+    { left: '苦', right: '甜', tag: '默认' }
+  ];
+
+  var ID = 'wavelength';
+  var NAME = '心有灵犀·波长';
+  var EMOJI = '\uD83C\uDF0A';
+  var MIN = 3;
+  var MAX = 12;
+  var CLUE_MS = 60000;
+  var GUESS_MS = 45000;
+  var REVEAL_MS = 4000;
+
+  function rnd(n) { return Math.floor(Math.random() * n); }
+
+  function pickSpectrum(used) {
+    var pool = null;
+    try {
+      var raw = PN.pick.spectrum(used);
+      if (raw && raw.left && raw.right) pool = raw;
+    } catch (e) {}
+    if (!pool) {
+      var fpool = FALLBACK.slice();
+      if (used && used.length) {
+        var seen = {};
+        for (var i = 0; i < used.length; i++) seen[used[i]] = true;
+        fpool = fpool.filter(function (s) { return !seen[s.left + '|' + s.right]; });
+      }
+      if (!fpool.length) fpool = FALLBACK;
+      pool = fpool[rnd(fpool.length)];
+    }
+    var key = pool.left + '|' + pool.right;
+    if (!used) used = [];
+    used.push(key);
+    return pool;
+  }
+
+  function fallbackClue() {
+    var clues = ['靠近中间', '偏左一点', '偏右一点', '差不多这儿', '再往右点', '靠左不少', '你品品', '懂的都懂'];
+    return clues[rnd(clues.length)];
+  }
+
+  function guessers(host) {
+    var g = host.g();
+    var online = host.onlinePlayers();
+    var list = [];
+    for (var i = 0; i < online.length; i++) {
+      if (online[i].id !== g.cur) list.push(online[i].id);
+    }
+    return list;
+  }
+
+  function allGuessed(host) {
+    var g = host.g();
+    var list = guessers(host);
+    for (var i = 0; i < list.length; i++) {
+      if (g.guesses[list[i]] === undefined) return false;
+    }
+    return true;
+  }
+
+  function init(host) {
+    var s = host.state;
+    s.phase = 'round';
+    var g = s.g = {};
+    var settings = s.settings.wavelength || {};
+    g.rounds = settings.rounds || 6;
+    g.round = 0;
+    g.used = [];
+
+    var online = host.onlinePlayers();
+    online.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+    g.order = online.map(function (p) { return p.id; });
+
+    host.toast('🌊 心有灵犀·波长 开始！共 ' + g.rounds + ' 局', 'good');
+    host.event({ t: 'toast', text: '🔮 通灵者就位，第一回合开始！' });
+    nextRound(host);
+  }
+
+  function nextRound(host) {
+    var g = host.g();
+    g.round++;
+    if (g.round > g.rounds) { gameOver(host); return; }
+
+    var sp = pickSpectrum(g.used);
+    g.left = sp.left;
+    g.right = sp.right;
+
+    g.cur = g.order[(g.round - 1) % g.order.length];
+
+    var target = 8 + rnd(85);
+
+    host.sendSecret(g.cur, {
+      target: target,
+      left: g.left,
+      right: g.right,
+      round: g.round
+    });
+
+    g.curPhase = 'clue';
+    g.clue = null;
+    g.guesses = {};
+    g.done = false;
+    g.reveal = null;
+    g.deadline = host.now() + CLUE_MS;
+
+    host.toast('🎯 第 ' + g.round + '/' + g.rounds + ' 回合 — 通灵者请给出线索', 'info');
+    host.event({ t: 'newRound', round: g.round, left: g.left, right: g.right, psychic: g.cur });
+
+    host.after('clue', CLUE_MS, function () {
+      var g2 = host.g();
+      if (g2.curPhase !== 'clue') return;
+      g2.clue = fallbackClue();
+      host.toast('⏰ 通灵者超时，系统自动补了个线索', 'bad');
+      host.event({ t: 'autoClue', text: g2.clue, psychic: g2.cur });
+      enterGuess(host);
+    });
+    host.emit();
+  }
+
+  function enterGuess(host) {
+    var g = host.g();
+    g.curPhase = 'guess';
+    g.guesses = {};
+    g.deadline = host.now() + GUESS_MS;
+
+    host.toast('🔮 通灵者说：「' + g.clue + '」大家快猜位置！', 'info');
+    host.event({ t: 'enterGuess', clue: g.clue });
+
+    host.after('guess', GUESS_MS, function () {
+      var g2 = host.g();
+      if (g2.curPhase !== 'guess') return;
+      enterReveal(host);
+    });
+    host.emit();
+  }
+
+  function enterReveal(host) {
+    var g = host.g();
+    g.curPhase = 'reveal';
+
+    var psychicId = g.cur;
+    var secret = host.secretCache ? host.secretCache[psychicId] : null;
+    var target = (secret && typeof secret.target === 'number') ? secret.target : 50;
+
+    var guessList = [];
+    var totalDist = 0;
+    var guessCount = 0;
+    var bestDist = Infinity;
+    var bestId = null;
+
+    for (var pid in g.guesses) {
+      if (!g.guesses.hasOwnProperty(pid)) continue;
+      var v = g.guesses[pid];
+      var dist = Math.abs(v - target);
+      guessList.push({ id: pid, v: v, distance: dist });
+      totalDist += dist;
+      guessCount++;
+      if (dist < bestDist) { bestDist = dist; bestId = pid; }
+    }
+
+    for (var i = 0; i < guessList.length; i++) {
+      var gl = guessList[i];
+      var score = gl.distance <= 8
+        ? 1000
+        : Math.min(500, Math.round(1000 / (10 + gl.distance)));
+      host.addScore(gl.id, score);
+    }
+
+    if (bestId && guessList.length > 0) {
+      host.addScore(bestId, 300);
+      var bestName = host.player(bestId);
+      host.toast('🏆 ' + (bestName ? bestName.name : '某人') + ' 波段大师 +300', 'good');
+    }
+
+    if (guessCount > 0) {
+      var avgDist = totalDist / guessCount;
+      var psychicScore = Math.max(0, Math.round((100 - avgDist) * 10));
+      host.addScore(psychicId, psychicScore);
+      var psychicName = host.player(psychicId);
+      host.toast('🔮 通灵者' + (psychicName ? psychicName.name : '') + ' +' + psychicScore + ' 分', 'info');
+    }
+
+    g.reveal = {
+      target: target,
+      guesses: guessList,
+      bestId: bestId
+    };
+    g.done = true;
+
+    host.event({
+      t: 'reveal',
+      target: target,
+      clue: g.clue,
+      left: g.left,
+      right: g.right,
+      round: g.round,
+      guesses: guessList,
+      bestId: bestId
+    });
+
+    host.revealAll({
+      target: target,
+      clue: g.clue,
+      left: g.left,
+      right: g.right,
+      guesses: guessList
+    });
+
+    host.toast('🎯 目标值 ' + target + ' / 100，' + (g.round < g.rounds ? '下一回合马上开始' : '比赛结束！'), 'info');
+
+    host.after('reveal', REVEAL_MS, function () {
+      nextRound(host);
+    });
+    host.emit();
+  }
+
+  function gameOver(host) {
+    var s = host.state;
+    s.phase = 'over';
+    var g = host.g();
+    g.curPhase = 'over';
+
+    var players = s.players.slice().sort(function (a, b) {
+      return (b.score || 0) - (a.score || 0);
+    });
+    g.winner = players[0] ? players[0].id : null;
+
+    host.event({
+      t: 'gameover',
+      players: players.map(function (p) {
+        return { id: p.id, name: p.name, score: p.score || 0 };
+      })
+    });
+
+    host.toast('🏆 比赛结束！' + (players[0] ? players[0].name : '') + ' 获得胜利！', 'good');
+    host.emit();
+  }
+
+  function action(host, act, from) {
+    var s = host.state;
+    var g = host.g();
+    if (s.phase !== 'round' && s.phase !== 'over') return;
+
+    if (host.amHost(from)) {
+      if (act.t === 'again' && s.phase === 'over') {
+        init(host);
+        host.emit();
+        return;
+      }
+      if (act.t === 'lobby' && s.phase === 'over') {
+        host.goLobby();
+        return;
+      }
+      if (act.t === 'skip') {
+        if (g.curPhase === 'clue') { host.clearTimer('clue'); enterGuess(host); }
+        else if (g.curPhase === 'guess') { host.clearTimer('guess'); enterReveal(host); }
+        return;
+      }
+    }
+
+    if (act.t === 'clue' && g.curPhase === 'clue' && from === g.cur) {
+      var text = String(act.text || '').trim();
+      if (!text) { host.toast('线索不能为空', 'bad'); return; }
+      if (text.length > 50) { text = text.slice(0, 50); }
+      g.clue = text;
+      host.clearTimer('clue');
+      host.toast('🔮 通灵者已给出线索，大家开猜！', 'info');
+      enterGuess(host);
+      return;
+    }
+
+    if (act.t === 'guess' && g.curPhase === 'guess') {
+      if (from === g.cur) { host.toast('通灵者不用猜哦', 'info'); return; }
+      if (g.guesses[from] !== undefined) { host.toast('你已经猜过了', 'info'); return; }
+      var p = host.player(from);
+      if (!p || !p.online) return;
+
+      var v = Number(act.v);
+      if (isNaN(v) || v < 0 || v > 100) { host.toast('请输入 0-100 之间的整数', 'bad'); return; }
+      v = Math.round(v);
+
+      g.guesses[from] = v;
+
+      if (allGuessed(host)) {
+        host.clearTimer('guess');
+        enterReveal(host);
+      } else {
+        host.emit();
+      }
+      return;
+    }
+
+    if (act.t === 'reportTarget' && g.curPhase === 'reveal' && from === g.cur) {
+      var rt = Number(act.target);
+      if (isNaN(rt) || rt < 0 || rt > 100) return;
+      if (host.secretCache && !host.secretCache[g.cur]) {
+        host.secretCache[g.cur] = { target: rt };
+        if (!g.done) { enterReveal(host); }
+      }
+      return;
+    }
+  }
+
+  function resume(host) {
+    var g = host.g();
+    if (!g || !g.curPhase) return;
+
+    if (g.curPhase === 'clue') {
+      var target = 8 + rnd(85);
+      host.sendSecret(g.cur, {
+        target: target,
+        left: g.left,
+        right: g.right,
+        round: g.round
+      });
+      var remaining = g.deadline - host.now();
+      if (remaining > 5000) {
+        host.after('clue', remaining, function () {
+          var g2 = host.g();
+          if (g2.curPhase !== 'clue') return;
+          g2.clue = fallbackClue();
+          host.toast('⏰ 通灵者超时，系统自动补了线索', 'bad');
+          host.event({ t: 'autoClue', text: g2.clue, psychic: g2.cur });
+          enterGuess(host);
+        });
+      } else {
+        g.clue = fallbackClue();
+        host.toast('🔄 宿主切换，系统自动补了线索', 'bad');
+        enterGuess(host);
+      }
+      host.emit();
+
+    } else if (g.curPhase === 'guess') {
+      var target2 = 8 + rnd(85);
+      host.sendSecret(g.cur, {
+        target: target2,
+        left: g.left,
+        right: g.right,
+        round: g.round
+      });
+      var remaining2 = g.deadline - host.now();
+      if (remaining2 > 5000) {
+        host.after('guess', remaining2, function () {
+          var g2 = host.g();
+          if (g2.curPhase !== 'guess') return;
+          enterReveal(host);
+        });
+      } else {
+        enterReveal(host);
+      }
+      host.emit();
+
+    } else if (g.curPhase === 'reveal' && !g.done) {
+      enterReveal(host);
+
+    } else if (g.curPhase === 'reveal' && g.done && g.round <= g.rounds) {
+      host.after('reveal', REVEAL_MS, function () {
+        nextRound(host);
+      });
+
+    } else if (g.curPhase === 'over' || g.round > g.rounds) {
+      /* 游戏结束，等房主操作 */
+    }
+  }
+
+  function onLeave(host, id) {
+    var g = host.g();
+    if (!g || !g.curPhase) return;
+
+    if (id === g.cur) {
+      var online = host.onlinePlayers();
+      var candidates = online.filter(function (p) { return p.id !== id; });
+      if (candidates.length === 0) return;
+
+      var curIdx = g.order.indexOf(id);
+      var nextIdx = (curIdx + 1) % g.order.length;
+      var tries = 0;
+      while (tries < g.order.length) {
+        var candidate = g.order[nextIdx];
+        var found = false;
+        for (var i = 0; i < candidates.length; i++) {
+          if (candidates[i].id === candidate) { found = true; break; }
+        }
+        if (found) break;
+        nextIdx = (nextIdx + 1) % g.order.length;
+        tries++;
+      }
+      if (tries < g.order.length) {
+        var newCur = g.order[nextIdx];
+        g.cur = newCur;
+        var secret = host.secretCache ? host.secretCache[id] : null;
+        if (secret && typeof secret.target === 'number') {
+          host.sendSecret(newCur, {
+            target: secret.target,
+            left: g.left,
+            right: g.right,
+            round: g.round
+          });
+        } else {
+          var newTarget = 8 + rnd(85);
+          host.sendSecret(newCur, {
+            target: newTarget,
+            left: g.left,
+            right: g.right,
+            round: g.round
+          });
+        }
+        host.toast('🔄 通灵者掉线，已换人', 'bad');
+        host.emit();
+      }
+      return;
+    }
+
+    if (g.curPhase === 'guess' && allGuessed(host)) {
+      host.clearTimer('guess');
+      enterReveal(host);
+    }
+  }
+
+  PN.games[ID] = {
+    id: ID,
+    name: NAME,
+    emoji: EMOJI,
+    blurb: '通灵者看到靶心（8-92），给出线索，其他人猜位置——越近分越高！',
+    minPlayers: MIN,
+    maxPlayers: MAX,
+    init: init,
+    action: action,
+    resume: resume,
+    onLeave: onLeave
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+/* ===== src/screens-common.js ===== */
+/* ===== 游戏屏通用组件 + 谁最有可能屏幕 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  PN.esc = esc;
+
+  function gameHeader(ui, state, title, phaseText, extra) {
+    var g = state.g || {};
+    var roundText = g.round ? ('第 ' + g.round + ' 回合') : '';
+    return '<div class="ghead">' +
+      '<div class="gh-title">' + esc(title) + '</div>' +
+      '<div class="row" style="gap:6px">' +
+      (roundText ? '<span class="pill">' + roundText + '</span>' : '') +
+      (phaseText ? '<span class="pill">' + esc(phaseText) + '</span>' : '') +
+      (extra || '') +
+      '</div></div>';
+  }
+
+  function deadlineChip(deadline) {
+    return '<span class="pill timer" data-deadline="' + deadline + '">' + fmtLeft(deadline - Date.now()) + '</span>';
+  }
+  function fmtLeft(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.ceil(ms / 1000);
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function playerGrid(ui, state, opts) {
+    opts = opts || {};
+    var dead = opts.dead || {};
+    var sel = opts.sel;
+    var disabled = opts.disabled || false;
+    var players = state.players || [];
+    var out = '<div class="players-grid">';
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      var cls = 'pickable';
+      if (dead[p.id]) cls += ' dead';
+      if (sel && sel[p.id]) cls += ' sel';
+      out += '<button class="' + cls + '" data-pick="' + p.id + '" ' + ((disabled && !opts.allowSelf) || !p.online ? 'disabled' : '') + '>' +
+        '<span class="em">' + (p.emoji || '🙂') + '</span>' +
+        '<span>' + esc(p.name) + '</span>' +
+        (opts.showVotes ? '<span class="muted" style="font-size:11px">' + (opts.showVotes[p.id] || 0) + ' 票</span>' : '') +
+        '</button>';
+    }
+    return out + '</div>';
+  }
+
+  function scoreboard(state, winnerId, title) {
+    var players = (state.players || []).slice().sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+    var out = '<div class="card"><div class="center" style="font-weight:800;margin-bottom:10px">' + (title || '🏆 终局计分') + '</div><div class="scoreboard">';
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      out += '<div class="sbrow' + (i === 0 ? ' top' : '') + '">' +
+        '<span class="rank">' + (i + 1) + '</span><span class="em">' + (p.emoji || '🙂') + '</span>' +
+        '<span class="nm">' + esc(p.name) + (p.id === winnerId ? ' 👑' : '') + '</span>' +
+        '<span class="pts">' + (p.score || 0) + ' 分</span></div>';
+    }
+    return out + '</div></div>';
+  }
+
+  function overButtons(ui, gameId) {
+    if (!ui.isHost()) {
+      return '<div class="muted center mt16">等房主决定再来一局还是换游戏～</div>';
+    }
+    return '<div class="grid2 mt16"><button class="btn primary" data-over="again">🔁 再来一局</button>' +
+      '<button class="btn ghost" data-over="lobby">🏠 回大厅</button></div>';
+  }
+
+  PN.gameCommon = {
+    gameHeader: gameHeader, deadlineChip: deadlineChip, fmtLeft: fmtLeft,
+    playerGrid: playerGrid, scoreboard: scoreboard, overButtons: overButtons
+  };
+
+  /* 全局 1s 倒计时刷新（只动计时 chip，不整页重渲） */
+  if (typeof document !== 'undefined' && typeof setInterval === 'function') {
+    setInterval(function () {
+      document.querySelectorAll('[data-deadline]').forEach(function (el) {
+        var dl = Number(el.getAttribute('data-deadline'));
+        if (isNaN(dl)) return;
+        el.textContent = fmtLeft(dl - Date.now());
+        if (dl - Date.now() < 10000) el.style.color = 'var(--acc2)';
+      });
+    }, 500);
+  }
+
+  /* ================= 谁最有可能 ================= */
+  PN.screens = PN.screens || {};
+  PN.screens.mostlikely = {
+    name: 'mostlikely',
+    render: function (state, secret) {
+      var ui = this;
+      var C = PN.gameCommon;
+      var g = state.g || {};
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+      var total = (g.settings && g.settings.rounds) || 8;
+      wrap.appendChild(ui.h(C.gameHeader(ui, state, '🎯 谁最有可能', state.phase === 'vote' ? '投票中' : (state.phase === 'reveal' ? '答案揭晓' : '本局结束'),
+        g.cur && g.cur.deadline ? C.deadlineChip(g.cur.deadline) : '<span class="pill">' + (g.round || 0) + '/' + total + '</span>')));
+
+      var body = ui.el('div');
+      if (state.phase === 'vote' && g.cur) {
+        body.appendChild(ui.h(
+          '<div class="card center"><div class="muted" style="margin-bottom:6px">谁最有可能——</div>' +
+          '<div style="font-size:21px;font-weight:800;line-height:1.4">' + esc(g.cur.q) + '</div>' +
+          '<div class="muted mt8">点人头投票 · 可改票 · 可投自己 · 截止自动开奖</div></div>'
+        ));
+        var votes = g.cur.votes || {};
+        var myVote = votes[ui.pid()];
+        var sel = {}; if (myVote) sel[myVote] = true;
+        var counts = {};
+        for (var vk in votes) if (Object.prototype.hasOwnProperty.call(votes, vk)) counts[votes[vk]] = (counts[votes[vk]] || 0) + 1;
+        body.appendChild(ui.h('<div class="card"><div class="muted" style="margin-bottom:10px">已投 ' + Object.keys(votes).length + ' 人（共 ' + state.players.filter(function (p) { return p.online; }).length + ' 在线）</div>' +
+          C.playerGrid(ui, state, { sel: sel, showVotes: counts }) + '</div>'));
+        body.querySelectorAll('[data-pick]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            ui.send({ t: 'vote', id: b.getAttribute('data-pick') });
+            b.classList.add('sel');
+          });
+        });
+      } else if (state.phase === 'reveal' && g.last) {
+        var winners = {};
+        (g.last.winners || []).forEach(function (w) { winners[w] = true; });
+        var maxV = g.last.maxVotes || 0;
+        body.appendChild(ui.h(
+          '<div class="card center"><div class="muted">公布答案</div>' +
+          '<div style="font-size:18px;font-weight:800;margin:8px 0">' + esc(g.last.q || '') + '</div>' +
+          (maxV > 0 ? '<div style="font-size:15px">最高 ' + maxV + ' 票 🎉</div>' : '<div class="muted">没人被投中，各自安好</div>') +
+          '</div>'
+        ));
+        body.appendChild(ui.h('<div class="card">' + C.playerGrid(ui, state, { sel: winners, showVotes: g.last.counts }) + '</div>'));
+        body.appendChild(ui.h('<div class="muted center mt8">3 秒后自动下一题…</div>'));
+      } else {
+        body.appendChild(ui.h(C.scoreboard(state, g.winner)));
+        var btns = ui.h(C.overButtons(ui, 'mostlikely'));
+        body.appendChild(btns);
+        wireOver(btns, ui);
+      }
+      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter()); // 进行中也能回大厅
+      wrap.appendChild(body);
+      return wrap;
+    }
+  };
+
+  function wireOver(btns, ui) {
+    btns.querySelectorAll('[data-over]').forEach(function (b) {
+      b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
+    });
+  }
+  PN.wireOver = wireOver;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/screens-undercover.js ===== */
+/* ===== 谁是卧底 屏幕 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+
+  function phaseText(g) {
+    if (g.phase === 'setup') return '房主选词中';
+    if (g.phase === 'describe') return '描述阶段';
+    if (g.phase === 'vote') return '投票淘汰';
+    if (g.phase === 'revote') return '平票重投';
+    if (g.phase === 'blankGuess') return '白板猜词';
+    return '本局结束';
+  }
+  function wordCard(ui, secret, g) {
+    if (!secret) return '';
+    var roleName = { under: '卧底 🕵️', civil: '平民 😇', blank: '白板 🃏' }[secret.role] || '';
+    var word = secret.role === 'blank' ? '你没有词，听别人描述后浑水摸鱼！' : secret.word;
+    var hint = secret.role === 'under' ? '你的词和别人不一样，混过去！' : (secret.role === 'civil' ? '找出和你描述不一样的人' : '别露馅，被投出去时还有一次猜词机会');
+    return '<div class="card center"><div class="pill">' + roleName + ' · 第 ' + (g.round || secret.round || 1) + ' 轮</div>' +
+      '<div class="bigword">' + esc(word) + '</div><div class="muted">' + esc(hint) + '</div>' +
+      (g.numUnder > 0 ? '<div class="muted mt8">卧底人数：' + g.numUnder + (g.blank ? ' · 有白板' : '') + '</div>' : '') + '</div>';
+  }
+  function inputBar(ui, placeholder, send) {
+    var bar = ui.el('div', 'inputbar');
+    var input = ui.el('input');
+    input.placeholder = placeholder;
+    input.maxLength = 200;
+    var btn = ui.el('button', 'btn primary', '发送');
+    var go = function () {
+      var v = input.value.trim();
+      if (!v) return;
+      send(v);
+      input.value = '';
+    };
+    btn.addEventListener('click', go);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+    bar.appendChild(input); bar.appendChild(btn);
+    return bar;
+  }
+  function deadSet(g) {
+    var d = {};
+    for (var i = 0; i < (g.dead || []).length; i++) d[g.dead[i]] = true;
+    return d;
+  }
+  function pickGrid(ui, state, g, pool, votes) {
+    var C = PN.gameCommon;
+    var sel = {};
+    if (votes && votes[ui.pid()]) sel[votes[ui.pid()]] = true;
+    var wrap = ui.el('div');
+    wrap.appendChild(ui.h(C.playerGrid(ui, state, { dead: deadSet(g), sel: sel, pool: pool, disabled: false })));
+    wrap.querySelectorAll('[data-pick]').forEach(function (b) {
+      if (b.hasAttribute('disabled')) return;
+      if (pool && pool.indexOf(b.getAttribute('data-pick')) === -1) { b.setAttribute('disabled', ''); return; }
+      b.addEventListener('click', function () { ui.send({ t: 'vote', id: b.getAttribute('data-pick') }); });
+    });
+    return wrap;
+  }
+  function chipCounts(g) {
+    var out = '';
+    var counts = g.counts || {};
+    if (g.phase === 'revote') {
+      for (var i = 0; i < (g.revotePool || []).length; i++) {
+        var id = g.revotePool[i];
+        out += '<span class="pill">' + esc(nameOf(ui_state, id)) + ' ' + (counts[id] || 0) + ' 票</span>';
+      }
+    }
+    return out;
+  }
+  var ui_state = null;
+  function nameOf(s, id) { var p = null; if (s && s.players) for (var i = 0; i < s.players.length; i++) if (s.players[i].id === id) { p = s.players[i]; break; } return p ? p.name : '??'; }
+
+  PN.screens = PN.screens || {};
+  PN.screens.undercover = {
+    name: 'undercover',
+    render: function (state, secret) {
+      var ui = this;
+      ui_state = state;
+      var C = PN.gameCommon;
+      var g = state.g || {};
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+      wrap.appendChild(ui.h(C.gameHeader(ui, state, '🕵️ 谁是卧底', phaseText(g),
+        g.deadline ? C.deadlineChip(g.deadline) : '<span class="pill">第 ' + (g.round || 0) + ' 轮</span>')));
+
+      if (g.phase === 'setup') {
+        if (ui.isHost()) {
+          var side = g.side || 'random';
+          var mk = function (v, label) { return '<button class="btn sm ' + (side === v ? 'primary' : 'ghost') + '" data-side="' + v + '">' + label + '</button>'; };
+          wrap.appendChild(ui.h('<div class="card center"><div class="muted" style="margin-bottom:10px">卧底词选哪一边？（两边词只有你能看到）</div>' +
+            '<div class="row" style="justify-content:center">' + mk('a', 'A 面') + mk('b', 'B 面') + mk('random', '随机') + '</div>' +
+            '<button class="btn primary block mt16" data-go>🎬 发词开局</button>' +
+            '<div class="muted mt8">' + (state.players.filter(function (p) { return p.online; }).length) + ' 人在线 · 卧底 ' + g.numUnder + ' 个' + (g.blank ? ' + 白板' : '') + '</div></div>'));
+          wrap.querySelectorAll('[data-side]').forEach(function (b) {
+            b.addEventListener('click', function () { ui.send({ t: 'pickSide', side: b.getAttribute('data-side') }); });
+          });
+          wrap.querySelector('[data-go]').addEventListener('click', function () { ui.send({ t: 'start' }); });
+        } else {
+          wrap.appendChild(ui.h('<div class="card center"><div class="bigword">⏳</div><div class="muted">等房主发词…</div></div>'));
+        }
+        wrap.appendChild(ui.renderGameFooter());
+        return wrap;
+      }
+
+      if (g.phase === 'over') {
+        wrap.appendChild(ui.h(C.scoreboard(state, Array.isArray(g.winner) ? g.winner[0] : null,
+          '🏁 ' + (g.winner === 'under' ? '卧底获胜！' : (Array.isArray(g.winner) ? '白板猜词获胜！' : '平民获胜！')))));
+        wrap.appendChild(ui.h(C.overButtons(ui, 'undercover')));
+        wrap.appendChild(ui.renderGameFooter());
+        wrap.querySelectorAll('[data-over]').forEach(function (b) {
+          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
+        });
+        return wrap;
+      }
+
+      wrap.appendChild(ui.h(wordCard(ui, secret, g)));
+      var body = ui.el('div');
+      if (g.phase === 'describe') {
+        var mine = g.desc && g.desc.filter(function (d) { return d.id === ui.pid(); }).length;
+        body.appendChild(ui.h('<div class="card"><div class="muted" style="margin-bottom:8px">描述进度：' + (g.descCount || 0) + '/' + (g.alive || []).length + '（收齐自动开始投票' + (g.textMode ? '' : '，本轮口头描述') + '）</div>' +
+          '<div class="row" style="flex-wrap:wrap">' + (g.alive || []).map(function (id) {
+            return '<span class="pill">' + esc(nameOf(state, id)) + '</span>';
+          }).join('') + '</div></div>'));
+        if (g.textMode && (g.alive || []).indexOf(ui.pid()) !== -1 && !mine) {
+          wrap.appendChild(inputBar(ui, '用一句话描述你的词（别暴露）…', function (v) { ui.send({ t: 'desc', text: v }); }));
+        }
+      } else if (g.phase === 'vote' || g.phase === 'revote') {
+        var descHtml = (g.desc || []).map(function (d) {
+          return '<div class="listitem"><div class="who">' + esc(d.name) + '</div><div class="what">' + esc(d.text) + '</div></div>';
+        }).join('');
+        if (descHtml) body.appendChild(ui.h('<div class="card"><div class="muted" style="margin-bottom:8px">大家的描述</div><div class="list">' + descHtml + '</div></div>'));
+        body.appendChild(ui.h('<div class="card"><div class="muted" style="margin-bottom:10px">' + (g.phase === 'revote' ? '平票！只能投这些人：' : '投票淘汰一个人（不能投自己）') + '</div></div>'));
+        body.appendChild(pickGrid(ui, state, g, g.phase === 'revote' ? g.revotePool : null, g.votes));
+        body.appendChild(ui.h('<div class="muted center mt8">已投 ' + Object.keys(g.votes || {}).length + '/' + (g.alive || []).length + '</div>'));
+      } else if (g.phase === 'blankGuess') {
+        if (g.blankEliminated && ui.pid() === g.blankId) {
+          wrap.appendChild(inputBar(ui, '你只有一次机会：猜平民词是？', function (v) { ui.send({ t: 'blankGuess', word: v }); }));
+        } else {
+          body.appendChild(ui.h('<div class="card center"><div class="bigword">🃏</div><div class="muted">白板正在猜词…</div></div>'));
+        }
+      }
+      wrap.appendChild(body);
+      wrap.appendChild(ui.renderGameFooter());
+      return wrap;
+    },
+    onRecover: function (obj) {
+      var ui = this;
+      var s = ui.secrets.undercover && ui.secrets.undercover.mine;
+      if (s && s.role) ui.send({ t: 'recover', word: s.word, role: s.role });
+    },
+    onReveal: function (obj) {
+      var ui = this;
+      if (obj && obj.words) {
+        ui.toast('🎭 两个词是「' + obj.words[0] + '」vs「' + obj.words[1] + '」，卧底词：「' + obj.underWord + '」', 'good');
+      }
+    }
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/screens-wavelength.js ===== */
+/* ===== 心有灵犀·波长 屏幕 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var esc = PN.esc;
+
+  function phaseText(g) {
+    if (g.curPhase === 'clue') return '通灵者想线索';
+    if (g.curPhase === 'guess') return '大家猜位置';
+    if (g.curPhase === 'reveal') return '开奖';
+    return '本局结束';
+  }
+
+  function spectrum(ui, g, opts) {
+    var wrap = ui.el('div', 'card');
+    var value = opts.value;
+    var onSet = opts.onSet;
+    var bar = ui.el('div', 'wave-bar');
+    var track = ui.el('div', 'wave-track');
+    bar.appendChild(track);
+    if (opts.marker !== undefined) {
+      var mk = ui.el('div', 'marker');
+      mk.style.left = opts.marker + '%';
+      bar.appendChild(mk);
+    }
+    var knob = ui.el('div', 'wave-knob', value == null ? '?' : String(value));
+    if (value != null) knob.style.left = value + '%';
+    track.appendChild(knob);
+    if (onSet) {
+      var setFrom = function (e) {
+        var rect = bar.getBoundingClientRect();
+        var x = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - rect.left;
+        var v = Math.max(0, Math.min(100, Math.round(x / rect.width * 100)));
+        knob.style.left = v + '%';
+        knob.textContent = String(v);
+        onSet(v);
+      };
+      var dragging = false;
+      track.addEventListener('pointerdown', function (e) { dragging = true; track.setPointerCapture && track.setPointerCapture(e.pointerId); setFrom(e); });
+      track.addEventListener('pointermove', function (e) { if (dragging) setFrom(e); });
+      track.addEventListener('pointerup', function (e) { dragging = false; setFrom(e); });
+      track.addEventListener('touchstart', function (e) { e.preventDefault(); setFrom(e); }, { passive: false });
+    }
+    wrap.appendChild(bar);
+    var labels = ui.el('div', 'wave-labels');
+    labels.appendChild(ui.el('span', '', null));
+    labels.innerHTML = '<span><b>' + esc(g.left || '') + '</b> ←</span><span>→ <b>' + esc(g.right || '') + '</b></span>';
+    wrap.appendChild(labels);
+    return wrap;
+  }
+
+  PN.screens = PN.screens || {};
+  PN.screens.wavelength = {
+    name: 'wavelength',
+    render: function (state, secret) {
+      var ui = this;
+      var C = PN.gameCommon;
+      var g = state.g || {};
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+      wrap.appendChild(ui.h(C.gameHeader(ui, state, '🌊 心有灵犀·波长', phaseText(g),
+        g.deadline ? C.deadlineChip(g.deadline) : '<span class="pill">' + (g.round || 0) + '/' + (g.rounds || 6) + '</span>')));
+      var psychic = g.cur;
+      var iAmPsychic = psychic === ui.pid();
+      var pName = '';
+      if (state.players) for (var i = 0; i < state.players.length; i++) if (state.players[i].id === psychic) pName = state.players[i].name;
+
+      if (state.phase === 'over') {
+        wrap.appendChild(ui.h(C.scoreboard(state, g.winner, '🏆 波段对决结束')));
+        wrap.appendChild(ui.h(C.overButtons(ui, 'wavelength')));
+        wrap.appendChild(ui.renderGameFooter());
+        wrap.querySelectorAll('[data-over]').forEach(function (b) {
+          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
+        });
+        return wrap;
+      }
+
+      if (g.curPhase === 'clue') {
+        if (iAmPsychic && secret && typeof secret.target === 'number') {
+          wrap.appendChild(ui.h('<div class="card center"><div class="pill">你是通灵者 🔮</div>' +
+            '<div class="muted mt8">靶心位置：</div><div class="bigword">' + secret.target + '</div>' +
+            '<div class="muted">想一个线索词/短语，让别人尽量猜中它，但别说数字！</div></div>'));
+          wrap.appendChild(spectrum(ui, g, { value: secret.target, marker: secret.target }));
+          wrap.appendChild(inputBarClue(ui, function (v) { ui.send({ t: 'clue', text: v }); }));
+        } else {
+          wrap.appendChild(ui.h('<div class="card center"><div class="bigword">🔮</div>' +
+            '<div class="muted">通灵者 <b>' + esc(pName) + '</b> 正在想线索…</div></div>'));
+          wrap.appendChild(spectrum(ui, g, {}));
+        }
+      } else if (g.curPhase === 'guess') {
+        if (iAmPsychic) {
+          wrap.appendChild(ui.h('<div class="card center"><div class="pill">你是通灵者</div>' +
+            '<div class="muted mt8">你给出的线索：</div><div style="font-size:24px;font-weight:900">「' + esc(g.clue || '') + '」</div>' +
+            '<div class="muted mt8">看大家能不能猜中你心里的位置 🍿</div></div>'));
+        } else {
+          var mine = g.guesses && g.guesses[ui.pid()];
+          wrap.appendChild(ui.h('<div class="card center"><div class="pill">线索</div>' +
+            '<div style="font-size:24px;font-weight:900;margin-top:6px">「' + esc(g.clue || '') + '」</div>' +
+            '<div class="muted mt8">' + (mine !== undefined ? '已提交：' + mine + '（等大家）' : '拖动滑块，猜通灵者想的位置') + '</div></div>'));
+          var submitted = mine !== undefined;
+          var val = mine !== undefined ? mine : 50;
+          var sbar = spectrum(ui, g, {
+            value: submitted ? mine : val,
+            onSet: function (v) { val = v; if (!submitted) { submitted = false; } }
+          });
+          var bar = ui.el('div');
+          bar.appendChild(sbar);
+          var btn = ui.el('button', 'btn primary block', submitted ? '已提交 ' + mine + ' 分位' : '提交我的位置');
+          btn.disabled = submitted;
+          btn.addEventListener('click', function () { ui.send({ t: 'guess', v: val }); });
+          bar.appendChild(btn);
+          wrap.appendChild(bar);
+        }
+      } else if (g.curPhase === 'reveal') {
+        var r = g.reveal || {};
+        var target = r.target != null ? r.target : (secret && secret.target);
+        var guessList = r.guesses || [];
+        var lines = guessList.map(function (x) {
+          var name = '';
+          if (state.players) for (var j = 0; j < state.players.length; j++) if (state.players[j].id === x.id) name = state.players[j].name;
+          return '<div class="listitem"><div class="who">' + esc(name) + (x.id === r.bestId ? ' 👑 波段大师' : '') + '</div>' +
+            '<div class="what">' + x.v + ' 分位 · 偏差 ' + x.distance + '</div></div>';
+        }).join('');
+        wrap.appendChild(ui.h('<div class="card center"><div class="pill">答案揭晓</div>' +
+          '<div class="muted mt8">线索「' + esc(g.clue || '') + '」</div>' +
+          '<div class="bigword">' + target + '</div></div>'));
+        wrap.appendChild(spectrum(ui, g, { marker: target }));
+        if (lines) wrap.appendChild(ui.h('<div class="card"><div class="list">' + lines + '</div></div>'));
+        wrap.appendChild(ui.h('<div class="muted center mt8">下一回合马上开始…</div>'));
+      }
+      wrap.appendChild(ui.renderGameFooter()); // 给线索/猜的时候也要能回大厅
+      return wrap;
+    }
+  };
+
+  function inputBarClue(ui, send) {
+    var bar = ui.el('div', 'inputbar');
+    var input = ui.el('input');
+    input.placeholder = '给个线索（别直接说数字）…';
+    input.maxLength = 50;
+    var btn = ui.el('button', 'btn primary', '🔮 给线索');
+    var go = function () { var v = input.value.trim(); if (!v) return; send(v); input.value = ''; };
+    btn.addEventListener('click', go);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+    bar.appendChild(input); bar.appendChild(btn);
+    return bar;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/screens-drawgame.js ===== */
+/* ===== 你画我猜 屏幕 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var esc = PN.esc;
+  var local = { round: -1, segments: [], style: { color: '#222222', w: 6 }, canvas: null, ctx: null, raf: 0, painter: false };
+
+  var COLORS = ['#222222', '#ff4d4d', '#ff9f43', '#2fbf71', '#3f8cff', '#9b59ff'];
+  var WIDTHS = [4, 8, 16];
+
+  function ensureCanvas(ui, painter) {
+    if (local.canvas) return local.canvas;
+    var c = ui.el('canvas');
+    local.canvas = c;
+    local.ctx = c.getContext('2d');
+    local.painter = painter;
+    return c;
+  }
+  function sizeCanvas(ui) {
+    if (!local.canvas) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var rect = local.canvas.getBoundingClientRect();
+    if (rect.width < 10) rect = { width: 340, height: 340 };
+    local.canvas.width = Math.round(rect.width * dpr);
+    local.canvas.height = Math.round(rect.height * dpr);
+    local.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function white() {
+    var c = local.ctx, cv = local.canvas;
+    if (!c) return;
+    var rect = cv.getBoundingClientRect();
+    c.clearRect(0, 0, rect.width || 340, rect.height || 340);
+  }
+  function drawSeg(seg) {
+    var c = local.ctx, cv = local.canvas;
+    if (!c || !cv) return;
+    var rect = cv.getBoundingClientRect();
+    var W = rect.width || 340, H = rect.height || 340;
+    var pts = seg.s || [];
+    if (!pts.length) return;
+    c.strokeStyle = seg.color || '#222222';
+    c.lineWidth = seg.w || 6;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath();
+    for (var i = 0; i < pts.length; i++) {
+      var x = pts[i][0] / 1000 * W, y = pts[i][1] / 1000 * H;
+      if (pts[i][2] === 0 || i === 0) c.moveTo(x, y);
+      else c.lineTo(x, y);
+    }
+    c.stroke();
+  }
+  function redrawAll() {
+    white();
+    for (var i = 0; i < local.segments.length; i++) drawSeg(local.segments[i]);
+  }
+  function resetRound(round) {
+    if (local.round !== round) {
+      local.round = round;
+      local.segments = [];
+      local.painter = false;
+      local.canvas = null;
+      local.ctx = null;
+    }
+  }
+
+  PN.screens = PN.screens || {};
+  PN.screens.drawgame = {
+    name: 'drawgame',
+    render: function (state, secret) {
+      var ui = this;
+      var C = PN.gameCommon;
+      var g = state.g || {};
+      var cur = g.cur || {};
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+      wrap.appendChild(ui.h(C.gameHeader(ui, state, '🎨 你画我猜', cur.phase === 'pick' ? '画家选词' : (cur.phase === 'draw' ? '画画时间' : (cur.phase === 'reveal' ? '答案揭晓' : '本局结束')),
+        cur.deadline ? C.deadlineChip(cur.deadline) : '<span class="pill">' + (g.round || 0) + '/' + (g.settings_rounds || 6) + '</span>')));
+
+      if (g.done || !cur.phase) {
+        wrap.appendChild(ui.h(C.scoreboard(state, g.winner, '🏆 灵魂画手大赛结束')));
+        wrap.appendChild(ui.h(C.overButtons(ui, 'drawgame')));
+        wrap.appendChild(ui.renderGameFooter());
+        wrap.querySelectorAll('[data-over]').forEach(function (b) {
+          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
+        });
+        return wrap;
+      }
+
+      var painter = cur.painter;
+      var iAmPainter = painter === ui.pid();
+      var pName = '';
+      if (state.players) for (var i = 0; i < state.players.length; i++) if (state.players[i].id === painter) pName = state.players[i].name;
+      resetRound(g.round);
+
+      if (cur.phase === 'pick') {
+        if (iAmPainter && secret && secret.words) {
+          var cards = secret.words.map(function (w, idx) {
+            return '<button class="btn primary" data-word="' + idx + '" style="font-size:22px;padding:16px">' + esc(w) + '</button>';
+          }).join('');
+          wrap.appendChild(ui.h('<div class="card center"><div class="pill">你是画家 🎨</div>' +
+            '<div class="muted mt8">选一个你要画的词（' + (secret.drawSec || 90) + ' 秒）：</div>' +
+            '<div class="grid2 mt16">' + cards + '</div></div>'));
+          wrap.querySelectorAll('[data-word]').forEach(function (b) {
+            b.addEventListener('click', function () { ui.send({ t: 'pick', i: Number(b.getAttribute('data-word')) }); });
+          });
+        } else {
+          wrap.appendChild(ui.h('<div class="card center"><div class="bigword">🎨</div><div class="muted">画家 <b>' + esc(pName) + '</b> 正在选词…</div></div>'));
+        }
+        wrap.appendChild(ui.renderGameFooter());
+        return wrap;
+      }
+
+      var drawArea = ui.el('div', 'drawwrap');
+      var c = ensureCanvas(ui, iAmPainter);
+      drawArea.appendChild(c);
+      sizeCanvas(ui);
+      redrawAll();
+      wrap.appendChild(drawArea);
+
+      if (iAmPainter && cur.phase === 'draw') {
+        var tray = ui.el('div', 'dtray');
+        COLORS.forEach(function (col) {
+          var s = ui.el('button', 'swatch' + (local.style.color === col ? ' sel' : ''));
+          s.style.background = col;
+          s.addEventListener('click', function () {
+            local.style.color = col;
+            ui.send({ t: 'style', color: col, w: local.style.w });
+            tray.querySelectorAll('.swatch').forEach(function (x) { x.classList.remove('sel'); });
+            s.classList.add('sel');
+          });
+          tray.appendChild(s);
+        });
+        var clearBtn = ui.el('button', 'btn warn sm', '🧽 清空');
+        clearBtn.addEventListener('click', function () {
+          local.segments = [];
+          redrawAll();
+          ui.send({ t: 'clear' });
+        });
+        var widthRow = ui.el('div', 'row');
+        WIDTHS.forEach(function (w) {
+          var b = ui.el('button', 'btn sm ' + (local.style.w === w ? 'primary' : 'ghost'), '●');
+          b.style.fontSize = (w / 2 + 8) + 'px';
+          b.addEventListener('click', function () {
+            local.style.w = w;
+            ui.send({ t: 'style', color: local.style.color, w: w });
+          });
+          widthRow.appendChild(b);
+        });
+        wrap.appendChild(ui.el('div', 'row mt8'));
+        tray.appendChild(clearBtn);
+        tray.appendChild(widthRow);
+        wrap.appendChild(tray);
+        bindPaint(ui);
+      } else if (cur.phase === 'draw') {
+        wrap.appendChild(ui.h('<div class="card center"><div class="muted">画家 <b>' + esc(pName) + '</b> 正在作画… 在下面输入你的答案！</div></div>'));
+        var bar = ui.el('div', 'inputbar');
+        var input = ui.el('input');
+        input.placeholder = '我猜是……';
+        input.maxLength = 30;
+        var btn = ui.el('button', 'btn primary', '猜！');
+        var go = function () {
+          var v = input.value.trim();
+          if (!v) return;
+          ui.send({ t: 'guess', text: v });
+          input.value = '';
+          ui.toast('已提交：' + v);
+        };
+        btn.addEventListener('click', go);
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+        bar.appendChild(input); bar.appendChild(btn);
+        wrap.appendChild(bar);
+      }
+
+      if (cur.phase === 'reveal') {
+        wrap.appendChild(ui.h('<div class="muted center mt8">答案公布，马上进入下一回合…</div>'));
+      }
+      wrap.appendChild(ui.renderGameFooter());
+      return wrap;
+    },
+    onPrivate: function (obj) {
+      var ui = this;
+      if (obj && obj.obj && obj.obj.replay && obj.obj.replay.length) {
+        resetRound(obj.obj.round);
+        local.segments = obj.obj.replay.slice();
+        if (local.canvas && local.ctx) redrawAll();
+      }
+    },
+    onPeer: function (msg, from) {
+      var ui = this;
+      if (!msg) return;
+      if (msg.t === 'clear') { local.segments = []; redrawAll(); return; }
+      if (msg.t === 'style') { local.style.color = msg.color || local.style.color; local.style.w = msg.w || local.style.w; return; }
+      if (msg.t === 'stroke') {
+        var seg = { color: msg.color || local.style.color, w: msg.w || local.style.w, s: msg.s };
+        local.segments.push(seg);
+        if (local.ctx) drawSeg(seg);
+      }
+    }
+  };
+
+  var pending = [];
+  var lastSent = 0;
+  function bindPaint(ui) {
+    var c = local.canvas;
+    if (!c || c.dataset.paint) return;
+    c.dataset.paint = '1';
+    var toNorm = function (e) {
+      var rect = c.getBoundingClientRect();
+      var x = Math.max(0, Math.min(1000, Math.round((e.clientX - rect.left) / rect.width * 1000)));
+      var y = Math.max(0, Math.min(1000, Math.round((e.clientY - rect.top) / rect.height * 1000)));
+      return [x, y];
+    };
+    var flush = function () {
+      if (!pending.length) return;
+      var pts = pending;
+      pending = [];
+      var seg = { color: local.style.color, w: local.style.w, s: pts };
+      local.segments.push(seg);
+      ui.send({ t: 'peer', msg: { t: 'stroke', color: seg.color, w: seg.w, s: pts } });
+    };
+    var down = function (e) {
+      c.setPointerCapture && c.setPointerCapture(e.pointerId);
+      pending = [toNorm(e).concat([0])];
+      lastSent = Date.now();
+    };
+    var move = function (e) {
+      if (!pending.length) return;
+      pending.push(toNorm(e).concat([1]));
+      if (pending.length > 80 || Date.now() - lastSent > 70) {
+        var pts = pending; pending = [];
+        var seg = { color: local.style.color, w: local.style.w, s: pts };
+        local.segments.push(seg);
+        if (local.ctx) drawSeg(seg);
+        ui.send({ t: 'peer', msg: { t: 'stroke', color: seg.color, w: seg.w, s: pts } });
+        lastSent = Date.now();
+      }
+    };
+    var up = function () {
+      if (pending.length) { pending.push(pending[pending.length - 1].slice(0, 2).concat([2])); flush(); }
+    };
+    c.addEventListener('pointerdown', down);
+    c.addEventListener('pointermove', move);
+    c.addEventListener('pointerup', up);
+    c.addEventListener('pointercancel', up);
+    c.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/ui.js ===== */
+/* ===== UI 核心：落地页 + 大厅 + 通用渲染骨架 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var $ = function (sel) { return document.querySelector(sel); };
+  var EMPTY = { mode: 'lobby', phase: 'lobby', players: [], settings: {}, g: {}, log: [] };
+  var EMOS = ['😎','🤪','🐱','🐶','🦊','🐼','🐸','🦄','🍄','🌚','👾','🎃','🍑','🔥','💎','🍉','🐧','🦖','🤖','🥷'];
+
+  function UI() {
+    this.root = $('#pn-root');
+    this.room = null;
+    this.host = null;
+    this.state = EMPTY;
+    this.secrets = {};
+    this.screen = null;
+    this.screenName = 'land';
+    this.conn = 'off';
+    this._toastTimer = null;
+  }
+
+  UI.prototype.el = function (tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  UI.prototype.h = function (html) {
+    var d = document.createElement('div');
+    d.innerHTML = html.trim();
+    return d.firstElementChild;
+  };
+  UI.prototype.me = function () { return this.room ? this.room.me : null; };
+  UI.prototype.pid = function () { return this.me() ? this.me().id : null; };
+  UI.prototype.isHost = function () { return this.room ? this.room.isHost : false; };
+  UI.prototype.p = function (id) {
+    if (!this.state) return null;
+    for (var i = 0; i < this.state.players.length; i++) if (this.state.players[i].id === id) return this.state.players[i];
+    return null;
+  };
+  UI.prototype.send = function (action) {
+    if (this.room) this.room.sendAction(action);
+  };
+  UI.prototype.renderGameFooter = function () {
+    var self = this;
+    var row = this.el('div', 'row mt16');
+    row.style.justifyContent = 'center';
+    var back = this.el('button', 'btn ghost sm', '🏠 回大厅');
+    back.addEventListener('click', function () {
+      if (self.isHost()) self.send({ t: 'lobby' });
+      else self.room.leave(false);
+    });
+    row.appendChild(back);
+    return row;
+  };
+  UI.prototype.toast = function (text, kind) {
+    var box = $('.toasts');
+    if (!box) { box = this.el('div', 'toasts'); document.body.appendChild(box); }
+    var t = this.el('div', 'toast' + (kind ? ' ' + kind : ''), text);
+    box.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 3200);
+    setTimeout(function () { t.remove(); }, 3600);
+  };
+  UI.prototype.clear = function () { this.root.innerHTML = ''; };
+  UI.prototype.setScreen = function (name, screen) {
+    this.screenName = name;
+    this.screen = screen || null;
+    this.render();
+  };
+  UI.prototype.render = function () {
+    if (!this.state) return;
+    var name = this.state.mode === 'lobby' ? 'lobby' : this.state.mode;
+    if (name !== this.screenName && PN.screens[name]) this.setScreen(name, PN.screens[name]);
+    if (this.screen && this.screen.render) {
+      var self = this;
+      this.clear();
+      try {
+        var sec = this.secrets[this.state.mode];
+        var node = self.screen.render.call(self, this.state, (sec && sec.mine) || null); // 屏幕要的是秘密本身，不是 {mine} 包装
+        if (node && node.nodeType === 1) this.root.appendChild(node); // 屏幕只负责返回节点，由这里挂载
+      } catch (e) { console.error('render error', e); this.clear(); this.root.appendChild(this.h('<div class="card center muted">界面出错了，请刷新（' + (e && e.message) + '）</div>')); }
+    }
+  };
+  UI.prototype.local = function (key, val) {
+    try {
+      if (val === undefined) return localStorage.getItem('pn_' + key);
+      localStorage.setItem('pn_' + key, val);
+    } catch (e) {}
+    return undefined;
+  };
+
+  UI.prototype.renderTopbar = function (into) {
+    var self = this;
+    var code = this.room ? this.room.code : '';
+    var dot = this.conn === 'connected' ? 'ok' : 'warn';
+    var title = '群友派对之夜';
+    var bar = this.h(
+      '<div class="topbar">' +
+      '<span class="logo">🎉</span><span class="title">' + title + '</span>' +
+      '<span class="spacer"></span>' +
+      '<span class="chip"><span class="dot ' + dot + '"></span>' + (this.conn === 'connected' ? '在线' : '重连中…') + '</span>' +
+      (code ? '<button class="chip" id="pn-copycode"><b>' + code + '</b></button>' : '') +
+      '</div>'
+    );
+    into.appendChild(bar);
+    var cbtn = $('#pn-copycode');
+    if (cbtn) cbtn.addEventListener('click', function () { self.copyLink(); });
+  };
+  UI.prototype.link = function () {
+    return location.origin + location.pathname + (location.search || '') + '#' + (this.room ? this.room.code : '');
+  };
+  UI.prototype.copyLink = function () {
+    var link = this.link(), self = this;
+    var done = function () { self.toast('链接已复制，甩给群友！', 'good'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(done).catch(function () { prompt('复制链接（长按复制）', link); });
+    } else prompt('复制链接', link);
+  };
+  UI.prototype.share = function () {
+    var link = this.link();
+    if (navigator.share) navigator.share({ title: '群友派对之夜', text: '点进来一起玩：房号 ' + (this.room ? this.room.code : ''), url: link }).catch(function () {});
+    else this.copyLink();
+  };
+
+  /* ===== 落地页 ===== */
+  UI.prototype.renderLand = function () {
+    var self = this;
+    this.clear();
+    this.root.appendChild(this.h(
+      '<div class="land">' +
+      '<div class="biglogo">🎉</div>' +
+      '<h1>群友派对之夜</h1>' +
+      '<div class="sub">零服务器 · 打开链接即联机 · 谁是卧底 / 波长 / 谁最有可能 / 你画我猜</div>' +
+      '<div class="field"><label>你的昵称</label><input id="pn-name" maxlength="12" placeholder="如：奶茶三分糖"></div>' +
+      '<div class="field"><label>选个头像</label><div class="emoji-row" id="pn-emojis"></div></div>' +
+      '<div class="grid2" style="max-width:340px;margin:0 auto">' +
+      '<button class="btn primary block" id="pn-create">➕ 开个房</button>' +
+      '<button class="btn block" id="pn-join">🚪 加入房间</button>' +
+      '</div>' +
+      '<div class="muted mt16">已有链接？直接点开输入昵称即可进场</div>' +
+      '</div>'
+    ));
+    var nameInput = $('#pn-name');
+    nameInput.value = this.local('name') || '';
+    var emoBox = $('#pn-emojis');
+    var curEmoji = this.local('emoji') || '😎';
+    EMOS.forEach(function (e) {
+      var b = self.el('button', 'e' + (e === curEmoji ? ' sel' : ''), e);
+      b.addEventListener('click', function () {
+        emoBox.querySelectorAll('.e').forEach(function (x) { x.classList.remove('sel'); });
+        b.classList.add('sel');
+        curEmoji = e;
+      });
+      emoBox.appendChild(b);
+    });
+    var enter = function (join) {
+      var name = nameInput.value.trim() || '神秘群友';
+      self.local('name', name);
+      self.local('emoji', curEmoji);
+      self.begin(name, curEmoji, join);
+    };
+    $('#pn-create').addEventListener('click', function () { enter(false); });
+    $('#pn-join').addEventListener('click', function () { enter(true); });
+    nameInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') enter(true); });
+  };
+
+  UI.prototype.begin = function (name, emoji, join) {
+    var self = this;
+    var id = this.local('id');
+    if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10); this.local('id', id); }
+    var code = (location.hash || '').replace('#', '').toUpperCase();
+    var wantJoin = join || !!code;
+    var brokerIndex = Number(this.local('broker')) || 0;
+    var build = function (c) {
+      self.room = new PN.Room({
+        code: c,
+        identity: { id: id, name: name, emoji: emoji },
+        brokerIndex: brokerIndex,
+        onStatus: function (s, d) {
+          self.conn = s === 'connected' ? 'connected' : (s === 'connecting' ? 'connecting' : 'off');
+          if (s === 'connected') { self.local('broker', String(self.room.brokerIndex)); if (self.state && self.state.mode !== 'lobby') self.render(); }
+          if (s === 'disconnected') self.render();
+        },
+        onRoster: function (list, kind, peerId) {
+          if (kind === 'join' && peerId && self.room && self.room.isHost && self.host) {
+            self.host.dispatch({ t: '_joined', id: peerId }, peerId);
+          }
+          if (self.room && self.room.isHost && self.host && self.state && self.state.mode === 'lobby') {
+            self.host.dispatch({ t: 'hi' }, self.pid());
+          }
+        },
+        onHost: function (isHost) {
+          if (isHost) {
+            if (!self.host) self.host = new PN.Host(self.room, function (state) { self.state = state; self.render(); });
+            if (self.room.lastState && self.room.lastState.players) self.host.adopt(self.room.lastState);
+            else self.host.fresh(id, name, emoji);
+          }
+          self.render();
+        },
+        onState: function (state) {
+          self.state = state;
+          if (!self.room.isHost && state.hostId !== self.pid()) self.state = state;
+          self.render();
+        },
+        onAction: function (action, from) { if (self.host && self.room.isHost) self.host.dispatch(action, from); },
+        onEvent: function (ev) { self.onEvent(ev); },
+        onPeer: function (msg, from) { if (self.screen && self.screen.onPeer) self.screen.onPeer(msg, from); },
+        onPrivate: function (obj, from) {
+          if (obj.kind === 'secret') {
+            self.secrets[obj.mode] = self.secrets[obj.mode] || {};
+            self.secrets[obj.mode].mine = obj.obj;
+            if (obj.obj && obj.obj.recover && self.screen && self.screen.onRecover) {
+              self.screen.onRecover.call(self, obj.obj);
+            }
+          }
+          if (obj.kind === 'reveal' && self.screen && self.screen.onReveal) self.screen.onReveal.call(self, obj.obj);
+          if (self.screen && self.screen.onPrivate) self.screen.onPrivate.call(self, obj, from);
+          self.render();
+        }
+      });
+      self.room.start().then(function () {
+        self.setScreen('lobby', PN.screens.lobby);
+      });
+    };
+    if (wantJoin) {
+      var c = code || '';
+      if (!c) {
+        var answer = prompt('输入 4 位房号（群友发你的）', '');
+        if (!answer) return;
+        c = answer.toUpperCase();
+      }
+      PN.Room.probe(c, brokerIndex, 3000).then(function (meta) {
+        if (!meta) {
+          if (confirm('没找到房间 ' + c + '，要自己开一个吗？')) build(c);
+          else self.renderLand();
+        } else build(c);
+      });
+    } else {
+      var gen = function (n) { for (var i = 0; i < n; i++) { var c = PN.randCode(4); if (c !== location.hash.slice(1).toUpperCase()) return c; } return PN.randCode(4); };
+      var c = gen(8);
+      PN.Room.probe(c, brokerIndex, 2500).then(function (meta) { if (meta) build(gen(40)); else build(c); });
+    }
+  };
+
+  UI.prototype.onEvent = function (ev) {
+    if (ev.t === 'descAll') { this.toast('描述揭晓，开始投票！'); return; }
+    if (ev.t === 'voteResult') { this.toast('投票结果出炉'); return; }
+    if (ev.t === 'gameover') {
+      this.toast(ev.msg || '本局结束！', 'good');
+      if (ev.sfx) this.beep(ev.sfx);
+      return;
+    }
+    if (ev.t === 'question') { this.toast('🃏 ' + (ev.q || '')); return; }
+    if (ev.t === 'correct') { this.toast('✅ ' + (ev.text || '') + '！' + (ev.who ? ' ' + ev.who + ' 答对了' : ''), 'good'); this.beep('win'); return; }
+    if (ev.t === 'reveal') { this.toast('答案：' + (ev.answer || ev.target || '') + (ev.clue ? '（线索：' + ev.clue + '）' : ''), 'good'); this.beep('win'); return; }
+    if (ev.t === 'round') { this.toast(ev.msg || '新回合'); return; }
+    if (ev.t === 'toast') { this.toast(ev.text || '', ev.kind); return; }
+  };
+  UI.prototype.beep = function (kind) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var ctx = this._ac || (this._ac = new AC());
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      if (kind === 'win') { o.frequency.value = 880; g.gain.value = 0.08; o.start(); o.stop(ctx.currentTime + 0.18); }
+      else { o.frequency.value = 523; g.gain.value = 0.06; o.start(); o.stop(ctx.currentTime + 0.12); }
+    } catch (e) {}
+  };
+
+  /* ===== 大厅 ===== */
+  PN.screens = PN.screens || {};
+  PN.screens.lobby = {
+    name: 'lobby',
+    render: function (state, secret) { return UI.prototype.renderLobby.call(this, state); }
+  };
+  // 注：屏幕的 render 由 UI.render 用 .call(ui, ...) 调用，所以这里 this 就是 UI 实例
+
+  UI.prototype.renderLobby = function (state) {
+    var self = this;
+    this.clear();
+    var wrap = this.el('div');
+    this.root.appendChild(wrap); // 先挂载：下面用 $('#...') 全局查元素
+    this.renderTopbar(wrap);
+    var s = state;
+    var sorted = (s.players || []).slice().sort(function (a, b) { return b.score - a.score; });
+    var playersHtml = sorted.map(function (p) {
+      return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.online ? '' : ' off') + '">' +
+        '<span class="em">' + (p.emoji || '🙂') + '</span>' +
+        '<span class="nm">' + p.name + '</span>' +
+        '<span class="sc">' + (p.score || 0) + ' 分</span>' +
+        '</div>';
+    }).join('');
+    var modes = [];
+    for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
+      var g = PN.games[k];
+      modes.push(
+        '<div class="modecard" data-mode="' + k + '">' +
+        '<div class="ico">' + g.emoji + '</div>' +
+        '<div class="nm">' + g.name + '</div>' +
+        '<div class="blurb">' + g.blurb + '</div>' +
+        '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
+        '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' + (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
+        '<div class="settings" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
+        '</div>'
+      );
+    }
+    wrap.appendChild(this.h(
+      '<div>' + // 必须包一层：h() 只保留第一个顶层元素
+      '<div class="roomcode card row">' +
+      '<div><div class="muted" style="font-size:11px">房号（复制发给群友）</div><div class="code">' + this.room.code + '</div></div>' +
+      '<div style="flex:1"></div>' +
+      '<button class="btn sm" id="pn-copy">📋 复制链接</button>' +
+      '<button class="btn sm" id="pn-share">📤</button>' +
+      '</div>' +
+      '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的群友（' + (s.players || []).length + '）</div>' +
+      '<div class="players">' + (playersHtml || '<div class="muted">还没人，快拉人！</div>') + '</div></div>' +
+      '<div class="modegrid">' + modes.join('') + '</div>' +
+      '<div class="row mt16" style="justify-content:center;gap:8px">' +
+      '<button class="btn ghost sm" id="pn-edit">✏️ 改昵称</button>' +
+      (self.isHost() ? '<button class="btn warn sm" id="pn-reset">清零积分</button><button class="btn warn sm" id="pn-disband">解散房间</button>' : '<button class="btn warn sm" id="pn-leave">离开</button>') +
+      '</div>' +
+      '</div>'
+    ));
+    $('#pn-copy').addEventListener('click', function () { self.copyLink(); });
+    $('#pn-share').addEventListener('click', function () { self.share(); });
+    $('#pn-edit').addEventListener('click', function () { self.editProfile(); });
+    var reset = $('#pn-reset'); if (reset) reset.addEventListener('click', function () { if (confirm('清零所有人积分？')) self.send({ t: 'resetScores' }); });
+    var dis = $('#pn-disband'); if (dis) dis.addEventListener('click', function () { if (confirm('解散房间？所有人都要重进')) { self.room.leave(true); location.reload(); } });
+    var lv = $('#pn-leave'); if (lv) lv.addEventListener('click', function () { self.room.leave(false); location.reload(); });
+    var cards = wrap.querySelectorAll('.modecard');
+    cards.forEach(function (card) {
+      var mode = card.dataset.mode;
+      card.querySelector('[data-act="cfg"]').addEventListener('click', function () {
+        var cfg = $('#cfg-' + mode);
+        if (cfg) cfg.classList.toggle('open');
+      });
+      card.querySelector('[data-act="start"]').addEventListener('click', function () {
+        self.send({ t: 'start', mode: mode });
+      });
+      card.querySelectorAll('.cfg').forEach(function (ctl) {
+        ctl.addEventListener('click', function () {
+          var raw = ctl.dataset.val;
+          var v;
+          if (raw === 'true') v = true; else if (raw === 'false') v = false; else if (!isNaN(Number(raw))) v = Number(raw); else v = raw;
+          var values = {};
+          values[ctl.dataset.key] = v;
+          self.send({ t: 'settings', values: values });
+          card.querySelectorAll('.cfg[data-key="' + ctl.dataset.key + '"]').forEach(function (x) { x.classList.remove('on'); });
+          ctl.classList.add('on');
+        });
+      });
+    });
+    return wrap;
+  };
+
+  UI.prototype.settingsHtml = function (mode, s) {
+    var st = (s.settings && s.settings[mode]) || {};
+    var rows = [];
+    var seg = function (label, key, opts) {
+      var cur = String(st[key]);
+      return '<div class="setrow"><span>' + label + '</span><div class="seg">' + opts.map(function (o) {
+        return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + '</div></div>';
+    };
+    if (mode === 'undercover') {
+      rows.push(seg('卧底人数', 'numUnder', [[1, '1 个'], [2, '2 个']]));
+      rows.push(seg('加白板', 'blank', [[false, '关'], [true, '开']]));
+      rows.push(seg('描述方式', 'textMode', [[true, '打字'], [false, '开口说']]));
+      rows.push(seg('每轮时长', 'roundSec', [[90, '90s'], [180, '180s'], [300, '300s']]));
+    } else if (mode === 'wavelength') {
+      rows.push(seg('总局数', 'rounds', [[4, '4'], [6, '6'], [8, '8'], [10, '10']]));
+    } else if (mode === 'mostlikely') {
+      rows.push(seg('总题数', 'rounds', [[6, '6'], [8, '8'], [10, '10'], [12, '12']]));
+      rows.push(seg('每题时长', 'eachSec', [[20, '20s'], [30, '30s'], [45, '45s']]));
+    } else if (mode === 'drawgame') {
+      rows.push(seg('总回合', 'rounds', [[3, '3'], [6, '6'], [9, '9']]));
+      rows.push(seg('画画时长', 'drawSec', [[60, '60s'], [90, '90s'], [120, '120s']]));
+    }
+    return rows.join('');
+  };
+
+  UI.prototype.editProfile = function () {
+    var self = this;
+    this.root.appendChild(this.h(
+      '<div class="overlay"><div class="modal">' +
+      '<div class="center" style="font-weight:800;margin-bottom:14px">✏️ 改昵称</div>' +
+      '<div class="field"><input id="pn-ename" maxlength="12" value="' + this.me().name + '"></div>' +
+      '<div class="row mt16"><button class="btn ghost block" id="pn-ecancel">取消</button>' +
+      '<button class="btn primary block" id="pn-esave">保存</button></div>' +
+      '</div></div>'
+    ));
+    $('#pn-ecancel').addEventListener('click', function () { document.querySelector('.overlay').remove(); });
+    $('#pn-esave').addEventListener('click', function () {
+      var name = $('#pn-ename').value.trim() || '神秘群友';
+      self.room.me.name = name;
+      self.local('name', name);
+      self.send({ t: 'setProfile', name: name, emoji: self.me().emoji });
+      document.querySelector('.overlay').remove();
+      self.render();
+    });
+  };
+
+  PN.UI = UI;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/app.js ===== */
+/* ===== 应用入口 ===== */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  function boot() {
+    var ui = new PN.UI();
+    PN.app = ui;
+    ui.renderLand();
+    var wrapErr = function (e) {
+      console.error(e);
+      document.getElementById('pn-root').innerHTML =
+        '<div class="land"><div class="biglogo">🛠️</div><h1>启动失败</h1>' +
+        '<div class="sub">' + (e && e.message ? e.message : '未知错误') + '（刷新重试）</div></div>';
+    };
+    window.addEventListener('error', function (e) {
+      // 只在致命阶段兜底，不打扰游戏内小错
+      if (!PN.app || !PN.app.room) wrapErr(e.error || e);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+</body>
+</html>
