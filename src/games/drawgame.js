@@ -362,7 +362,7 @@
         if (g.cur && g.cur.phase === 'draw') {
           var rd = getRD(g.round);
           if (msg.t === 'stroke' && msg.s && msg.s.length) {
-            rd.segments.push({ id: msg.id, color: msg.color, w: msg.w, s: msg.s });
+            rd.segments.push({ id: msg.id, r: msg.r, color: msg.color, w: msg.w, s: msg.s });
             while (rd.segments.length > 900) rd.segments.shift();
           } else if (msg.t === 'undo') {
             rd.segments = rd.segments.filter(function (c) { return c.id !== msg.id; });

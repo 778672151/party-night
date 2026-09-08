@@ -50,8 +50,12 @@
   /* ---------------- 画布 ---------------- */
   function resetIfNewGame(g) {
     var stamp = (g && g.startedAt) || 0;
-    if (stamp !== local.startedAt || (g && g.round) < local.round) {
+    var round = (g && g.round) || 0;
+    // 换轮必须清空！startedAt 只在开局写一次，只靠它判断会漏掉每一次换轮：
+    // 画布带着上一轮的画继续用，另一端回放/新画的笔画又对不上，看起来就是「没清 + 显示错」。
+    if (stamp !== local.startedAt || round !== local.round) {
       local.startedAt = stamp;
+      local.round = round;
       local.strokes = [];
       local.byId = {};
       local.curId = null;
@@ -61,8 +65,9 @@
       local.w = local.h = 0;
       local.rect = null;
       local.painting = false;
+      local.sent = 0;
+      local.seq = 0;
     }
-    local.round = (g && g.round) || 0;
   }
   function ensureCanvas(ui) {
     if (local.canvas) return local.canvas;
@@ -138,8 +143,8 @@
     clearCanvas();
     for (var i = 0; i < local.strokes.length; i++) paintStroke(local.strokes[i]);
   }
-  function addStroke(id, color, w) {
-    var st = { id: id, color: color, w: w, pts: [] };
+  function addStroke(id, color, w, r) {
+    var st = { id: id, color: color, w: w, r: r === undefined ? local.round : r, pts: [] };
     local.byId[id] = st;
     local.strokes.push(st);
     return st;
@@ -166,7 +171,7 @@
       local.lastFlush = now;
       var chunk = st.pts.slice(local.sent);
       local.sent = st.pts.length;
-      ui.send({ t: 'peer', msg: { t: 'stroke', id: st.id, color: st.color, w: st.w, s: chunk } });
+      ui.send({ t: 'peer', msg: { t: 'stroke', id: st.id, r: st.r, color: st.color, w: st.w, s: chunk } });
     }
 
     function down(e) {
@@ -177,7 +182,7 @@
       measureRect(cv); // 每笔开头量一次就够，中途不再触发布局
       local.painting = true; // 落笔期间冻结 DOM 重建：否则画布被拆 → 指针捕获丢失 → 断笔
       var p = toNorm(cv, e);
-      var st = addStroke('k' + (++local.seq) + 'r' + local.round, local.style.color, local.style.w);
+      var st = addStroke('k' + (++local.seq) + 'r' + local.round, local.style.color, local.style.w, local.round);
       st.pts.push(p);
       local.curId = st.id;
       local.sent = 0;
@@ -399,13 +404,13 @@
           var last = local.strokes[local.strokes.length - 1];
           if (!last) return;
           dropStroke(last.id);
-          ui.send({ t: 'peer', msg: { t: 'undo', id: last.id } });
+          ui.send({ t: 'peer', msg: { t: 'undo', id: last.id, r: local.round } });
         });
         var clr = ui.el('button', 'btn warn sm', '🧽 清空');
         clr.addEventListener('click', function () {
           local.strokes = []; local.byId = {}; local.curId = null;
           redrawAll();
-          ui.send({ t: 'peer', msg: { t: 'clear' } });
+          ui.send({ t: 'peer', msg: { t: 'clear', r: local.round } });
         });
         tools.appendChild(undo);
         tools.appendChild(clr);
@@ -459,6 +464,8 @@
     /* ---------- 别人画的笔画 ---------- */
     onPeer: function (msg) {
       if (!msg) return;
+      // 上一轮的残尾（落笔正好跨过换轮时 flush 出来的）不能画到新画布上
+      if (msg.r && local.round && msg.r !== local.round) return;
       if (msg.t === 'clear') {
         local.strokes = []; local.byId = {}; local.curId = null;
         redrawAll();
@@ -468,7 +475,7 @@
       if (msg.t !== 'stroke' || !msg.s || !msg.s.length) return;
       var st = local.byId[msg.id];
       var isNew = !st;
-      if (isNew) st = addStroke(msg.id, msg.color, msg.w);
+      if (isNew) st = addStroke(msg.id, msg.color, msg.w, msg.r);
       var from = st.pts.length;
       st.pts = st.pts.concat(msg.s);
       if (local.w) { if (isNew) paintStroke(st); else paintTail(st, from + 1); }
@@ -484,7 +491,7 @@
           var ch = obj.replay[i];
           if (!ch || !ch.s) continue;
           var st = local.byId[ch.id];
-          if (!st) st = addStroke(ch.id, ch.color, ch.w);
+          if (!st) st = addStroke(ch.id, ch.color, ch.w, ch.r);
           st.pts = st.pts.concat(ch.s);
         }
         redrawAll();

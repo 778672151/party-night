@@ -84,6 +84,25 @@ for (const p of others) {
 }
 assert(h.state.players.find(x => x.id === painterId).score >= 100, '画家按被猜中次数加分');
 
-console.log('PASS 真实联机：你画我猜跑通（选词→作画→聊天/猜错/差一点→全员猜中提前揭晓→回放），答案 = "' + words[0] + '"');
+// ---------------- 换轮：这一段就是用户报的「换一轮画布不清 + 另一端看到错误」 ----------------
+assert(clock.has('drawgame_reveal'), '揭晓后排了「进入下一轮」计时器');
+clock.pump('drawgame_reveal');
+assert(h.state.g.round === 2, '进入第 2 轮，got=' + h.state.g.round);
+const painter2Id = h.state.g.cur.painter;
+assert(painter2Id !== painterId, '换轮换画家：' + painterId + ' → ' + painter2Id);
+const painter2 = t.byId(painter2Id);
+await sleepUntil(() => painter2.secrets.some(s => s.obj && s.obj.words && s.obj.words.length === 3), 20000, '第 2 轮画家收到候选词');
+const words2 = painter2.secrets.filter(s => s.obj && s.obj.words).pop().obj.words;
+painter2.room.sendAction({ t: 'pick', i: 0 });
+await sleepUntil(() => h.state.g.round === 2 && h.state.g.cur.phase === 'draw', 20000, '第 2 轮进入作画');
+assert(h.state.g.chat.every(m => m.k !== 'ok' || m.text.indexOf(words2[0]) === -1), '第 2 轮聊天不泄露新答案');
+painter2.room.sendAction({ t: 'peer', msg: { t: 'stroke', id: 'k1r2', r: 2, color: '#222222', w: 9, s: [[10, 10], [500, 500]] } });
+const late2 = await t.add('f0000001', '小F', '🐨');
+await sleepUntil(() => late2.secrets.some(s => s.obj && Array.isArray(s.obj.replay) && s.obj.replay.length), 25000, '第 2 轮晚到者收到回放');
+const rep2 = late2.secrets.filter(s => s.obj && Array.isArray(s.obj.replay)).pop().obj.replay;
+assert(rep2.length === 1, '回放只有第 2 轮的 1 条笔画，got=' + rep2.length + '（夹带第 1 轮就会串画）');
+assert(rep2[0].id === 'k1r2' && rep2[0].r === 2, '回放块带轮次标记 r=2：' + JSON.stringify({ id: rep2[0].id, r: rep2[0].r }));
+
+console.log('PASS 真实联机：你画我猜跑通（选词→作画→聊天/猜错/差一点→全员猜中提前揭晓→回放→换轮清屏/回放不串轮），答案 = "' + words[0] + '"');
 t.close();
 process.exit(0);
