@@ -13,7 +13,7 @@
     startedAt: 0, mode: '', strokes: [], byId: {}, curId: null, sent: 0, seq: 0,
     style: { color: COLORS[0], w: WIDTHS[1] },
     canvas: null, ctx: null, w: 0, h: 0, dpr: 1,
-    ro: null, hintTimer: 0, lastFlush: 0,
+    ro: null, hintTimer: 0, lastFlush: 0, painting: false, rect: null,
     draft: '', hadFocus: false, logAtBottom: true, myWord: ''
   };
 
@@ -26,9 +26,15 @@
   function clampPt(x, y) {
     return [Math.max(0, Math.min(1000, Math.round(x))), Math.max(0, Math.min(1000, Math.round(y)))];
   }
-  function toNorm(cv, e) {
+  /** 缓存画布矩形：每个 pointermove 都 getBoundingClientRect 会强制整页重排（聊天区变长时明显卡顿） */
+  function measureRect(cv) {
     var r = cv.getBoundingClientRect();
-    if (!r.width || !r.height) return [0, 0];
+    local.rect = (r && r.width && r.height) ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+    return local.rect;
+  }
+  function toNorm(cv, e) {
+    var r = local.rect || measureRect(cv);
+    if (!r) return [0, 0];
     return clampPt((e.clientX - r.left) / r.width * 1000, (e.clientY - r.top) / r.height * 1000);
   }
   function maskHtml(g, cur) {
@@ -53,6 +59,8 @@
       local.canvas = null;
       local.ctx = null;
       local.w = local.h = 0;
+      local.rect = null;
+      local.painting = false;
     }
     local.round = (g && g.round) || 0;
   }
@@ -69,16 +77,18 @@
     if (!cv || !local.ctx) return;
     var r = cv.getBoundingClientRect();
     if (!r.width || !r.height || r.width < 20) return; // 没挂载/不可见 → 保持原样，别写坏
+    local.rect = { left: r.left, top: r.top, width: r.width, height: r.height }; // 顺手刷新矩形缓存
     var dpr = Math.min(root.devicePixelRatio || 1, 2);
     var W = Math.max(1, Math.round(r.width * dpr));
     var H = Math.max(1, Math.round(r.height * dpr));
-    if (cv.width !== W || cv.height !== H || local.dpr !== dpr) {
-      local.dpr = dpr;
+    if (cv.width === W && cv.height === H && local.dpr === dpr && local.w === r.width && local.h === r.height) return;
+    local.dpr = dpr;
+    local.w = r.width; local.h = r.height;
+    if (cv.width !== W || cv.height !== H) { // 赋 width/height 会清空画布并重置变换，所以只在真的变了时动
       cv.width = W; cv.height = H;
       local.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      local.w = r.width; local.h = r.height;
-      redrawAll();
     }
+    redrawAll();
   }
   function clearCanvas() {
     if (local.ctx && local.w) local.ctx.clearRect(0, 0, local.w, local.h);
@@ -164,6 +174,8 @@
       if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return; // 只认左键
       e.preventDefault();
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+      measureRect(cv); // 每笔开头量一次就够，中途不再触发布局
+      local.painting = true; // 落笔期间冻结 DOM 重建：否则画布被拆 → 指针捕获丢失 → 断笔
       var p = toNorm(cv, e);
       var st = addStroke('k' + (++local.seq) + 'r' + local.round, local.style.color, local.style.w);
       st.pts.push(p);
@@ -194,11 +206,12 @@
     function up(e) {
       if (!drawing) return;
       drawing = false;
-      e.preventDefault();
+      local.painting = false;
+      if (e && e.preventDefault) e.preventDefault();
       var st = local.byId[local.curId];
       if (st) {
-        var r = cv.getBoundingClientRect();
-        if (st.pts.length === 1 && r.width) {
+        var r = local.rect || measureRect(cv);
+        if (st.pts.length === 1 && r) {
           // 单击点：补一个极近的点，避免只有一个孤点
           st.pts.push([st.pts[0][0], st.pts[0][1]]);
           paintStroke(st);
@@ -206,12 +219,19 @@
         flush(true);
       }
       local.curId = null;
+      // 落笔期间被 deferRender 跳过的状态更新，现在补上（挪出事件回调，别在派发中途改 DOM）
+      if (ui._renderPending) setTimeout(function () { ui.flushRender(); }, 0);
     }
     cv.addEventListener('pointerdown', down);
     cv.addEventListener('pointermove', move);
     cv.addEventListener('pointerup', up);
     cv.addEventListener('pointercancel', up);
-    cv.addEventListener('pointerleave', function (e) { if (drawing) up(e); });
+    // 拖到画布外：只要还持有指针捕获就继续画（越界坐标会被 clamp 在画布内），别把笔画截断
+    cv.addEventListener('pointerleave', function (e) {
+      if (!drawing) return;
+      var held = typeof cv.hasPointerCapture === 'function' && cv.hasPointerCapture(e.pointerId);
+      if (!held) up(e);
+    });
     cv.addEventListener('contextmenu', function (e) { if (local.painter) e.preventDefault(); });
   }
 
@@ -232,6 +252,9 @@
   PN.screens.drawgame = {
     name: 'drawgame',
     wide: true,
+
+    /** 落笔期间冻结 DOM 重建（见 ui.js deferRender 注释）：保住画布的指针捕获，笔画才不会中途断 */
+    deferRender: function () { return !!local.painting; },
 
     /** 重绘前抢救输入草稿 + 滚动位置（否则每来一条消息就丢焦点） */
     beforeRender: function () {
@@ -418,7 +441,11 @@
         local.draft = '';
       };
       btn.addEventListener('click', go);
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+      input.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    if (e.isComposing || e.keyCode === 229) return; // 输入法回车=确认候选词，不能当提交
+    e.preventDefault(); go();
+  });
       bar.appendChild(input);
       bar.appendChild(btn);
       side.appendChild(bar);

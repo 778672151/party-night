@@ -34,7 +34,10 @@
       input.value = '';
     };
     btn.addEventListener('click', go);
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+    input.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return; // 输入法回车=确认候选词
+    go();
+  });
     bar.appendChild(input); bar.appendChild(btn);
     return bar;
   }

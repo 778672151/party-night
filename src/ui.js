@@ -61,6 +61,21 @@
     setTimeout(function () { t.remove(); }, 3600);
   };
   UI.prototype.clear = function () { this.root.innerHTML = ''; };
+
+  /* 输入法组合（拼音还没上屏）期间，绝不能重建 DOM —— clear() 会把输入框拆掉，
+     未上屏的拼音和候选词会整段丢失（中文群友打字几乎必踩）。这里做全局检测，所有屏幕共享。 */
+  var imeComposing = false, lastUI = null;
+  function imeFreeze() {
+    if (!imeComposing) return false;
+    var ae = document.activeElement;
+    if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA')) { imeComposing = false; return false; } // 自愈：输入框已不在焦点上
+    return true;
+  }
+  document.addEventListener('compositionstart', function () { imeComposing = true; }, true);
+  document.addEventListener('compositionend', function () {
+    imeComposing = false;
+    if (lastUI && lastUI._renderPending) setTimeout(function () { lastUI.flushRender(); }, 0);
+  }, true);
   UI.prototype.setScreen = function (name, screen) {
     this.screenName = name;
     this.screen = screen || null;
@@ -73,6 +88,15 @@
     if (this.screen && this.screen.render) {
       var self = this;
       if (this.screen.beforeRender) { try { this.screen.beforeRender.call(this); } catch (e) {} } // 清空 DOM 前抢救输入草稿/滚动位置
+      // 拖拽/作画进行中绝不重建 DOM：clear() 会拆掉画布元素，浏览器随即释放指针捕获并抛 pointercancel，
+      // 笔画当场断掉（jsdom 没有指针捕获语义，所以单测测不出来）。屏幕用 deferRender 声明，落笔后自己 flushRender 补一次。
+      if (this.screen.deferRender) {
+        var defer = false;
+        try { defer = !!this.screen.deferRender.call(this); } catch (e) {}
+        if (defer) { this._renderPending = true; return; }
+      }
+      if (imeFreeze()) { this._renderPending = true; return; } // 拼音上屏中：先别动 DOM
+      lastUI = this;
       this.clear();
       try {
         var sec = this.secrets[this.state.mode];
@@ -82,6 +106,12 @@
         if (this.screen.mounted) this.screen.mounted.call(self, node); // 挂载后钩子：此时才量得到真实尺寸
       } catch (e) { console.error('render error', e); this.clear(); this.root.appendChild(this.h('<div class="card center muted">界面出错了，请刷新（' + (e && e.message) + '）</div>')); }
     }
+  };
+  /** 配合 screen.deferRender：拖拽结束后把被跳过的那次渲染补上 */
+  UI.prototype.flushRender = function () {
+    if (!this._renderPending) return;
+    this._renderPending = false;
+    this.render();
   };
   UI.prototype.local = function (key, val) {
     try {
@@ -163,7 +193,10 @@
     };
     $('#pn-create').addEventListener('click', function () { enter(false); });
     $('#pn-join').addEventListener('click', function () { enter(true); });
-    nameInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') enter(true); });
+    nameInput.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return; // 输入法回车=确认候选词
+      enter(true);
+    });
   };
 
   UI.prototype.begin = function (name, emoji, join) {
