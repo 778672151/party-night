@@ -83,6 +83,8 @@ function makeFakeUI(state, id) {
   u.clear = UI.prototype.clear;
   u.render = UI.prototype.render;
   u.flushRender = UI.prototype.flushRender;
+  u.snapshotInput = UI.prototype.snapshotInput; // 通用草稿抢救（新增）
+  u.restoreInput = UI.prototype.restoreInput;
   return u;
 }
 

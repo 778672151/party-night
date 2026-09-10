@@ -161,6 +161,8 @@ input[type=range]{width:120px;accent-color:var(--acc)}
   box-shadow:0 8px 30px rgba(0,0,0,.35),inset 0 0 0 3px rgba(255,255,255,.08)}
 .dg-stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
 .dg-stage.locked canvas{cursor:default}
+/* 猜词者/旁观者要能用手指在画布区域上下滑动页面；只有画家才禁用滚动 */
+.dg-stage.locked,.dg-stage.locked canvas{touch-action:pan-y}
 .dg-hint{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;margin:2px 0 8px;
   font-size:22px;font-weight:800;letter-spacing:.22em;color:var(--ink)}
 .dg-hint .w{color:#ffd93d}
@@ -682,7 +684,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         urls: urls,
         clientId: 'pn_' + self.me.id + '_' + Math.random().toString(36).slice(2, 7),
         keepalive: 45,
-        will: { topic: self.topic('a'), payload: self._enc({ t: 'bye', id: self.me.id }) },
+        // dropped:true 表示这是 broker 代发的遗嘱（真掉线）；主动 leave() 发的 bye 不带这个标记。
+        // 房主据此决定是「标离线保留积分」还是「真的移出房间」。
+        will: { topic: self.topic('a'), payload: self._enc({ t: 'bye', id: self.me.id, dropped: true }) },
         onStatus: function (s, d) { self.cb.onStatus && self.cb.onStatus(s, d); },
         onConnect: function () {
           self.mqtt.subscribe([self.base + '/#']);
@@ -702,9 +706,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     this.publishRaw('a', { t: 'hi', id: this.me.id, name: this.me.name, emoji: this.me.emoji, pub: this.me.pub, ts: now() });
   };
 
-  Room.prototype.publishRaw = function (k, obj, retain) {
+  Room.prototype.publishRaw = function (k, obj, retain, queue) {
     if (!this.mqtt) return;
-    this.mqtt.publish(this.topic(k), this._enc(obj), { retain: !!retain, queue: k === 'a' });
+    this.mqtt.publish(this.topic(k), this._enc(obj), { retain: !!retain, queue: queue === undefined ? (k === 'a' || k === 'p') : !!queue });
   };
 
   Room.prototype._onMessage = function (topic, bytes, retained) {
@@ -729,7 +733,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       if (msg.t === 'bye') {
         delete self.peers[msg.id];
         self.cb.onRoster && self.cb.onRoster(self.roster(), 'leave', msg.id);
-        if (self.isHost) self.cb.onAction && self.cb.onAction({ t: '_left', id: msg.id }, msg.id);
+        if (self.isHost) self.cb.onAction && self.cb.onAction({ t: '_left', id: msg.id, dropped: !!msg.dropped }, msg.id);
         return;
       }
       if (self.peers[msg.from]) self.peers[msg.from].lastSeen = now();
@@ -875,7 +879,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var out = {}, k;
     for (k in rec.payload) out[k] = rec.payload[k];
     out.mid = rec.mid;
-    self.publishRaw('a', out);
+    // 动作不进断线队列：排队的话重连时会一次性涌入，落到已经换过轮的新一轮里
+    // （比如你掉线前拖的猜测，回来时已经开了新回合）。重传机制本身已经覆盖短暂抖动。
+    self.publishRaw('a', out, false, false);
     if (rec.tries >= ACT_MAX_TRIES) { delete self._pending[rec.mid]; return; }
     clearTimeout(rec.timer);
     rec.timer = setTimeout(function () { self._sendAct(rec); }, ACT_RETRY_MS);
@@ -998,6 +1004,8 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
 
   PN.games = {};
 
+  var DROP_GRACE_MS = 25000; // 掉线宽限期：刷新/切后台回来的人还在对局里
+
   function Host(room, onStateChange) {
     this.room = room;
     this.onStateChange = onStateChange || function () {};
@@ -1031,12 +1039,24 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var s = this.state;
     if (!from) return;
     if (action.t === '_joined' || action.t === 'hi') {
+      var before = this.state.players.length;
+      var prevP = this.player(from);
+      var wasOffline = !prevP || !prevP.online; // 掉线的人回来了，也要广播一次
       this.upsertPlayer(from);
-      this.emit();
+      // 只有名单或在线状态真的变了才广播：以前每收到一次心跳就 emit 一次，
+      // 四个人在大厅里等于每 1 秒把整棵树重建一次 —— 改昵称弹窗、设置面板全被冲掉。
+      if (this.syncOnline() || wasOffline || this.state.players.length !== before) this.emit();
+      return;
+    }
+    if (action.t === '_syncOnline') {
+      // 对局中刷新在线状态：掉线的人不能一直算在「等人描述 / 等人投票」里
+      if (this.syncOnline()) this.emit();
       return;
     }
     if (action.t === '_left') {
-      this.removePlayer(from);
+      // 掉线只标离线（积分保住，人回来接着玩）；主动退出才真的移出房间
+      if (action.dropped) this.markOffline(from);
+      else this.removePlayer(from);
       this.emit();
       return;
     }
@@ -1064,8 +1084,15 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     }
     if (action.t === 'lobby') { this.goLobby(); return; }
     if (action.t === 'settings') {
-      for (var k in action.values) if (Object.prototype.hasOwnProperty.call(action.values, k)) {
-        this.state.settings[k] = this.coerce(this.state.settings[k], action.values[k]);
+      // 设置是分模式存的（settings.undercover.blank 这种）。这里以前直接写成 settings[k]，
+      // 而游戏读的全是 settings.<模式>.<键> —— 于是大厅里所有设置项（卧底人数/白板/描述方式/
+      // 每轮时长、波长局数、谁最可能题数/时长、画猜回合数/时长）统统不生效。
+      var smode = action.mode || (this.state.mode !== 'lobby' ? this.state.mode : null);
+      var bag = smode ? this.state.settings[smode] : null;
+      if (bag) {
+        for (var k in action.values) if (Object.prototype.hasOwnProperty.call(action.values, k)) {
+          bag[k] = this.coerce(bag[k], action.values[k]);
+        }
       }
       this.emit();
       return;
@@ -1122,11 +1149,47 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       if (patch.name !== undefined) found.name = patch.name;
       if (patch.emoji !== undefined) found.emoji = patch.emoji;
     }
+    this.clearTimer('drop_' + id); // 人回来了：取消宽限期后的移出
     found.online = true;
     return found;
   };
 
+  /** 用花名册心跳刷新在线状态。
+   *  以前 state.players[].online 一旦为 true 就再也不会变 false，
+   *  于是「等人描述/等人投票」会把掉线的人一直算进去，整桌干等一分钟以上。 */
+  Host.prototype.syncOnline = function () {
+    if (!this.room.roster) return false;
+    var list = this.room.roster(), map = {}, i, changed = false;
+    for (i = 0; i < list.length; i++) map[list[i].id] = list[i].online;
+    this.state.players.forEach(function (p) {
+      // 不在花名册里 = 早就掉线并被清理掉了（新房主 adopt 过来的旧 state 尤其常见），
+      // 这种情况必须判离线，否则他会一直算在「等人描述 / 等人投票」里，全桌干等。
+      var on = Object.prototype.hasOwnProperty.call(map, p.id) ? map[p.id] : false;
+      if (p.online !== on) {
+        p.online = on;
+        changed = true;
+      }
+    });
+    return changed;
+  };
+
+  /** 掉线（非主动退出）：标记离线、保留积分，并给一个宽限期。
+   *  不能立刻把人踢出对局 —— 刷新页面、切后台、短暂断网都会走遗嘱，
+   *  几秒后就回来的人应该原样继续玩，而不是被移出名单再也投不了票。 */
+  Host.prototype.markOffline = function (id) {
+    var p = this.player(id);
+    if (p) p.online = false;
+    var self = this;
+    this.clearTimer('drop_' + id);
+    this.after('drop_' + id, DROP_GRACE_MS, function () {
+      var g = PN.games[self.state.mode];
+      if (g && g.onLeave) g.onLeave(self, id);
+      self.emit();
+    });
+  };
+
   Host.prototype.removePlayer = function (id) {
+    this.clearTimer('drop_' + id);
     var s = this.state;
     s.players = s.players.filter(function (p) { return p.id !== id; });
     var g = PN.games[s.mode];
@@ -1185,6 +1248,12 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     this.secretCache[pid] = obj;
     this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: obj });
   };
+  /** 只发「请上报」请求，绝不写缓存。
+   *  不能用 sendSecret 发请求：它会把 secretCache[pid] 覆盖成 {recover:true}，
+   *  于是玩家真报回来的身份词被 if (!secretCache[from]) 挡在门外，新房主永远学不到词。 */
+  Host.prototype.requestSecret = function (pid, obj) {
+    this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: obj });
+  };
   Host.prototype.resendSecret = function (pid) {
     if (this.secretCache[pid]) this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: this.secretCache[pid] });
   };
@@ -1235,6 +1304,8 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
   // ----- 闭包：绝不进入 state -----
   // _rounds[round] = { words:[], answer:null, segments:[{id,color,w,s}], guessed:{}, painterScore:0 }
   var _rounds = {};
+  // 同理：用过的词也不能进 state.g —— 它会在下一回合前就把本回合 3 个候选词广播给所有人
+  var _used = [];
 
   function min(a, b) { return a < b ? a : b; }
   function max(a, b) { return a > b ? a : b; }
@@ -1450,6 +1521,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     if (g.round >= rounds) {
       g.cur = null;
       g.done = true;
+      s.phase = 'over'; // 和另外三个游戏保持一致的 phase 契约（界面本来就读 g.done）
       var players = host.state.players;
       var winner = null, maxScore = -1;
       for (var i = 0; i < players.length; i++) {
@@ -1481,9 +1553,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var left = g.order[(pi - 1 + g.order.length) % g.order.length];
     var right = g.order[(pi + 1) % g.order.length];
 
-    var words = PN.pick.drawWords(g.used, 3);
+    var words = PN.pick.drawWords(_used, 3);
     for (var wi = 0; wi < words.length; wi++) {
-      if (g.used.indexOf(words[wi]) === -1) g.used.push(words[wi]);
+      if (_used.indexOf(words[wi]) === -1) _used.push(words[wi]);
     }
 
     var rd = getRD(g.round);
@@ -1541,7 +1613,6 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
 
       s.g = {
         round: 0,
-        used: [],
         order: order,
         orderIdx: -1,
         cur: null,
@@ -1552,6 +1623,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       };
 
       _rounds = {};
+      _used = [];
 
       host.toast('🎨 你画我猜开始！第一位画家即将诞生...', 'good');
       host.emit();
@@ -1567,7 +1639,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
 
       // 新玩家加入 / 重连 → 回放笔迹（回放走私密通道，顺带把词补给画家）
-      if (action.t === '_joined' || action.t === 'hi' || action.t === '_replay') {
+      if (action.t === '_joined' || action.t === 'hi') {
         if (g.cur && g.cur.phase === 'draw' && from) {
           var rd0 = getRD(g.round);
           var payload = { round: g.round };
@@ -1611,6 +1683,18 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
 
       if (!from) return;
 
+      // ----- 房主迁移：画家回报自己手里的词 -----
+      if (action.t === 'repaint' && g.cur && from === g.cur.painter) {
+        var rdR = getRD(g.round);
+        if (action.words && action.words.length && !rdR.words.length) rdR.words = action.words.slice(0, 3);
+        if (action.answer && !rdR.answer) {
+          rdR.answer = String(action.answer).slice(0, 30);
+          if (g.cur.phase === 'pick') { host.clearTimer('drawgame_pick'); startDraw(host, rdR.answer); }
+          else host.emit();
+        }
+        return;
+      }
+
       // ----- 选词 -----
       if (action.t === 'pick' && g.cur && g.cur.phase === 'pick' && g.cur.painter === from) {
         var rd1 = getRD(g.round);
@@ -1652,6 +1736,12 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     resume: function (host) {
       var g = host.g();
       if (!g || !g.cur) return;
+
+      // 新房主的闭包是空的（_rounds 每个页面一份），本回合的答案和候选词都丢了：
+      // 向画家要回来。少了这一步，猜对也不认、选词超时会变成「???」，整回合废掉。
+      if (g.cur.painter && !getRD(g.round).answer) {
+        host.requestSecret(g.cur.painter, { recover: true, round: g.round });
+      }
 
       var now = host.now();
       var remaining = max(0, g.cur.deadline - now);
@@ -1981,6 +2071,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
   'use strict';
   var PN = root.PN = root.PN || {};
 
+  var MAX_ROUNDS = 12; // 全员挂机/反复平票时的兜底上限
   var M = {};
   M.id = 'undercover';
   M.name = '谁是卧底';
@@ -1996,15 +2087,26 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     return _priv.get(host);
   }
   function alive(host) { return host.g().alive; }
+  /** 本局名单里此刻还在线的人数：掉线的人不该让全桌一直等（旧版会干等到遗嘱超时） */
+  function onlineAliveCount(host) {
+    var list = alive(host), n = 0;
+    for (var i = 0; i < list.length; i++) {
+      var p = host.player(list[i]);
+      if (p && p.online) n++;
+    }
+    return n;
+  }
 
   M.init = function (host) {
     var s = host.state;
     var st = s.settings.undercover || {};
+    s.phase = 'setup'; // 状态契约里 phase 要跟着走（另外三个游戏都维护它，只有这里一直停在 lobby）
     s.g = {
       phase: 'setup',
       side: 'random',
       round: 0,
-      used: [],
+      // 注意：题库去重的 used 绝不能放进 state.g。state 是 retained 全量广播的，
+      // 放进去等于把「卧底词对」（也就是答案）直接发给每个玩家（作弊级泄露）。
       alive: [],
       dead: [],
       desc: [],
@@ -2043,9 +2145,11 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       return;
     }
 
-    var pair = PN.pick.undercoverPair(g.used);
+    var pv = priv(host);
+    var used = pv.used || (pv.used = []);
+    var pair = PN.pick.undercoverPair(used);
     var key = pair.a + '|' + pair.b;
-    if (g.used.indexOf(key) === -1) g.used.push(key);
+    if (used.indexOf(key) === -1) used.push(key);
 
     var side = g.side === 'a' || g.side === 'b' ? g.side : (Math.random() < 0.5 ? 'a' : 'b');
     var underWord = side === 'a' ? pair.a : pair.b;
@@ -2083,13 +2187,15 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     g.numUnder = numUnder;
     g.blank = blank;
     g.phase = 'describe';
+    host.state.phase = 'round';
     g.deadline = host.now() + roundSec * 1000;
     g.recovering = false;
 
-    var base = { round: g.round, underCount: numUnder, blank: false, textMode: textMode };
-    for (var c = 0; c < civilIds.length; c++) host.sendSecret(civilIds[c], { word: civilWord, role: 'civil', round: 1, underCount: numUnder, blank: false, textMode: textMode });
-    for (var u = 0; u < underIds.length; u++) host.sendSecret(underIds[u], { word: underWord, role: 'under', round: 1, underCount: numUnder, blank: false, textMode: textMode });
-    if (blankId) host.sendSecret(blankId, { word: null, role: 'blank', round: 1, underCount: numUnder, blank: true, textMode: textMode });
+    // guess:false 是必须的：私密消息在客户端是「合并」保存的，不显式清掉的话
+    // 上一局白板留下的 guess:true 会留到新一局，让人平白多出一个猜词框。
+    for (var c = 0; c < civilIds.length; c++) host.sendSecret(civilIds[c], { word: civilWord, role: 'civil', round: 1, underCount: numUnder, blank: false, textMode: textMode, guess: false });
+    for (var u = 0; u < underIds.length; u++) host.sendSecret(underIds[u], { word: underWord, role: 'under', round: 1, underCount: numUnder, blank: false, textMode: textMode, guess: false });
+    if (blankId) host.sendSecret(blankId, { word: null, role: 'blank', round: 1, underCount: numUnder, blank: true, textMode: textMode, guess: false });
 
     host.after('describe', roundSec * 1000, function () { advanceVote(host); });
     host.toast('🕵️ 词已私发！卧底请藏好自己', 'info');
@@ -2101,6 +2207,15 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var g = host.g();
     if (!g || !g.phase) return;
     switch (action.t) {
+      // 刷新 / 重连 / 中途加入：把词补发给他，否则他屏幕上没有词（旧版直接整屏「界面出错了」）
+      case '_joined':
+      case 'hi':
+        // 只补给还在本局名单里的人；掉线被移出名单的人回来只能旁观，不该再拿到已作废的词
+        if (from && g.phase !== 'setup' && g.alive.indexOf(from) !== -1) {
+          if (host.secretCache[from]) host.resendSecret(from);
+          else host.requestSecret(from, { recover: true, round: g.round });
+        }
+        break;
       case 'start':
         if (host.amHost(from) && g.phase === 'setup') deal(host);
         break;
@@ -2143,6 +2258,18 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         blank: action.role === 'blank',
         textMode: g.textMode
       };
+      // 房主迁移时闭包整体丢失，这里必须按上报结果把卧底/白板名单和两个词重建出来，
+      // 否则 checkWin() 会崩、白板被投出也认不出人。
+      var rp = priv(host);
+      if (!rp.under) rp.under = [];
+      if (action.role === 'under') {
+        if (rp.under.indexOf(from) === -1) rp.under.push(from);
+        if (action.word != null) rp.underWord = action.word;
+      } else if (action.role === 'blank') {
+        rp.blankId = from;
+      } else if (action.role === 'civil' && action.word != null && rp.civilWord == null) {
+        rp.civilWord = action.word;
+      }
     }
     if (g.recovering) {
       var done = g.alive.every(function (id) { return !!host.secretCache[id]; });
@@ -2157,6 +2284,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
   M.resume = function (host) {
     var g = host.g();
     if (!g || !g.phase) return;
+    // 新房主的闭包是空的：先兜底一个空名单，否则 checkWin 里 p.under.indexOf 会抛 TypeError
+    var pv = priv(host);
+    if (!pv.under) pv.under = [];
     if (g.phase === 'describe' && g.deadline) host.after('describe', Math.max(0, g.deadline - host.now()), function () { advanceVote(host); });
     if (g.phase === 'vote' && g.deadline) host.after('vote', Math.max(0, g.deadline - host.now()), function () { tallyVotes(host); });
     if (g.phase === 'revote' && g.deadline) host.after('revote', Math.max(0, g.deadline - host.now()), function () { tallyVotes(host); });
@@ -2166,7 +2296,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       var need = g.alive.filter(function (id) { return !host.secretCache[id]; });
       if (need.length) {
         g.recovering = true;
-        for (var i = 0; i < need.length; i++) host.sendSecret(need[i], { recover: true, round: g.round });
+        for (var i = 0; i < need.length; i++) host.requestSecret(need[i], { recover: true, round: g.round });
         host.after('recover', 10000, function () { var g2 = host.g(); if (g2) { g2.recovering = false; host.emit(); } });
       }
     }
@@ -2193,7 +2323,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     if (!text) return;
     g.desc.push({ id: from, name: p ? p.name : '??', text: text });
     g.descCount++;
-    if (g.descCount >= alive(host).length) {
+    if (g.descCount >= onlineAliveCount(host)) {
       host.clearTimer('describe');
       advanceVote(host);
     } else host.emit();
@@ -2223,7 +2353,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     g.votes[from] = target;
     var voted = 0;
     for (var k in g.votes) if (Object.prototype.hasOwnProperty.call(g.votes, k)) voted++;
-    if (voted >= alive(host).length) {
+    if (voted >= onlineAliveCount(host)) {
       host.clearTimer(g.phase === 'vote' ? 'vote' : 'revote');
       tallyVotes(host);
     } else host.emit();
@@ -2331,6 +2461,15 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var g = host.g();
     var st = host.state.settings.undercover || {};
     var roundSec = st.roundSec || 180;
+    // 兜底：全员挂机或一直平票时不能让局数无限涨下去（其他三个游戏都有局数上限）
+    if (g.round >= MAX_ROUNDS) {
+      var pu = priv(host), left = 0;
+      for (var li = 0; li < alive(host).length; li++) if (pu.under && pu.under.indexOf(alive(host)[li]) !== -1) left++;
+      g.winner = left > 0 ? 'under' : 'civil';
+      host.toast('⏰ 已达最大轮数（' + MAX_ROUNDS + ' 轮），本局结束', 'info');
+      endGame(host);
+      return;
+    }
     g.round++;
     g.phase = 'describe';
     g.desc = [];
@@ -2353,6 +2492,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var g = host.g();
     var p = priv(host);
     g.phase = 'over';
+    host.state.phase = 'over';
     g.deadline = 0;
     host.clearTimer('describe'); host.clearTimer('vote'); host.clearTimer('revote'); host.clearTimer('blankGuess'); host.clearTimer('recover');
     var players = host.state.players;
@@ -2715,15 +2855,25 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       return;
     }
 
-    if (act.t === 'reportTarget' && g.curPhase === 'reveal' && from === g.cur) {
+    // 通灵者回报靶心：clue/guess 阶段迁过来时要先接住，开奖阶段则直接开奖
+    if (act.t === 'reportTarget' && from === g.cur && g.curPhase !== 'over') {
       var rt = Number(act.target);
       if (isNaN(rt) || rt < 0 || rt > 100) return;
       if (host.secretCache && !host.secretCache[g.cur]) {
         host.secretCache[g.cur] = { target: rt };
-        if (!g.done) { enterReveal(host); }
+        if (g.curPhase === 'reveal' && !g.done) { host.clearTimer('revealWait'); enterReveal(host); }
+        else host.emit();
       }
       return;
     }
+  }
+
+  /** 房主迁移后靶心只掌握在通灵者手里：问他要回来，绝不能重新随机。
+   *  重新随机会让已经给出的线索、已经投出的猜测全部对不上号。 */
+  function askTarget(host) {
+    var g = host.g();
+    if (!g.cur) return;
+    host.requestSecret(g.cur, { recover: true, round: g.round, left: g.left, right: g.right });
   }
 
   function resume(host) {
@@ -2731,13 +2881,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     if (!g || !g.curPhase) return;
 
     if (g.curPhase === 'clue') {
-      var target = 8 + rnd(85);
-      host.sendSecret(g.cur, {
-        target: target,
-        left: g.left,
-        right: g.right,
-        round: g.round
-      });
+      askTarget(host);
       var remaining = g.deadline - host.now();
       if (remaining > 5000) {
         host.after('clue', remaining, function () {
@@ -2756,13 +2900,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       host.emit();
 
     } else if (g.curPhase === 'guess') {
-      var target2 = 8 + rnd(85);
-      host.sendSecret(g.cur, {
-        target: target2,
-        left: g.left,
-        right: g.right,
-        round: g.round
-      });
+      askTarget(host);
       var remaining2 = g.deadline - host.now();
       if (remaining2 > 5000) {
         host.after('guess', remaining2, function () {
@@ -2776,7 +2914,13 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       host.emit();
 
     } else if (g.curPhase === 'reveal' && !g.done) {
-      enterReveal(host);
+      // 等通灵者把靶心报回来再开奖；5 秒还不报就按兜底值开，别把大家卡死
+      askTarget(host);
+      host.after('revealWait', 5000, function () {
+        var g2 = host.g();
+        if (g2 && g2.curPhase === 'reveal' && !g2.done) enterReveal(host);
+      });
+      host.emit();
 
     } else if (g.curPhase === 'reveal' && g.done && g.round <= g.rounds) {
       host.after('reveal', REVEAL_MS, function () {
@@ -3032,7 +3176,13 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     return '本局结束';
   }
   function wordCard(ui, secret, g) {
-    if (!secret) return '';
+    if (!secret || !secret.role) {
+      // 拿不到词有两种情况：刚刷新、房主马上会补发；或者本局开始后才进来（只能旁观）。
+      // 以前这里返回空串 → ui.h('') 得到 null → appendChild 抛异常 → 整个屏幕变成「界面出错了」。
+      var inGame = !!(g && g.alive && g.alive.indexOf(ui.pid()) !== -1);
+      return '<div class="card center"><div class="bigword">' + (inGame ? '⏳' : '👀') + '</div>' +
+        '<div class="muted">' + (inGame ? '正在取回你的词…（稍等一下）' : '本局已经开始了，你在旁观，等下一局吧～') + '</div></div>';
+    }
     var roleName = { under: '卧底 🕵️', civil: '平民 😇', blank: '白板 🃏' }[secret.role] || '';
     var word = secret.role === 'blank' ? '你没有词，听别人描述后浑水摸鱼！' : secret.word;
     var hint = secret.role === 'under' ? '你的词和别人不一样，混过去！' : (secret.role === 'civil' ? '找出和你描述不一样的人' : '别露馅，被投出去时还有一次猜词机会');
@@ -3070,7 +3220,8 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var sel = {};
     if (votes && votes[ui.pid()]) sel[votes[ui.pid()]] = true;
     var wrap = ui.el('div');
-    wrap.appendChild(ui.h(C.playerGrid(ui, state, { dead: deadSet(g), sel: sel, pool: pool, disabled: false })));
+    var iAmAlive = (g.alive || []).indexOf(ui.pid()) !== -1; // 出局/旁观的人不能投票，别给可点的假按钮
+    wrap.appendChild(ui.h(C.playerGrid(ui, state, { dead: deadSet(g), sel: sel, pool: pool, disabled: !iAmAlive })));
     wrap.querySelectorAll('[data-pick]').forEach(function (b) {
       if (b.hasAttribute('disabled')) return;
       if (pool && pool.indexOf(b.getAttribute('data-pick')) === -1) { b.setAttribute('disabled', ''); return; }
@@ -3078,18 +3229,6 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     });
     return wrap;
   }
-  function chipCounts(g) {
-    var out = '';
-    var counts = g.counts || {};
-    if (g.phase === 'revote') {
-      for (var i = 0; i < (g.revotePool || []).length; i++) {
-        var id = g.revotePool[i];
-        out += '<span class="pill">' + esc(nameOf(ui_state, id)) + ' ' + (counts[id] || 0) + ' 票</span>';
-      }
-    }
-    return out;
-  }
-  var ui_state = null;
   function nameOf(s, id) { var p = null; if (s && s.players) for (var i = 0; i < s.players.length; i++) if (s.players[i].id === id) { p = s.players[i]; break; } return p ? p.name : '??'; }
 
   PN.screens = PN.screens || {};
@@ -3097,7 +3236,6 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     name: 'undercover',
     render: function (state, secret) {
       var ui = this;
-      ui_state = state;
       var C = PN.gameCommon;
       var g = state.g || {};
       var wrap = ui.el('div');
@@ -3129,9 +3267,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
           '🏁 ' + (g.winner === 'under' ? '卧底获胜！' : (Array.isArray(g.winner) ? '白板猜词获胜！' : '平民获胜！')))));
         wrap.appendChild(ui.h(C.overButtons(ui, 'undercover')));
         wrap.appendChild(ui.renderGameFooter());
-        wrap.querySelectorAll('[data-over]').forEach(function (b) {
-          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
-        });
+        PN.wireOver(wrap, ui);
         return wrap;
       }
 
@@ -3155,7 +3291,8 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         body.appendChild(pickGrid(ui, state, g, g.phase === 'revote' ? g.revotePool : null, g.votes));
         body.appendChild(ui.h('<div class="muted center mt8">已投 ' + Object.keys(g.votes || {}).length + '/' + (g.alive || []).length + '</div>'));
       } else if (g.phase === 'blankGuess') {
-        if (g.blankEliminated && ui.pid() === g.blankId) {
+        // 白板身份只在私密通道里（state.g 绝不能带 blankId，那等于公开谁是白板）
+        if (secret && secret.guess === true) {
           wrap.appendChild(inputBar(ui, '你只有一次机会：猜平民词是？', function (v) { ui.send({ t: 'blankGuess', word: v }); }));
         } else {
           body.appendChild(ui.h('<div class="card center"><div class="bigword">🃏</div><div class="muted">白板正在猜词…</div></div>'));
@@ -3186,6 +3323,10 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
   var PN = root.PN = root.PN || {};
   var esc = PN.esc;
 
+  /* 拖拽状态提到模块级：整树重建会换掉滑杆元素、丢掉指针捕获、把闭包里的值清回 50。
+     和画布落笔一样，拖拽期间必须冻结重建（见 ui.js 的 deferRender）。 */
+  var DRAG = { active: false, value: null };
+
   function phaseText(g) {
     if (g.curPhase === 'clue') return '通灵者想线索';
     if (g.curPhase === 'guess') return '大家猜位置';
@@ -3215,13 +3356,24 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         var v = Math.max(0, Math.min(100, Math.round(x / rect.width * 100)));
         knob.style.left = v + '%';
         knob.textContent = String(v);
+        DRAG.value = v; // 记住位置：重建后不会跳回 50
         onSet(v);
       };
       var dragging = false;
-      track.addEventListener('pointerdown', function (e) { dragging = true; track.setPointerCapture && track.setPointerCapture(e.pointerId); setFrom(e); });
+      var endDrag = function (e) {
+        if (!dragging) return;
+        dragging = false;
+        DRAG.active = false;
+        setFrom(e);
+        if (ui._renderPending) setTimeout(function () { ui.flushRender(); }, 0); // 补上被冻结的那次渲染
+      };
+      track.addEventListener('pointerdown', function (e) { dragging = true; DRAG.active = true; track.setPointerCapture && track.setPointerCapture(e.pointerId); setFrom(e); });
       track.addEventListener('pointermove', function (e) { if (dragging) setFrom(e); });
-      track.addEventListener('pointerup', function (e) { dragging = false; setFrom(e); });
-      track.addEventListener('touchstart', function (e) { e.preventDefault(); setFrom(e); }, { passive: false });
+      track.addEventListener('pointerup', endDrag);
+      track.addEventListener('pointercancel', endDrag);
+      track.addEventListener('touchstart', function (e) { e.preventDefault(); dragging = true; DRAG.active = true; setFrom(e); }, { passive: false });
+      // 兜底：万一 pointerup 没来（部分手机浏览器），touchend 也要解冻，别把页面冻死
+      track.addEventListener('touchend', function () { if (dragging) { dragging = false; DRAG.active = false; if (ui._renderPending) setTimeout(function () { ui.flushRender(); }, 0); } }, { passive: true });
     }
     wrap.appendChild(bar);
     var labels = ui.el('div', 'wave-labels');
@@ -3234,6 +3386,8 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
   PN.screens = PN.screens || {};
   PN.screens.wavelength = {
     name: 'wavelength',
+    /** 拖滑杆期间冻结 DOM 重建，否则别人一提交就把你的指针捕获拆掉、位置打回 50 */
+    deferRender: function () { return DRAG.active; },
     render: function (state, secret) {
       var ui = this;
       var C = PN.gameCommon;
@@ -3251,9 +3405,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         wrap.appendChild(ui.h(C.scoreboard(state, g.winner, '🏆 波段对决结束')));
         wrap.appendChild(ui.h(C.overButtons(ui, 'wavelength')));
         wrap.appendChild(ui.renderGameFooter());
-        wrap.querySelectorAll('[data-over]').forEach(function (b) {
-          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
-        });
+        PN.wireOver(wrap, ui);
         return wrap;
       }
 
@@ -3280,7 +3432,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
             '<div style="font-size:24px;font-weight:900;margin-top:6px">「' + esc(g.clue || '') + '」</div>' +
             '<div class="muted mt8">' + (mine !== undefined ? '已提交：' + mine + '（等大家）' : '拖动滑块，猜通灵者想的位置') + '</div></div>'));
           var submitted = mine !== undefined;
-          var val = mine !== undefined ? mine : 50;
+          var val = mine !== undefined ? mine : (DRAG.value == null ? 50 : DRAG.value);
           var sbar = spectrum(ui, g, {
             value: submitted ? mine : val,
             onSet: function (v) { val = v; if (!submitted) { submitted = false; } }
@@ -3289,7 +3441,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
           bar.appendChild(sbar);
           var btn = ui.el('button', 'btn primary block', submitted ? '已提交 ' + mine + ' 分位' : '提交我的位置');
           btn.disabled = submitted;
-          btn.addEventListener('click', function () { ui.send({ t: 'guess', v: val }); });
+          btn.addEventListener('click', function () { ui.send({ t: 'guess', v: val }); DRAG.value = null; });
           bar.appendChild(btn);
           wrap.appendChild(bar);
         }
@@ -3312,6 +3464,12 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       }
       wrap.appendChild(ui.renderGameFooter()); // 给线索/猜的时候也要能回大厅
       return wrap;
+    },
+    /* 房主迁移：新房主问我要靶心，把手里那个原样报回去（绝不让他重新随机） */
+    onRecover: function () {
+      var ui = this;
+      var s = ui.secrets.wavelength && ui.secrets.wavelength.mine;
+      if (s && typeof s.target === 'number') ui.send({ t: 'reportTarget', target: s.target });
     }
   };
 
@@ -3650,9 +3808,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         wrap.appendChild(ui.h(C.scoreboard(state, g.winner, '🏆 灵魂画手大赛结束')));
         wrap.appendChild(ui.h(C.overButtons(ui, 'drawgame')));
         wrap.appendChild(ui.renderGameFooter());
-        wrap.querySelectorAll('[data-over]').forEach(function (b) {
-          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
-        });
+        PN.wireOver(wrap, ui);
         return wrap;
       }
 
@@ -3702,8 +3858,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       var c = ensureCanvas(ui);
       stage.appendChild(c);
       main.appendChild(stage);
+      // 这里只量尺寸就够了：画布节点是复用的，位图还在，无需每次状态消息都整幅重绘
+      // （笔画最多 900 段，聊天每来一条就全量重绘会明显卡）。真需要重绘时 sizeCanvas() 会自己做。
       sizeCanvas();
-      redrawAll();
 
       /* ---------- 画家工具条 ---------- */
       if (iAmPainter && phase === 'draw') {
@@ -3816,6 +3973,16 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       if (local.w) { if (isNew) paintStroke(st); else paintTail(st, from + 1); }
     },
 
+    /* ---------- 房主迁移：新房主问我要词，把手里那份报回去 ---------- */
+    onRecover: function () {
+      var ui = this;
+      var s = (ui.secrets.drawgame && ui.secrets.drawgame.mine) || {};
+      var answer = s.answer || local.myWord || null;
+      if (answer || (s.words && s.words.length)) {
+        ui.send({ t: 'repaint', answer: answer, words: s.words || null });
+      }
+    },
+
     /* ---------- 私密消息：自己的词 / 回放 ---------- */
     onPrivate: function (obj) {
       if (!obj) return;
@@ -3900,6 +4067,33 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
   };
   UI.prototype.clear = function () { this.root.innerHTML = ''; };
 
+  /* 整树重建前抢救输入框：每收到一条状态消息都会 clear()，别人一提交，
+     你正在打的半截描述/线索就被清空了（中文输入法更是整段丢字）。
+     屏幕如果自己实现了 beforeRender（你画我猜），就归屏幕管，这里不插手。 */
+  UI.prototype.snapshotInput = function () {
+    this._draft = null;
+    var ae = document.activeElement;
+    if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA') || ae.disabled || ae.readOnly) return;
+    var all = document.querySelectorAll('input,textarea'), idx = -1, i;
+    for (i = 0; i < all.length; i++) if (all[i] === ae) { idx = i; break; }
+    var s = null, e = null;
+    try { s = ae.selectionStart; e = ae.selectionEnd; } catch (err) {}
+    this._draft = { tag: ae.tagName, ph: ae.placeholder || '', idx: idx, value: ae.value, s: s, e: e };
+  };
+  UI.prototype.restoreInput = function () {
+    var d = this._draft;
+    if (!d) return;
+    this._draft = null;
+    var all = document.querySelectorAll('input,textarea'), el = null, i;
+    for (i = 0; i < all.length; i++) {
+      if (all[i].tagName === d.tag && (all[i].placeholder || '') === d.ph) { el = all[i]; break; }
+    }
+    if (!el && d.idx >= 0 && all[d.idx] && all[d.idx].tagName === d.tag) el = all[d.idx];
+    if (!el || el.disabled) return;
+    el.value = d.value;
+    try { el.focus(); if (d.s !== null) el.setSelectionRange(d.s, d.e); } catch (err) {}
+  };
+
   /* 输入法组合（拼音还没上屏）期间，绝不能重建 DOM —— clear() 会把输入框拆掉，
      未上屏的拼音和候选词会整段丢失（中文群友打字几乎必踩）。这里做全局检测，所有屏幕共享。 */
   var imeComposing = false, lastUI = null;
@@ -3925,7 +4119,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     if (name !== this.screenName && PN.screens[name]) this.setScreen(name, PN.screens[name]);
     if (this.screen && this.screen.render) {
       var self = this;
+      var ownsDraft = !!this.screen.beforeRender;
       if (this.screen.beforeRender) { try { this.screen.beforeRender.call(this); } catch (e) {} } // 清空 DOM 前抢救输入草稿/滚动位置
+      if (!ownsDraft) this.snapshotInput(); // 其他屏幕用通用抢救：重建后草稿和光标都还在
       // 拖拽/作画进行中绝不重建 DOM：clear() 会拆掉画布元素，浏览器随即释放指针捕获并抛 pointercancel，
       // 笔画当场断掉（jsdom 没有指针捕获语义，所以单测测不出来）。屏幕用 deferRender 声明，落笔后自己 flushRender 补一次。
       if (this.screen.deferRender) {
@@ -3940,6 +4136,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         var sec = this.secrets[this.state.mode];
         var node = self.screen.render.call(self, this.state, (sec && sec.mine) || null); // 屏幕要的是秘密本身，不是 {mine} 包装
         if (node && node.nodeType === 1) this.root.appendChild(node); // 屏幕只负责返回节点，由这里挂载
+        if (!ownsDraft) this.restoreInput();
         this.root.classList.toggle('wide', !!(this.screen && this.screen.wide)); // 画猜用宽屏双栏
         if (this.screen.mounted) this.screen.mounted.call(self, node); // 挂载后钩子：此时才量得到真实尺寸
       } catch (e) { console.error('render error', e); this.clear(); this.root.appendChild(this.h('<div class="card center muted">界面出错了，请刷新（' + (e && e.message) + '）</div>')); }
@@ -3990,6 +4187,15 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var link = this.link();
     if (navigator.share) navigator.share({ title: '群友派对之夜', text: '点进来一起玩：房号 ' + (this.room ? this.room.code : ''), url: link }).catch(function () {});
     else this.copyLink();
+  };
+
+  /* ===== 过渡页：建房/进房时先给个反馈，别让人对着落地页干等 ===== */
+  UI.prototype.renderWaiting = function (text) {
+    this.clear();
+    this.root.appendChild(this.h(
+      '<div class="land"><div class="biglogo">🎉</div><h1>群友派对之夜</h1>' +
+      '<div class="sub">' + PN.esc(text) + '</div></div>'
+    ));
   };
 
   /* ===== 落地页 ===== */
@@ -4058,8 +4264,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
           if (kind === 'join' && peerId && self.room && self.room.isHost && self.host) {
             self.host.dispatch({ t: '_joined', id: peerId }, peerId);
           }
-          if (self.room && self.room.isHost && self.host && self.state && self.state.mode === 'lobby') {
-            self.host.dispatch({ t: 'hi' }, self.pid());
+          if (self.room && self.room.isHost && self.host) {
+            // 大厅：刷新名单；对局中：只刷新在线状态（否则掉线的人会让全桌干等人）
+            self.host.dispatch({ t: self.state && self.state.mode === 'lobby' ? 'hi' : '_syncOnline' }, self.pid());
           }
         },
         onHost: function (isHost) {
@@ -4081,7 +4288,14 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         onPrivate: function (obj, from) {
           if (obj.kind === 'secret') {
             self.secrets[obj.mode] = self.secrets[obj.mode] || {};
-            self.secrets[obj.mode].mine = obj.obj;
+            // 同一个 mode 下会收到多种私密消息（发词 / 白板猜词 / 请求上报），必须合并而不是覆盖：
+            // 覆盖会当场抹掉玩家自己的词和身份 —— 白板词卡变空白、房主迁移时 onRecover 读不到角色而无法上报。
+            var prevSec = self.secrets[obj.mode].mine || {};
+            var nextSec = obj.obj || {};
+            var mergedSec = {}, mk;
+            for (mk in prevSec) if (Object.prototype.hasOwnProperty.call(prevSec, mk)) mergedSec[mk] = prevSec[mk];
+            for (mk in nextSec) if (Object.prototype.hasOwnProperty.call(nextSec, mk)) mergedSec[mk] = nextSec[mk];
+            self.secrets[obj.mode].mine = mergedSec;
             if (obj.obj && obj.obj.recover && self.screen && self.screen.onRecover) {
               self.screen.onRecover.call(self, obj.obj);
             }
@@ -4102,15 +4316,16 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         if (!answer) return;
         c = answer.toUpperCase();
       }
-      PN.Room.probe(c, brokerIndex, 3000).then(function (meta) {
-        if (!meta) {
-          if (confirm('没找到房间 ' + c + '，要自己开一个吗？')) build(c);
-          else self.renderLand();
-        } else build(c);
-      });
+      // 房号本身就是房间标识，探不到也照样能进——你要是第一个到的，你自动就是房主。
+      // 这里以前拿 3 秒 probe 的结果决定要不要 confirm 问「没找到房间，要自己开一个吗？」，
+      // 但公共 broker 的冷连接实测要 6~7 秒，3 秒必然超时 —— 结果每个点链接进来的人
+      // 都被这句吓一跳，点「取消」还会被踢回落地页。改成直接进场，只给一句过渡提示。
+      self.renderWaiting('正在进入房间 ' + c + '…');
+      build(c);
     } else {
       var gen = function (n) { for (var i = 0; i < n; i++) { var c = PN.randCode(4); if (c !== location.hash.slice(1).toUpperCase()) return c; } return PN.randCode(4); };
       var c = gen(8);
+      self.renderWaiting('正在建房…');
       PN.Room.probe(c, brokerIndex, 2500).then(function (meta) { if (meta) build(gen(40)); else build(c); });
     }
   };
@@ -4157,6 +4372,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     this.renderTopbar(wrap);
     var s = state;
     var sorted = (s.players || []).slice().sort(function (a, b) { return b.score - a.score; });
+    // 点链接进来却一个人都没有、自己还成了房主：多半是网络把这位群友分到了另一台公共服务器
+    // （客户端连不上主 broker 会自动换备用，而备用和主用的是两套话题空间）。给一句人话提示。
+    var lonely = !!location.hash && (s.players || []).length <= 1 && s.hostId === this.pid();
     var playersHtml = sorted.map(function (p) {
       return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.online ? '' : ' off') + '">' +
         '<span class="em">' + (p.emoji || '🙂') + '</span>' +
@@ -4165,6 +4383,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         '</div>';
     }).join('');
     var modes = [];
+    var cfgOpen = this._cfgOpen || (this._cfgOpen = {}); // 展开状态记在实例上，重建后还能保持
     for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
       var g = PN.games[k];
       modes.push(
@@ -4174,7 +4393,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
         '<div class="blurb">' + g.blurb + '</div>' +
         '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
         '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' + (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
-        '<div class="settings" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
+        '<div class="settings' + (cfgOpen[k] ? ' open' : '') + '" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
         '</div>'
       );
     }
@@ -4186,6 +4405,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       '<button class="btn sm" id="pn-copy">📋 复制链接</button>' +
       '<button class="btn sm" id="pn-share">📤</button>' +
       '</div>' +
+      (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到群友了。</div></div>' : '') +
       '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的群友（' + (s.players || []).length + '）</div>' +
       '<div class="players">' + (playersHtml || '<div class="muted">还没人，快拉人！</div>') + '</div></div>' +
       '<div class="modegrid">' + modes.join('') + '</div>' +
@@ -4206,7 +4426,8 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       var mode = card.dataset.mode;
       card.querySelector('[data-act="cfg"]').addEventListener('click', function () {
         var cfg = $('#cfg-' + mode);
-        if (cfg) cfg.classList.toggle('open');
+        self._cfgOpen[mode] = !self._cfgOpen[mode];
+        if (cfg) cfg.classList.toggle('open', self._cfgOpen[mode]);
       });
       card.querySelector('[data-act="start"]').addEventListener('click', function () {
         self.send({ t: 'start', mode: mode });
@@ -4218,7 +4439,7 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
           if (raw === 'true') v = true; else if (raw === 'false') v = false; else if (!isNaN(Number(raw))) v = Number(raw); else v = raw;
           var values = {};
           values[ctl.dataset.key] = v;
-          self.send({ t: 'settings', values: values });
+          self.send({ t: 'settings', mode: mode, values: values }); // 必须带上模式：设置存在 settings[模式] 下
           card.querySelectorAll('.cfg[data-key="' + ctl.dataset.key + '"]').forEach(function (x) { x.classList.remove('on'); });
           ctl.classList.add('on');
         });
@@ -4255,7 +4476,9 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
 
   UI.prototype.editProfile = function () {
     var self = this;
-    this.root.appendChild(this.h(
+    // 必须挂在 #pn-root 外面：render() 会 root.innerHTML='' ，挂里面的话
+    // 任何人进房/改设置都会把弹窗连同你正在输入的昵称一起抹掉。
+    document.body.appendChild(this.h(
       '<div class="overlay"><div class="modal">' +
       '<div class="center" style="font-weight:800;margin-bottom:14px">✏️ 改昵称</div>' +
       '<div class="field"><input id="pn-ename" maxlength="12" value="' + this.me().name + '"></div>' +

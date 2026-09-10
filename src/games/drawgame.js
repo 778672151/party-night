@@ -9,6 +9,8 @@
   // ----- 闭包：绝不进入 state -----
   // _rounds[round] = { words:[], answer:null, segments:[{id,color,w,s}], guessed:{}, painterScore:0 }
   var _rounds = {};
+  // 同理：用过的词也不能进 state.g —— 它会在下一回合前就把本回合 3 个候选词广播给所有人
+  var _used = [];
 
   function min(a, b) { return a < b ? a : b; }
   function max(a, b) { return a > b ? a : b; }
@@ -224,6 +226,7 @@
     if (g.round >= rounds) {
       g.cur = null;
       g.done = true;
+      s.phase = 'over'; // 和另外三个游戏保持一致的 phase 契约（界面本来就读 g.done）
       var players = host.state.players;
       var winner = null, maxScore = -1;
       for (var i = 0; i < players.length; i++) {
@@ -255,9 +258,9 @@
     var left = g.order[(pi - 1 + g.order.length) % g.order.length];
     var right = g.order[(pi + 1) % g.order.length];
 
-    var words = PN.pick.drawWords(g.used, 3);
+    var words = PN.pick.drawWords(_used, 3);
     for (var wi = 0; wi < words.length; wi++) {
-      if (g.used.indexOf(words[wi]) === -1) g.used.push(words[wi]);
+      if (_used.indexOf(words[wi]) === -1) _used.push(words[wi]);
     }
 
     var rd = getRD(g.round);
@@ -315,7 +318,6 @@
 
       s.g = {
         round: 0,
-        used: [],
         order: order,
         orderIdx: -1,
         cur: null,
@@ -326,6 +328,7 @@
       };
 
       _rounds = {};
+      _used = [];
 
       host.toast('🎨 你画我猜开始！第一位画家即将诞生...', 'good');
       host.emit();
@@ -341,7 +344,7 @@
       if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
 
       // 新玩家加入 / 重连 → 回放笔迹（回放走私密通道，顺带把词补给画家）
-      if (action.t === '_joined' || action.t === 'hi' || action.t === '_replay') {
+      if (action.t === '_joined' || action.t === 'hi') {
         if (g.cur && g.cur.phase === 'draw' && from) {
           var rd0 = getRD(g.round);
           var payload = { round: g.round };
@@ -385,6 +388,18 @@
 
       if (!from) return;
 
+      // ----- 房主迁移：画家回报自己手里的词 -----
+      if (action.t === 'repaint' && g.cur && from === g.cur.painter) {
+        var rdR = getRD(g.round);
+        if (action.words && action.words.length && !rdR.words.length) rdR.words = action.words.slice(0, 3);
+        if (action.answer && !rdR.answer) {
+          rdR.answer = String(action.answer).slice(0, 30);
+          if (g.cur.phase === 'pick') { host.clearTimer('drawgame_pick'); startDraw(host, rdR.answer); }
+          else host.emit();
+        }
+        return;
+      }
+
       // ----- 选词 -----
       if (action.t === 'pick' && g.cur && g.cur.phase === 'pick' && g.cur.painter === from) {
         var rd1 = getRD(g.round);
@@ -426,6 +441,12 @@
     resume: function (host) {
       var g = host.g();
       if (!g || !g.cur) return;
+
+      // 新房主的闭包是空的（_rounds 每个页面一份），本回合的答案和候选词都丢了：
+      // 向画家要回来。少了这一步，猜对也不认、选词超时会变成「???」，整回合废掉。
+      if (g.cur.painter && !getRD(g.round).answer) {
+        host.requestSecret(g.cur.painter, { recover: true, round: g.round });
+      }
 
       var now = host.now();
       var remaining = max(0, g.cur.deadline - now);

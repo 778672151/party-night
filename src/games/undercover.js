@@ -6,6 +6,7 @@
   'use strict';
   var PN = root.PN = root.PN || {};
 
+  var MAX_ROUNDS = 12; // 全员挂机/反复平票时的兜底上限
   var M = {};
   M.id = 'undercover';
   M.name = '谁是卧底';
@@ -21,15 +22,26 @@
     return _priv.get(host);
   }
   function alive(host) { return host.g().alive; }
+  /** 本局名单里此刻还在线的人数：掉线的人不该让全桌一直等（旧版会干等到遗嘱超时） */
+  function onlineAliveCount(host) {
+    var list = alive(host), n = 0;
+    for (var i = 0; i < list.length; i++) {
+      var p = host.player(list[i]);
+      if (p && p.online) n++;
+    }
+    return n;
+  }
 
   M.init = function (host) {
     var s = host.state;
     var st = s.settings.undercover || {};
+    s.phase = 'setup'; // 状态契约里 phase 要跟着走（另外三个游戏都维护它，只有这里一直停在 lobby）
     s.g = {
       phase: 'setup',
       side: 'random',
       round: 0,
-      used: [],
+      // 注意：题库去重的 used 绝不能放进 state.g。state 是 retained 全量广播的，
+      // 放进去等于把「卧底词对」（也就是答案）直接发给每个玩家（作弊级泄露）。
       alive: [],
       dead: [],
       desc: [],
@@ -68,9 +80,11 @@
       return;
     }
 
-    var pair = PN.pick.undercoverPair(g.used);
+    var pv = priv(host);
+    var used = pv.used || (pv.used = []);
+    var pair = PN.pick.undercoverPair(used);
     var key = pair.a + '|' + pair.b;
-    if (g.used.indexOf(key) === -1) g.used.push(key);
+    if (used.indexOf(key) === -1) used.push(key);
 
     var side = g.side === 'a' || g.side === 'b' ? g.side : (Math.random() < 0.5 ? 'a' : 'b');
     var underWord = side === 'a' ? pair.a : pair.b;
@@ -108,13 +122,15 @@
     g.numUnder = numUnder;
     g.blank = blank;
     g.phase = 'describe';
+    host.state.phase = 'round';
     g.deadline = host.now() + roundSec * 1000;
     g.recovering = false;
 
-    var base = { round: g.round, underCount: numUnder, blank: false, textMode: textMode };
-    for (var c = 0; c < civilIds.length; c++) host.sendSecret(civilIds[c], { word: civilWord, role: 'civil', round: 1, underCount: numUnder, blank: false, textMode: textMode });
-    for (var u = 0; u < underIds.length; u++) host.sendSecret(underIds[u], { word: underWord, role: 'under', round: 1, underCount: numUnder, blank: false, textMode: textMode });
-    if (blankId) host.sendSecret(blankId, { word: null, role: 'blank', round: 1, underCount: numUnder, blank: true, textMode: textMode });
+    // guess:false 是必须的：私密消息在客户端是「合并」保存的，不显式清掉的话
+    // 上一局白板留下的 guess:true 会留到新一局，让人平白多出一个猜词框。
+    for (var c = 0; c < civilIds.length; c++) host.sendSecret(civilIds[c], { word: civilWord, role: 'civil', round: 1, underCount: numUnder, blank: false, textMode: textMode, guess: false });
+    for (var u = 0; u < underIds.length; u++) host.sendSecret(underIds[u], { word: underWord, role: 'under', round: 1, underCount: numUnder, blank: false, textMode: textMode, guess: false });
+    if (blankId) host.sendSecret(blankId, { word: null, role: 'blank', round: 1, underCount: numUnder, blank: true, textMode: textMode, guess: false });
 
     host.after('describe', roundSec * 1000, function () { advanceVote(host); });
     host.toast('🕵️ 词已私发！卧底请藏好自己', 'info');
@@ -126,6 +142,15 @@
     var g = host.g();
     if (!g || !g.phase) return;
     switch (action.t) {
+      // 刷新 / 重连 / 中途加入：把词补发给他，否则他屏幕上没有词（旧版直接整屏「界面出错了」）
+      case '_joined':
+      case 'hi':
+        // 只补给还在本局名单里的人；掉线被移出名单的人回来只能旁观，不该再拿到已作废的词
+        if (from && g.phase !== 'setup' && g.alive.indexOf(from) !== -1) {
+          if (host.secretCache[from]) host.resendSecret(from);
+          else host.requestSecret(from, { recover: true, round: g.round });
+        }
+        break;
       case 'start':
         if (host.amHost(from) && g.phase === 'setup') deal(host);
         break;
@@ -168,6 +193,18 @@
         blank: action.role === 'blank',
         textMode: g.textMode
       };
+      // 房主迁移时闭包整体丢失，这里必须按上报结果把卧底/白板名单和两个词重建出来，
+      // 否则 checkWin() 会崩、白板被投出也认不出人。
+      var rp = priv(host);
+      if (!rp.under) rp.under = [];
+      if (action.role === 'under') {
+        if (rp.under.indexOf(from) === -1) rp.under.push(from);
+        if (action.word != null) rp.underWord = action.word;
+      } else if (action.role === 'blank') {
+        rp.blankId = from;
+      } else if (action.role === 'civil' && action.word != null && rp.civilWord == null) {
+        rp.civilWord = action.word;
+      }
     }
     if (g.recovering) {
       var done = g.alive.every(function (id) { return !!host.secretCache[id]; });
@@ -182,6 +219,9 @@
   M.resume = function (host) {
     var g = host.g();
     if (!g || !g.phase) return;
+    // 新房主的闭包是空的：先兜底一个空名单，否则 checkWin 里 p.under.indexOf 会抛 TypeError
+    var pv = priv(host);
+    if (!pv.under) pv.under = [];
     if (g.phase === 'describe' && g.deadline) host.after('describe', Math.max(0, g.deadline - host.now()), function () { advanceVote(host); });
     if (g.phase === 'vote' && g.deadline) host.after('vote', Math.max(0, g.deadline - host.now()), function () { tallyVotes(host); });
     if (g.phase === 'revote' && g.deadline) host.after('revote', Math.max(0, g.deadline - host.now()), function () { tallyVotes(host); });
@@ -191,7 +231,7 @@
       var need = g.alive.filter(function (id) { return !host.secretCache[id]; });
       if (need.length) {
         g.recovering = true;
-        for (var i = 0; i < need.length; i++) host.sendSecret(need[i], { recover: true, round: g.round });
+        for (var i = 0; i < need.length; i++) host.requestSecret(need[i], { recover: true, round: g.round });
         host.after('recover', 10000, function () { var g2 = host.g(); if (g2) { g2.recovering = false; host.emit(); } });
       }
     }
@@ -218,7 +258,7 @@
     if (!text) return;
     g.desc.push({ id: from, name: p ? p.name : '??', text: text });
     g.descCount++;
-    if (g.descCount >= alive(host).length) {
+    if (g.descCount >= onlineAliveCount(host)) {
       host.clearTimer('describe');
       advanceVote(host);
     } else host.emit();
@@ -248,7 +288,7 @@
     g.votes[from] = target;
     var voted = 0;
     for (var k in g.votes) if (Object.prototype.hasOwnProperty.call(g.votes, k)) voted++;
-    if (voted >= alive(host).length) {
+    if (voted >= onlineAliveCount(host)) {
       host.clearTimer(g.phase === 'vote' ? 'vote' : 'revote');
       tallyVotes(host);
     } else host.emit();
@@ -356,6 +396,15 @@
     var g = host.g();
     var st = host.state.settings.undercover || {};
     var roundSec = st.roundSec || 180;
+    // 兜底：全员挂机或一直平票时不能让局数无限涨下去（其他三个游戏都有局数上限）
+    if (g.round >= MAX_ROUNDS) {
+      var pu = priv(host), left = 0;
+      for (var li = 0; li < alive(host).length; li++) if (pu.under && pu.under.indexOf(alive(host)[li]) !== -1) left++;
+      g.winner = left > 0 ? 'under' : 'civil';
+      host.toast('⏰ 已达最大轮数（' + MAX_ROUNDS + ' 轮），本局结束', 'info');
+      endGame(host);
+      return;
+    }
     g.round++;
     g.phase = 'describe';
     g.desc = [];
@@ -378,6 +427,7 @@
     var g = host.g();
     var p = priv(host);
     g.phase = 'over';
+    host.state.phase = 'over';
     g.deadline = 0;
     host.clearTimer('describe'); host.clearTimer('vote'); host.clearTimer('revote'); host.clearTimer('blankGuess'); host.clearTimer('recover');
     var players = host.state.players;

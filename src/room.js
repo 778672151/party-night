@@ -75,7 +75,9 @@
         urls: urls,
         clientId: 'pn_' + self.me.id + '_' + Math.random().toString(36).slice(2, 7),
         keepalive: 45,
-        will: { topic: self.topic('a'), payload: self._enc({ t: 'bye', id: self.me.id }) },
+        // dropped:true 表示这是 broker 代发的遗嘱（真掉线）；主动 leave() 发的 bye 不带这个标记。
+        // 房主据此决定是「标离线保留积分」还是「真的移出房间」。
+        will: { topic: self.topic('a'), payload: self._enc({ t: 'bye', id: self.me.id, dropped: true }) },
         onStatus: function (s, d) { self.cb.onStatus && self.cb.onStatus(s, d); },
         onConnect: function () {
           self.mqtt.subscribe([self.base + '/#']);
@@ -95,9 +97,9 @@
     this.publishRaw('a', { t: 'hi', id: this.me.id, name: this.me.name, emoji: this.me.emoji, pub: this.me.pub, ts: now() });
   };
 
-  Room.prototype.publishRaw = function (k, obj, retain) {
+  Room.prototype.publishRaw = function (k, obj, retain, queue) {
     if (!this.mqtt) return;
-    this.mqtt.publish(this.topic(k), this._enc(obj), { retain: !!retain, queue: k === 'a' });
+    this.mqtt.publish(this.topic(k), this._enc(obj), { retain: !!retain, queue: queue === undefined ? (k === 'a' || k === 'p') : !!queue });
   };
 
   Room.prototype._onMessage = function (topic, bytes, retained) {
@@ -122,7 +124,7 @@
       if (msg.t === 'bye') {
         delete self.peers[msg.id];
         self.cb.onRoster && self.cb.onRoster(self.roster(), 'leave', msg.id);
-        if (self.isHost) self.cb.onAction && self.cb.onAction({ t: '_left', id: msg.id }, msg.id);
+        if (self.isHost) self.cb.onAction && self.cb.onAction({ t: '_left', id: msg.id, dropped: !!msg.dropped }, msg.id);
         return;
       }
       if (self.peers[msg.from]) self.peers[msg.from].lastSeen = now();
@@ -268,7 +270,9 @@
     var out = {}, k;
     for (k in rec.payload) out[k] = rec.payload[k];
     out.mid = rec.mid;
-    self.publishRaw('a', out);
+    // 动作不进断线队列：排队的话重连时会一次性涌入，落到已经换过轮的新一轮里
+    // （比如你掉线前拖的猜测，回来时已经开了新回合）。重传机制本身已经覆盖短暂抖动。
+    self.publishRaw('a', out, false, false);
     if (rec.tries >= ACT_MAX_TRIES) { delete self._pending[rec.mid]; return; }
     clearTimeout(rec.timer);
     rec.timer = setTimeout(function () { self._sendAct(rec); }, ACT_RETRY_MS);

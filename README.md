@@ -54,9 +54,18 @@ node test/mostlikely-test.mjs       # 谁最有可能：逻辑
 node test/integration-undercover.mjs # 谁是卧底：真实 broker 四人一局
 node test/integration-wavelength.mjs # 波长：真实 broker 一回合
 node test/integration-drawgame.mjs   # 你画我猜：真实 broker 一轮（含中途加入回放）
+node test/regress-fixes.mjs         # 回归：答案泄露/设置失效/房主迁移/掉线丢分/挂机死局（零依赖）
+ln -sfn /tmp/pnt/node_modules node_modules && node test/regress-drawgame-screen.mjs; rm -f node_modules
+                                    # 画布/DOM 竞态回归（需要 jsdom，没装会 SKIP）
 ```
 
 集成测试是**真的**连公共 broker、真的四五个客户端互相通信：房主 + 三个玩家各自独立连接，私密消息、动作、状态广播全部走真实网络。
+
+`test/regress-fixes.mjs` 把每个已修缺陷都钉住：**把 src 改回旧代码，它是 3 通过 / 11 失败**（退出码非 0），当前代码 21 通过 / 0 失败。
+
+`test/browser/` 是**真浏览器**回归套件（Windows Edge + CDP，多浏览器上下文 = 多玩家），
+专测 jsdom 测不出来的东西：落笔中途来状态消息不许断笔、拖滑杆不许被打断、
+打了一半的描述不许被清空、房主掉线换主后这局还能不能打完。用法见 `test/browser/README.md`。
 
 `test/harness.mjs` 是共用的建桌脚手架，`test/faketimers.mjs` 把手动泵送计时器交给测试，`test/proxy.mjs` 是 TLS 透传中继（排查「消息到底有没有发出去」用），`test/debug-*.mjs` 是各类复现脚本。
 

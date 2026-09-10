@@ -62,6 +62,33 @@
   };
   UI.prototype.clear = function () { this.root.innerHTML = ''; };
 
+  /* 整树重建前抢救输入框：每收到一条状态消息都会 clear()，别人一提交，
+     你正在打的半截描述/线索就被清空了（中文输入法更是整段丢字）。
+     屏幕如果自己实现了 beforeRender（你画我猜），就归屏幕管，这里不插手。 */
+  UI.prototype.snapshotInput = function () {
+    this._draft = null;
+    var ae = document.activeElement;
+    if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA') || ae.disabled || ae.readOnly) return;
+    var all = document.querySelectorAll('input,textarea'), idx = -1, i;
+    for (i = 0; i < all.length; i++) if (all[i] === ae) { idx = i; break; }
+    var s = null, e = null;
+    try { s = ae.selectionStart; e = ae.selectionEnd; } catch (err) {}
+    this._draft = { tag: ae.tagName, ph: ae.placeholder || '', idx: idx, value: ae.value, s: s, e: e };
+  };
+  UI.prototype.restoreInput = function () {
+    var d = this._draft;
+    if (!d) return;
+    this._draft = null;
+    var all = document.querySelectorAll('input,textarea'), el = null, i;
+    for (i = 0; i < all.length; i++) {
+      if (all[i].tagName === d.tag && (all[i].placeholder || '') === d.ph) { el = all[i]; break; }
+    }
+    if (!el && d.idx >= 0 && all[d.idx] && all[d.idx].tagName === d.tag) el = all[d.idx];
+    if (!el || el.disabled) return;
+    el.value = d.value;
+    try { el.focus(); if (d.s !== null) el.setSelectionRange(d.s, d.e); } catch (err) {}
+  };
+
   /* 输入法组合（拼音还没上屏）期间，绝不能重建 DOM —— clear() 会把输入框拆掉，
      未上屏的拼音和候选词会整段丢失（中文群友打字几乎必踩）。这里做全局检测，所有屏幕共享。 */
   var imeComposing = false, lastUI = null;
@@ -87,7 +114,9 @@
     if (name !== this.screenName && PN.screens[name]) this.setScreen(name, PN.screens[name]);
     if (this.screen && this.screen.render) {
       var self = this;
+      var ownsDraft = !!this.screen.beforeRender;
       if (this.screen.beforeRender) { try { this.screen.beforeRender.call(this); } catch (e) {} } // 清空 DOM 前抢救输入草稿/滚动位置
+      if (!ownsDraft) this.snapshotInput(); // 其他屏幕用通用抢救：重建后草稿和光标都还在
       // 拖拽/作画进行中绝不重建 DOM：clear() 会拆掉画布元素，浏览器随即释放指针捕获并抛 pointercancel，
       // 笔画当场断掉（jsdom 没有指针捕获语义，所以单测测不出来）。屏幕用 deferRender 声明，落笔后自己 flushRender 补一次。
       if (this.screen.deferRender) {
@@ -102,6 +131,7 @@
         var sec = this.secrets[this.state.mode];
         var node = self.screen.render.call(self, this.state, (sec && sec.mine) || null); // 屏幕要的是秘密本身，不是 {mine} 包装
         if (node && node.nodeType === 1) this.root.appendChild(node); // 屏幕只负责返回节点，由这里挂载
+        if (!ownsDraft) this.restoreInput();
         this.root.classList.toggle('wide', !!(this.screen && this.screen.wide)); // 画猜用宽屏双栏
         if (this.screen.mounted) this.screen.mounted.call(self, node); // 挂载后钩子：此时才量得到真实尺寸
       } catch (e) { console.error('render error', e); this.clear(); this.root.appendChild(this.h('<div class="card center muted">界面出错了，请刷新（' + (e && e.message) + '）</div>')); }
@@ -152,6 +182,15 @@
     var link = this.link();
     if (navigator.share) navigator.share({ title: '群友派对之夜', text: '点进来一起玩：房号 ' + (this.room ? this.room.code : ''), url: link }).catch(function () {});
     else this.copyLink();
+  };
+
+  /* ===== 过渡页：建房/进房时先给个反馈，别让人对着落地页干等 ===== */
+  UI.prototype.renderWaiting = function (text) {
+    this.clear();
+    this.root.appendChild(this.h(
+      '<div class="land"><div class="biglogo">🎉</div><h1>群友派对之夜</h1>' +
+      '<div class="sub">' + PN.esc(text) + '</div></div>'
+    ));
   };
 
   /* ===== 落地页 ===== */
@@ -220,8 +259,9 @@
           if (kind === 'join' && peerId && self.room && self.room.isHost && self.host) {
             self.host.dispatch({ t: '_joined', id: peerId }, peerId);
           }
-          if (self.room && self.room.isHost && self.host && self.state && self.state.mode === 'lobby') {
-            self.host.dispatch({ t: 'hi' }, self.pid());
+          if (self.room && self.room.isHost && self.host) {
+            // 大厅：刷新名单；对局中：只刷新在线状态（否则掉线的人会让全桌干等人）
+            self.host.dispatch({ t: self.state && self.state.mode === 'lobby' ? 'hi' : '_syncOnline' }, self.pid());
           }
         },
         onHost: function (isHost) {
@@ -243,7 +283,14 @@
         onPrivate: function (obj, from) {
           if (obj.kind === 'secret') {
             self.secrets[obj.mode] = self.secrets[obj.mode] || {};
-            self.secrets[obj.mode].mine = obj.obj;
+            // 同一个 mode 下会收到多种私密消息（发词 / 白板猜词 / 请求上报），必须合并而不是覆盖：
+            // 覆盖会当场抹掉玩家自己的词和身份 —— 白板词卡变空白、房主迁移时 onRecover 读不到角色而无法上报。
+            var prevSec = self.secrets[obj.mode].mine || {};
+            var nextSec = obj.obj || {};
+            var mergedSec = {}, mk;
+            for (mk in prevSec) if (Object.prototype.hasOwnProperty.call(prevSec, mk)) mergedSec[mk] = prevSec[mk];
+            for (mk in nextSec) if (Object.prototype.hasOwnProperty.call(nextSec, mk)) mergedSec[mk] = nextSec[mk];
+            self.secrets[obj.mode].mine = mergedSec;
             if (obj.obj && obj.obj.recover && self.screen && self.screen.onRecover) {
               self.screen.onRecover.call(self, obj.obj);
             }
@@ -264,15 +311,16 @@
         if (!answer) return;
         c = answer.toUpperCase();
       }
-      PN.Room.probe(c, brokerIndex, 3000).then(function (meta) {
-        if (!meta) {
-          if (confirm('没找到房间 ' + c + '，要自己开一个吗？')) build(c);
-          else self.renderLand();
-        } else build(c);
-      });
+      // 房号本身就是房间标识，探不到也照样能进——你要是第一个到的，你自动就是房主。
+      // 这里以前拿 3 秒 probe 的结果决定要不要 confirm 问「没找到房间，要自己开一个吗？」，
+      // 但公共 broker 的冷连接实测要 6~7 秒，3 秒必然超时 —— 结果每个点链接进来的人
+      // 都被这句吓一跳，点「取消」还会被踢回落地页。改成直接进场，只给一句过渡提示。
+      self.renderWaiting('正在进入房间 ' + c + '…');
+      build(c);
     } else {
       var gen = function (n) { for (var i = 0; i < n; i++) { var c = PN.randCode(4); if (c !== location.hash.slice(1).toUpperCase()) return c; } return PN.randCode(4); };
       var c = gen(8);
+      self.renderWaiting('正在建房…');
       PN.Room.probe(c, brokerIndex, 2500).then(function (meta) { if (meta) build(gen(40)); else build(c); });
     }
   };
@@ -319,6 +367,9 @@
     this.renderTopbar(wrap);
     var s = state;
     var sorted = (s.players || []).slice().sort(function (a, b) { return b.score - a.score; });
+    // 点链接进来却一个人都没有、自己还成了房主：多半是网络把这位群友分到了另一台公共服务器
+    // （客户端连不上主 broker 会自动换备用，而备用和主用的是两套话题空间）。给一句人话提示。
+    var lonely = !!location.hash && (s.players || []).length <= 1 && s.hostId === this.pid();
     var playersHtml = sorted.map(function (p) {
       return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.online ? '' : ' off') + '">' +
         '<span class="em">' + (p.emoji || '🙂') + '</span>' +
@@ -327,6 +378,7 @@
         '</div>';
     }).join('');
     var modes = [];
+    var cfgOpen = this._cfgOpen || (this._cfgOpen = {}); // 展开状态记在实例上，重建后还能保持
     for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
       var g = PN.games[k];
       modes.push(
@@ -336,7 +388,7 @@
         '<div class="blurb">' + g.blurb + '</div>' +
         '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
         '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' + (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
-        '<div class="settings" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
+        '<div class="settings' + (cfgOpen[k] ? ' open' : '') + '" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
         '</div>'
       );
     }
@@ -348,6 +400,7 @@
       '<button class="btn sm" id="pn-copy">📋 复制链接</button>' +
       '<button class="btn sm" id="pn-share">📤</button>' +
       '</div>' +
+      (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到群友了。</div></div>' : '') +
       '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的群友（' + (s.players || []).length + '）</div>' +
       '<div class="players">' + (playersHtml || '<div class="muted">还没人，快拉人！</div>') + '</div></div>' +
       '<div class="modegrid">' + modes.join('') + '</div>' +
@@ -368,7 +421,8 @@
       var mode = card.dataset.mode;
       card.querySelector('[data-act="cfg"]').addEventListener('click', function () {
         var cfg = $('#cfg-' + mode);
-        if (cfg) cfg.classList.toggle('open');
+        self._cfgOpen[mode] = !self._cfgOpen[mode];
+        if (cfg) cfg.classList.toggle('open', self._cfgOpen[mode]);
       });
       card.querySelector('[data-act="start"]').addEventListener('click', function () {
         self.send({ t: 'start', mode: mode });
@@ -380,7 +434,7 @@
           if (raw === 'true') v = true; else if (raw === 'false') v = false; else if (!isNaN(Number(raw))) v = Number(raw); else v = raw;
           var values = {};
           values[ctl.dataset.key] = v;
-          self.send({ t: 'settings', values: values });
+          self.send({ t: 'settings', mode: mode, values: values }); // 必须带上模式：设置存在 settings[模式] 下
           card.querySelectorAll('.cfg[data-key="' + ctl.dataset.key + '"]').forEach(function (x) { x.classList.remove('on'); });
           ctl.classList.add('on');
         });
@@ -417,7 +471,9 @@
 
   UI.prototype.editProfile = function () {
     var self = this;
-    this.root.appendChild(this.h(
+    // 必须挂在 #pn-root 外面：render() 会 root.innerHTML='' ，挂里面的话
+    // 任何人进房/改设置都会把弹窗连同你正在输入的昵称一起抹掉。
+    document.body.appendChild(this.h(
       '<div class="overlay"><div class="modal">' +
       '<div class="center" style="font-weight:800;margin-bottom:14px">✏️ 改昵称</div>' +
       '<div class="field"><input id="pn-ename" maxlength="12" value="' + this.me().name + '"></div>' +

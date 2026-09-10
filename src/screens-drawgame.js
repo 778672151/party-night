@@ -315,9 +315,7 @@
         wrap.appendChild(ui.h(C.scoreboard(state, g.winner, '🏆 灵魂画手大赛结束')));
         wrap.appendChild(ui.h(C.overButtons(ui, 'drawgame')));
         wrap.appendChild(ui.renderGameFooter());
-        wrap.querySelectorAll('[data-over]').forEach(function (b) {
-          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
-        });
+        PN.wireOver(wrap, ui);
         return wrap;
       }
 
@@ -367,8 +365,9 @@
       var c = ensureCanvas(ui);
       stage.appendChild(c);
       main.appendChild(stage);
+      // 这里只量尺寸就够了：画布节点是复用的，位图还在，无需每次状态消息都整幅重绘
+      // （笔画最多 900 段，聊天每来一条就全量重绘会明显卡）。真需要重绘时 sizeCanvas() 会自己做。
       sizeCanvas();
-      redrawAll();
 
       /* ---------- 画家工具条 ---------- */
       if (iAmPainter && phase === 'draw') {
@@ -479,6 +478,16 @@
       var from = st.pts.length;
       st.pts = st.pts.concat(msg.s);
       if (local.w) { if (isNew) paintStroke(st); else paintTail(st, from + 1); }
+    },
+
+    /* ---------- 房主迁移：新房主问我要词，把手里那份报回去 ---------- */
+    onRecover: function () {
+      var ui = this;
+      var s = (ui.secrets.drawgame && ui.secrets.drawgame.mine) || {};
+      var answer = s.answer || local.myWord || null;
+      if (answer || (s.words && s.words.length)) {
+        ui.send({ t: 'repaint', answer: answer, words: s.words || null });
+      }
     },
 
     /* ---------- 私密消息：自己的词 / 回放 ---------- */

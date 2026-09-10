@@ -1,0 +1,4 @@
+# 本地跑测试时产生的临时物，不要提交
+node_modules/          # jsdom 用例会临时软链到这里（ln -sfn /tmp/pnt/node_modules node_modules）
+pn-shots/              # 真浏览器套件的截图目录（可用 PN_SHOTS 改到别处）
+*.log

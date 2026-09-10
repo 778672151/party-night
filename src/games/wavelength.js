@@ -330,15 +330,25 @@
       return;
     }
 
-    if (act.t === 'reportTarget' && g.curPhase === 'reveal' && from === g.cur) {
+    // 通灵者回报靶心：clue/guess 阶段迁过来时要先接住，开奖阶段则直接开奖
+    if (act.t === 'reportTarget' && from === g.cur && g.curPhase !== 'over') {
       var rt = Number(act.target);
       if (isNaN(rt) || rt < 0 || rt > 100) return;
       if (host.secretCache && !host.secretCache[g.cur]) {
         host.secretCache[g.cur] = { target: rt };
-        if (!g.done) { enterReveal(host); }
+        if (g.curPhase === 'reveal' && !g.done) { host.clearTimer('revealWait'); enterReveal(host); }
+        else host.emit();
       }
       return;
     }
+  }
+
+  /** 房主迁移后靶心只掌握在通灵者手里：问他要回来，绝不能重新随机。
+   *  重新随机会让已经给出的线索、已经投出的猜测全部对不上号。 */
+  function askTarget(host) {
+    var g = host.g();
+    if (!g.cur) return;
+    host.requestSecret(g.cur, { recover: true, round: g.round, left: g.left, right: g.right });
   }
 
   function resume(host) {
@@ -346,13 +356,7 @@
     if (!g || !g.curPhase) return;
 
     if (g.curPhase === 'clue') {
-      var target = 8 + rnd(85);
-      host.sendSecret(g.cur, {
-        target: target,
-        left: g.left,
-        right: g.right,
-        round: g.round
-      });
+      askTarget(host);
       var remaining = g.deadline - host.now();
       if (remaining > 5000) {
         host.after('clue', remaining, function () {
@@ -371,13 +375,7 @@
       host.emit();
 
     } else if (g.curPhase === 'guess') {
-      var target2 = 8 + rnd(85);
-      host.sendSecret(g.cur, {
-        target: target2,
-        left: g.left,
-        right: g.right,
-        round: g.round
-      });
+      askTarget(host);
       var remaining2 = g.deadline - host.now();
       if (remaining2 > 5000) {
         host.after('guess', remaining2, function () {
@@ -391,7 +389,13 @@
       host.emit();
 
     } else if (g.curPhase === 'reveal' && !g.done) {
-      enterReveal(host);
+      // 等通灵者把靶心报回来再开奖；5 秒还不报就按兜底值开，别把大家卡死
+      askTarget(host);
+      host.after('revealWait', 5000, function () {
+        var g2 = host.g();
+        if (g2 && g2.curPhase === 'reveal' && !g2.done) enterReveal(host);
+      });
+      host.emit();
 
     } else if (g.curPhase === 'reveal' && g.done && g.round <= g.rounds) {
       host.after('reveal', REVEAL_MS, function () {

@@ -4,6 +4,10 @@
   var PN = root.PN = root.PN || {};
   var esc = PN.esc;
 
+  /* 拖拽状态提到模块级：整树重建会换掉滑杆元素、丢掉指针捕获、把闭包里的值清回 50。
+     和画布落笔一样，拖拽期间必须冻结重建（见 ui.js 的 deferRender）。 */
+  var DRAG = { active: false, value: null };
+
   function phaseText(g) {
     if (g.curPhase === 'clue') return '通灵者想线索';
     if (g.curPhase === 'guess') return '大家猜位置';
@@ -33,13 +37,24 @@
         var v = Math.max(0, Math.min(100, Math.round(x / rect.width * 100)));
         knob.style.left = v + '%';
         knob.textContent = String(v);
+        DRAG.value = v; // 记住位置：重建后不会跳回 50
         onSet(v);
       };
       var dragging = false;
-      track.addEventListener('pointerdown', function (e) { dragging = true; track.setPointerCapture && track.setPointerCapture(e.pointerId); setFrom(e); });
+      var endDrag = function (e) {
+        if (!dragging) return;
+        dragging = false;
+        DRAG.active = false;
+        setFrom(e);
+        if (ui._renderPending) setTimeout(function () { ui.flushRender(); }, 0); // 补上被冻结的那次渲染
+      };
+      track.addEventListener('pointerdown', function (e) { dragging = true; DRAG.active = true; track.setPointerCapture && track.setPointerCapture(e.pointerId); setFrom(e); });
       track.addEventListener('pointermove', function (e) { if (dragging) setFrom(e); });
-      track.addEventListener('pointerup', function (e) { dragging = false; setFrom(e); });
-      track.addEventListener('touchstart', function (e) { e.preventDefault(); setFrom(e); }, { passive: false });
+      track.addEventListener('pointerup', endDrag);
+      track.addEventListener('pointercancel', endDrag);
+      track.addEventListener('touchstart', function (e) { e.preventDefault(); dragging = true; DRAG.active = true; setFrom(e); }, { passive: false });
+      // 兜底：万一 pointerup 没来（部分手机浏览器），touchend 也要解冻，别把页面冻死
+      track.addEventListener('touchend', function () { if (dragging) { dragging = false; DRAG.active = false; if (ui._renderPending) setTimeout(function () { ui.flushRender(); }, 0); } }, { passive: true });
     }
     wrap.appendChild(bar);
     var labels = ui.el('div', 'wave-labels');
@@ -52,6 +67,8 @@
   PN.screens = PN.screens || {};
   PN.screens.wavelength = {
     name: 'wavelength',
+    /** 拖滑杆期间冻结 DOM 重建，否则别人一提交就把你的指针捕获拆掉、位置打回 50 */
+    deferRender: function () { return DRAG.active; },
     render: function (state, secret) {
       var ui = this;
       var C = PN.gameCommon;
@@ -69,9 +86,7 @@
         wrap.appendChild(ui.h(C.scoreboard(state, g.winner, '🏆 波段对决结束')));
         wrap.appendChild(ui.h(C.overButtons(ui, 'wavelength')));
         wrap.appendChild(ui.renderGameFooter());
-        wrap.querySelectorAll('[data-over]').forEach(function (b) {
-          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
-        });
+        PN.wireOver(wrap, ui);
         return wrap;
       }
 
@@ -98,7 +113,7 @@
             '<div style="font-size:24px;font-weight:900;margin-top:6px">「' + esc(g.clue || '') + '」</div>' +
             '<div class="muted mt8">' + (mine !== undefined ? '已提交：' + mine + '（等大家）' : '拖动滑块，猜通灵者想的位置') + '</div></div>'));
           var submitted = mine !== undefined;
-          var val = mine !== undefined ? mine : 50;
+          var val = mine !== undefined ? mine : (DRAG.value == null ? 50 : DRAG.value);
           var sbar = spectrum(ui, g, {
             value: submitted ? mine : val,
             onSet: function (v) { val = v; if (!submitted) { submitted = false; } }
@@ -107,7 +122,7 @@
           bar.appendChild(sbar);
           var btn = ui.el('button', 'btn primary block', submitted ? '已提交 ' + mine + ' 分位' : '提交我的位置');
           btn.disabled = submitted;
-          btn.addEventListener('click', function () { ui.send({ t: 'guess', v: val }); });
+          btn.addEventListener('click', function () { ui.send({ t: 'guess', v: val }); DRAG.value = null; });
           bar.appendChild(btn);
           wrap.appendChild(bar);
         }
@@ -130,6 +145,12 @@
       }
       wrap.appendChild(ui.renderGameFooter()); // 给线索/猜的时候也要能回大厅
       return wrap;
+    },
+    /* 房主迁移：新房主问我要靶心，把手里那个原样报回去（绝不让他重新随机） */
+    onRecover: function () {
+      var ui = this;
+      var s = ui.secrets.wavelength && ui.secrets.wavelength.mine;
+      if (s && typeof s.target === 'number') ui.send({ t: 'reportTarget', target: s.target });
     }
   };
 

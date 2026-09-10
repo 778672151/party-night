@@ -13,7 +13,13 @@
     return '本局结束';
   }
   function wordCard(ui, secret, g) {
-    if (!secret) return '';
+    if (!secret || !secret.role) {
+      // 拿不到词有两种情况：刚刷新、房主马上会补发；或者本局开始后才进来（只能旁观）。
+      // 以前这里返回空串 → ui.h('') 得到 null → appendChild 抛异常 → 整个屏幕变成「界面出错了」。
+      var inGame = !!(g && g.alive && g.alive.indexOf(ui.pid()) !== -1);
+      return '<div class="card center"><div class="bigword">' + (inGame ? '⏳' : '👀') + '</div>' +
+        '<div class="muted">' + (inGame ? '正在取回你的词…（稍等一下）' : '本局已经开始了，你在旁观，等下一局吧～') + '</div></div>';
+    }
     var roleName = { under: '卧底 🕵️', civil: '平民 😇', blank: '白板 🃏' }[secret.role] || '';
     var word = secret.role === 'blank' ? '你没有词，听别人描述后浑水摸鱼！' : secret.word;
     var hint = secret.role === 'under' ? '你的词和别人不一样，混过去！' : (secret.role === 'civil' ? '找出和你描述不一样的人' : '别露馅，被投出去时还有一次猜词机会');
@@ -51,7 +57,8 @@
     var sel = {};
     if (votes && votes[ui.pid()]) sel[votes[ui.pid()]] = true;
     var wrap = ui.el('div');
-    wrap.appendChild(ui.h(C.playerGrid(ui, state, { dead: deadSet(g), sel: sel, pool: pool, disabled: false })));
+    var iAmAlive = (g.alive || []).indexOf(ui.pid()) !== -1; // 出局/旁观的人不能投票，别给可点的假按钮
+    wrap.appendChild(ui.h(C.playerGrid(ui, state, { dead: deadSet(g), sel: sel, pool: pool, disabled: !iAmAlive })));
     wrap.querySelectorAll('[data-pick]').forEach(function (b) {
       if (b.hasAttribute('disabled')) return;
       if (pool && pool.indexOf(b.getAttribute('data-pick')) === -1) { b.setAttribute('disabled', ''); return; }
@@ -59,18 +66,6 @@
     });
     return wrap;
   }
-  function chipCounts(g) {
-    var out = '';
-    var counts = g.counts || {};
-    if (g.phase === 'revote') {
-      for (var i = 0; i < (g.revotePool || []).length; i++) {
-        var id = g.revotePool[i];
-        out += '<span class="pill">' + esc(nameOf(ui_state, id)) + ' ' + (counts[id] || 0) + ' 票</span>';
-      }
-    }
-    return out;
-  }
-  var ui_state = null;
   function nameOf(s, id) { var p = null; if (s && s.players) for (var i = 0; i < s.players.length; i++) if (s.players[i].id === id) { p = s.players[i]; break; } return p ? p.name : '??'; }
 
   PN.screens = PN.screens || {};
@@ -78,7 +73,6 @@
     name: 'undercover',
     render: function (state, secret) {
       var ui = this;
-      ui_state = state;
       var C = PN.gameCommon;
       var g = state.g || {};
       var wrap = ui.el('div');
@@ -110,9 +104,7 @@
           '🏁 ' + (g.winner === 'under' ? '卧底获胜！' : (Array.isArray(g.winner) ? '白板猜词获胜！' : '平民获胜！')))));
         wrap.appendChild(ui.h(C.overButtons(ui, 'undercover')));
         wrap.appendChild(ui.renderGameFooter());
-        wrap.querySelectorAll('[data-over]').forEach(function (b) {
-          b.addEventListener('click', function () { ui.send({ t: b.getAttribute('data-over') }); });
-        });
+        PN.wireOver(wrap, ui);
         return wrap;
       }
 
@@ -136,7 +128,8 @@
         body.appendChild(pickGrid(ui, state, g, g.phase === 'revote' ? g.revotePool : null, g.votes));
         body.appendChild(ui.h('<div class="muted center mt8">已投 ' + Object.keys(g.votes || {}).length + '/' + (g.alive || []).length + '</div>'));
       } else if (g.phase === 'blankGuess') {
-        if (g.blankEliminated && ui.pid() === g.blankId) {
+        // 白板身份只在私密通道里（state.g 绝不能带 blankId，那等于公开谁是白板）
+        if (secret && secret.guess === true) {
           wrap.appendChild(inputBar(ui, '你只有一次机会：猜平民词是？', function (v) { ui.send({ t: 'blankGuess', word: v }); }));
         } else {
           body.appendChild(ui.h('<div class="card center"><div class="bigword">🃏</div><div class="muted">白板正在猜词…</div></div>'));

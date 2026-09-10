@@ -17,6 +17,8 @@
 
   PN.games = {};
 
+  var DROP_GRACE_MS = 25000; // 掉线宽限期：刷新/切后台回来的人还在对局里
+
   function Host(room, onStateChange) {
     this.room = room;
     this.onStateChange = onStateChange || function () {};
@@ -50,12 +52,24 @@
     var s = this.state;
     if (!from) return;
     if (action.t === '_joined' || action.t === 'hi') {
+      var before = this.state.players.length;
+      var prevP = this.player(from);
+      var wasOffline = !prevP || !prevP.online; // 掉线的人回来了，也要广播一次
       this.upsertPlayer(from);
-      this.emit();
+      // 只有名单或在线状态真的变了才广播：以前每收到一次心跳就 emit 一次，
+      // 四个人在大厅里等于每 1 秒把整棵树重建一次 —— 改昵称弹窗、设置面板全被冲掉。
+      if (this.syncOnline() || wasOffline || this.state.players.length !== before) this.emit();
+      return;
+    }
+    if (action.t === '_syncOnline') {
+      // 对局中刷新在线状态：掉线的人不能一直算在「等人描述 / 等人投票」里
+      if (this.syncOnline()) this.emit();
       return;
     }
     if (action.t === '_left') {
-      this.removePlayer(from);
+      // 掉线只标离线（积分保住，人回来接着玩）；主动退出才真的移出房间
+      if (action.dropped) this.markOffline(from);
+      else this.removePlayer(from);
       this.emit();
       return;
     }
@@ -83,8 +97,15 @@
     }
     if (action.t === 'lobby') { this.goLobby(); return; }
     if (action.t === 'settings') {
-      for (var k in action.values) if (Object.prototype.hasOwnProperty.call(action.values, k)) {
-        this.state.settings[k] = this.coerce(this.state.settings[k], action.values[k]);
+      // 设置是分模式存的（settings.undercover.blank 这种）。这里以前直接写成 settings[k]，
+      // 而游戏读的全是 settings.<模式>.<键> —— 于是大厅里所有设置项（卧底人数/白板/描述方式/
+      // 每轮时长、波长局数、谁最可能题数/时长、画猜回合数/时长）统统不生效。
+      var smode = action.mode || (this.state.mode !== 'lobby' ? this.state.mode : null);
+      var bag = smode ? this.state.settings[smode] : null;
+      if (bag) {
+        for (var k in action.values) if (Object.prototype.hasOwnProperty.call(action.values, k)) {
+          bag[k] = this.coerce(bag[k], action.values[k]);
+        }
       }
       this.emit();
       return;
@@ -141,11 +162,47 @@
       if (patch.name !== undefined) found.name = patch.name;
       if (patch.emoji !== undefined) found.emoji = patch.emoji;
     }
+    this.clearTimer('drop_' + id); // 人回来了：取消宽限期后的移出
     found.online = true;
     return found;
   };
 
+  /** 用花名册心跳刷新在线状态。
+   *  以前 state.players[].online 一旦为 true 就再也不会变 false，
+   *  于是「等人描述/等人投票」会把掉线的人一直算进去，整桌干等一分钟以上。 */
+  Host.prototype.syncOnline = function () {
+    if (!this.room.roster) return false;
+    var list = this.room.roster(), map = {}, i, changed = false;
+    for (i = 0; i < list.length; i++) map[list[i].id] = list[i].online;
+    this.state.players.forEach(function (p) {
+      // 不在花名册里 = 早就掉线并被清理掉了（新房主 adopt 过来的旧 state 尤其常见），
+      // 这种情况必须判离线，否则他会一直算在「等人描述 / 等人投票」里，全桌干等。
+      var on = Object.prototype.hasOwnProperty.call(map, p.id) ? map[p.id] : false;
+      if (p.online !== on) {
+        p.online = on;
+        changed = true;
+      }
+    });
+    return changed;
+  };
+
+  /** 掉线（非主动退出）：标记离线、保留积分，并给一个宽限期。
+   *  不能立刻把人踢出对局 —— 刷新页面、切后台、短暂断网都会走遗嘱，
+   *  几秒后就回来的人应该原样继续玩，而不是被移出名单再也投不了票。 */
+  Host.prototype.markOffline = function (id) {
+    var p = this.player(id);
+    if (p) p.online = false;
+    var self = this;
+    this.clearTimer('drop_' + id);
+    this.after('drop_' + id, DROP_GRACE_MS, function () {
+      var g = PN.games[self.state.mode];
+      if (g && g.onLeave) g.onLeave(self, id);
+      self.emit();
+    });
+  };
+
   Host.prototype.removePlayer = function (id) {
+    this.clearTimer('drop_' + id);
     var s = this.state;
     s.players = s.players.filter(function (p) { return p.id !== id; });
     var g = PN.games[s.mode];
@@ -202,6 +259,12 @@
 
   Host.prototype.sendSecret = function (pid, obj) {
     this.secretCache[pid] = obj;
+    this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: obj });
+  };
+  /** 只发「请上报」请求，绝不写缓存。
+   *  不能用 sendSecret 发请求：它会把 secretCache[pid] 覆盖成 {recover:true}，
+   *  于是玩家真报回来的身份词被 if (!secretCache[from]) 挡在门外，新房主永远学不到词。 */
+  Host.prototype.requestSecret = function (pid, obj) {
     this.room.sendPrivate(pid, { kind: 'secret', mode: this.state.mode, obj: obj });
   };
   Host.prototype.resendSecret = function (pid) {
