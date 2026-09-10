@@ -36,8 +36,8 @@ assert(h.state.g.chat.some(m => m.k === 'sys' && m.text.indexOf('来画') >= 0),
 await sleepUntil(() => painter.secrets.some(s => s.obj && s.obj.answer === words[0]), 20000, '画家收到答案 secret');
 
 // 画笔数据（peer 通道）经真实网络：两条笔画
-painter.room.sendAction({ t: 'peer', msg: { t: 'stroke', id: 'k1', color: '#222222', w: 9, s: [[100, 100], [600, 600]] } });
-painter.room.sendAction({ t: 'peer', msg: { t: 'stroke', id: 'k2', color: '#ff4d4d', w: 4, s: [[600, 600], [900, 200]] } });
+painter.room.sendInk({ t: 'stroke', id: 'k1', r: 1, color: '#222222', w: 9, i0: 0, s: [[100, 100], [600, 600]] });
+painter.room.sendInk({ t: 'stroke', id: 'k2', r: 1, color: '#ff4d4d', w: 4, i0: 0, s: [[600, 600], [900, 200]] });
 
 // 中途加入：应通过私密通道收到画笔回放（按笔画 id 分块）
 const late = await t.add('e0000001', '小E', '🐼');
@@ -96,7 +96,7 @@ const words2 = painter2.secrets.filter(s => s.obj && s.obj.words).pop().obj.word
 painter2.room.sendAction({ t: 'pick', i: 0 });
 await sleepUntil(() => h.state.g.round === 2 && h.state.g.cur.phase === 'draw', 20000, '第 2 轮进入作画');
 assert(h.state.g.chat.every(m => m.k !== 'ok' || m.text.indexOf(words2[0]) === -1), '第 2 轮聊天不泄露新答案');
-painter2.room.sendAction({ t: 'peer', msg: { t: 'stroke', id: 'k1r2', r: 2, color: '#222222', w: 9, s: [[10, 10], [500, 500]] } });
+painter2.room.sendInk({ t: 'stroke', id: 'k1r2', r: 2, color: '#222222', w: 9, i0: 0, s: [[10, 10], [500, 500]] });
 const late2 = await t.add('f0000001', '小F', '🐨');
 await sleepUntil(() => late2.secrets.some(s => s.obj && Array.isArray(s.obj.replay) && s.obj.replay.length), 25000, '第 2 轮晚到者收到回放');
 const rep2 = late2.secrets.filter(s => s.obj && Array.isArray(s.obj.replay)).pop().obj.replay;

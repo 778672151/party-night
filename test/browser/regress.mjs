@@ -245,7 +245,8 @@ S.draw = async (cdp) => {
 
   assert(await inkOf(G) === 0, '开局时另一端的画布是干净的');
   // 记录画家发出的画笔消息，用来看这一笔有没有被拆成两笔
-  await P.eval('window.__sends = []; const _o = PN.app.send.bind(PN.app); PN.app.send = a => { window.__sends.push(a); return _o(a); }');
+  // 画笔画现在走墨迹直达通道（sendInk）
+  await P.eval('window.__ink = []; const _i = PN.app.sendInk.bind(PN.app); PN.app.sendInk = m => { window.__ink.push(m); return _i(m); };');
 
   const box = await P.box('.dg-stage canvas');
   const y = box.top + box.h * 0.5;
@@ -262,7 +263,7 @@ S.draw = async (cdp) => {
   await P.mouse('mouseReleased', box.left + box.w * (0.2 + 0.06 * 14), y, { buttons: 0 });
   await sleep(600);
 
-  const strokes = await P.eval('JSON.stringify(window.__sends.filter(a => a.t === "peer" && a.msg && a.msg.t === "stroke").map(a => a.msg.id))');
+  const strokes = await P.eval('JSON.stringify(window.__ink.filter(m => m.t === "stroke").map(m => m.id))');
   const ids = [...new Set(JSON.parse(strokes))];
   console.log('  这一笔被拆成了', ids.length, '段:', strokes);
   assert(ids.length === 1, '整笔是连续的一段（状态消息没有把它打断）');

@@ -105,9 +105,16 @@
     c.lineCap = 'round';
     c.lineJoin = 'round';
   }
+  /** 能画的只有「从 0 开始连续」的那一段。
+   *  接收端是按 i0 落位的，缺号时 pts 中间会有洞 —— 拿洞里的 undefined 去画会抛异常，
+   *  整笔就断在那里（这就是「补发了却还是画不全」的原因）。 */
+  function denseLen(st) {
+    var have = (st.have === undefined) ? st.pts.length : st.have;
+    return Math.max(0, Math.min(have, st.pts.length));
+  }
   /** 整条笔画重绘（中点二次贝塞尔平滑） */
   function paintStroke(st) {
-    var c = local.ctx, pts = st.pts, n = pts.length;
+    var c = local.ctx, pts = st.pts, n = denseLen(st);
     if (!c || !n || !local.w) return;
     var W = local.w, H = local.h;
     styleCtx(c, st);
@@ -129,7 +136,7 @@
   }
   /** 只画新增的一小段（实时跟手，不必整条重绘） */
   function paintTail(st, from) {
-    var c = local.ctx, pts = st.pts, n = pts.length;
+    var c = local.ctx, pts = st.pts, n = denseLen(st);
     if (!c || n < 2 || !local.w) return;
     var W = local.w, H = local.h;
     styleCtx(c, st);
@@ -149,6 +156,25 @@
     local.strokes.push(st);
     return st;
   }
+  /** 兜底：任何一条墨迹到达时顺手检查别的笔是否还带着洞（例如「最后一块」正好丢了），
+   *  有就再要一次补发。每笔最多要 6 次、400ms 冷却，不会打风暴。 */
+  function sweepHoles(ui) {
+    var now = Date.now();
+    for (var id in local.byId) {
+      if (!Object.prototype.hasOwnProperty.call(local.byId, id)) continue;
+      var s = local.byId[id];
+      if (!s || !s.pts || !s.owner) continue;
+      var hole = -1;
+      for (var q = (s.have || 0); q < s.pts.length; q++) if (s.pts[q] === undefined) { hole = q; break; }
+      if (hole < 0) continue;
+      if ((s.askTries || 0) >= 12) continue; // 补发本身也会丢，多要几次；上限防止打风暴
+      if (s.askAt && now - s.askAt < 400) continue;
+      s.askAt = now;
+      s.askTries = (s.askTries || 0) + 1;
+      if (ui.room && ui.room.askInk) ui.room.askInk(s.owner, id, s.have || 0);
+    }
+  }
+
   function dropStroke(id) {
     delete local.byId[id];
     local.strokes = local.strokes.filter(function (s) { return s.id !== id; });
@@ -156,7 +182,24 @@
   }
 
   /* ---------------- 画笔交互 ---------------- */
+  /* 周期性自愈：公共 broker 是 QoS0，补发包本身也可能丢。
+     只要还有笔带着洞，就隔一会儿再要一次补发 —— 否则「最后一块」丢了以后没人再触发，洞会永远留着。 */
+  if (typeof setInterval === 'function') {
+    setInterval(function () {
+      if (!local.ui || !local.byId) return;
+      for (var id in local.byId) {
+        if (!Object.prototype.hasOwnProperty.call(local.byId, id)) continue;
+        var s = local.byId[id];
+        if (!s || !s.pts || !s.owner || !s.pts.length) continue;
+        for (var q = (s.have || 0); q < s.pts.length; q++) {
+          if (s.pts[q] === undefined) { sweepHoles(local.ui); return; }
+        }
+      }
+    }, 1200);
+  }
+
   function bindPaint(ui) {
+    local.ui = ui;
     var cv = local.canvas;
     if (!cv || cv.dataset.paint) return;
     cv.dataset.paint = '1';
@@ -169,9 +212,10 @@
       if (!force && now - local.lastFlush < 55) return;
       if (local.sent >= st.pts.length) return;
       local.lastFlush = now;
-      var chunk = st.pts.slice(local.sent);
+      var i0 = local.sent; // 本块第一个点在整笔中的下标：对端据此落位、发现缺号
+      var chunk = st.pts.slice(i0);
       local.sent = st.pts.length;
-      ui.send({ t: 'peer', msg: { t: 'stroke', id: st.id, r: st.r, color: st.color, w: st.w, s: chunk } });
+      ui.sendInk({ t: 'stroke', id: st.id, r: st.r, color: st.color, w: st.w, i0: i0, s: chunk });
     }
 
     function down(e) {
@@ -292,8 +336,9 @@
           try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {}
         }
       }
-      var hintEl = document.querySelector('[data-hint]');
-      if (hintEl) hintEl.textContent = hintEl.getAttribute('data-hint');
+      // 曾经这里把 data-hint 属性（转义过的 <span> 源码）塞回 textContent，
+      // 猜词者屏幕上就会显示 '<span class="u">＿</span>' 这种源码，而且每揭一个字跟着变一次。
+      // innerHTML 已经渲染好了，不需要再补一刀。
     },
 
     render: function (state, secret) {
@@ -403,13 +448,13 @@
           var last = local.strokes[local.strokes.length - 1];
           if (!last) return;
           dropStroke(last.id);
-          ui.send({ t: 'peer', msg: { t: 'undo', id: last.id, r: local.round } });
+          ui.sendInk({ t: 'undo', id: last.id, r: local.round });
         });
         var clr = ui.el('button', 'btn warn sm', '🧽 清空');
         clr.addEventListener('click', function () {
           local.strokes = []; local.byId = {}; local.curId = null;
           redrawAll();
-          ui.send({ t: 'peer', msg: { t: 'clear', r: local.round } });
+          ui.sendInk({ t: 'clear', r: local.round });
         });
         tools.appendChild(undo);
         tools.appendChild(clr);
@@ -461,7 +506,8 @@
     },
 
     /* ---------- 别人画的笔画 ---------- */
-    onPeer: function (msg) {
+    onPeer: function (msg, from) {
+      var ui = this; // ui.js 用 .call(ui) 调进来，和 onPrivate/onRecover 一样
       if (!msg) return;
       // 上一轮的残尾（落笔正好跨过换轮时 flush 出来的）不能画到新画布上
       if (msg.r && local.round && msg.r !== local.round) return;
@@ -472,18 +518,30 @@
       }
       if (msg.t === 'undo') { dropStroke(msg.id); return; }
       if (msg.t !== 'stroke' || !msg.s || !msg.s.length) return;
+
       var st = local.byId[msg.id];
-      var isNew = !st;
-      if (isNew) st = addStroke(msg.id, msg.color, msg.w, msg.r);
-      var from = st.pts.length;
-      st.pts = st.pts.concat(msg.s);
-      // 这里必须传 from（paintTail 内部从 from-1 起笔），传 from+1 会从本块第一个点起笔，
-      // 于是「上一块的末点 → 本块的起点」那一段永远不画 —— 每 55ms 一块，块块之间全是缝，
-      // 看起来就是「藕断丝连」。（本机跟手没问题，因为本机那条路径的 from 算法是对的。）
-      // 这里必须传 from（paintTail 内部从 from-1 起笔），传 from+1 会从本块第一个点起笔，
-      // 于是「上一块的末点 → 本块的起点」那一段永远不画 —— 每 55ms 一块，块块之间全是缝，
-      // 慢画（一块只含 1 个点）时更是一整段都画不出来。看起来就是「藕断丝连 / 别人看不到」。
-      if (local.w) { if (isNew) paintStroke(st); else paintTail(st, from + 1); }
+      if (!st) { st = addStroke(msg.id, msg.color, msg.w, msg.r); st.pts = []; st.have = 0; st.owner = from; }
+      var prevHave = st.have || 0;
+      // 按 i0 落位：缺哪几个点一目了然；补发的块晚到、乱序到也不会把笔画写歪
+      var res = PN.Wire.place(st.pts, prevHave, msg);
+      st.have = res.have;
+      if (res.have > prevHave) st.askTries = 0; // 补上了，计数归零
+      sweepHoles(ui);
+      if (res.gap) {
+        // 中间断了：先向发送者要补发，别把断开的那段画出来
+        var now = Date.now();
+        if (!st.askAt || now - st.askAt > 400) {
+          st.askAt = now;
+          st.askTries = (st.askTries || 0) + 1;
+          if (ui.room && ui.room.askInk) ui.room.askInk(from, msg.id, res.gap[0]);
+        }
+        return;
+      }
+      if (!local.w) return;
+      if (res.have === prevHave && msg.i0 + msg.s.length <= prevHave) return; // 重复/迟到的补发，不必重画
+      if (st.pts.length === 1) paintStroke(st);                       // 只有一个点：画成圆点
+      else if (msg.i0 === prevHave && !msg.re) paintTail(st, msg.i0); // 正好接上：只画新增的一小段
+      else paintStroke(st);                                          // 补齐了空洞：整笔重画，保证连续
     },
 
     /* ---------- 房主迁移：新房主问我要词，把手里那份报回去 ---------- */
@@ -506,8 +564,15 @@
           var ch = obj.replay[i];
           if (!ch || !ch.s) continue;
           var st = local.byId[ch.id];
-          if (!st) st = addStroke(ch.id, ch.color, ch.w, ch.r);
-          st.pts = st.pts.concat(ch.s);
+          if (!st) { st = addStroke(ch.id, ch.color, ch.w, ch.r); st.pts = []; }
+          // 按 i0 落位：房主存的块可能是补发补进去的、顺序不保证，按位合并才稳
+          for (var k = 0; k < ch.s.length; k++) st.pts[(ch.i0 || 0) + k] = ch.s[k];
+        }
+        for (var j = 0; j < local.strokes.length; j++) {
+          var s2 = local.strokes[j];
+          var dense = [];                      // 稀疏数组要压紧，画布只认连续点
+          for (var q = 0; q < s2.pts.length; q++) if (s2.pts[q] !== undefined) dense.push(s2.pts[q]);
+          s2.pts = dense;
         }
         redrawAll();
       }

@@ -40,6 +40,10 @@
   UI.prototype.send = function (action) {
     if (this.room) this.room.sendAction(action);
   };
+  /** 墨迹直达通道（不走动作通道、不绕房主转发）：丢包能自愈，见 src/wire.js */
+  UI.prototype.sendInk = function (msg) {
+    if (this.room) this.room.sendInk(msg);
+  };
   UI.prototype.renderGameFooter = function () {
     var self = this;
     var row = this.el('div', 'row mt16');
@@ -283,7 +287,13 @@
         },
         onAction: function (action, from) { if (self.host && self.room.isHost) self.host.dispatch(action, from); },
         onEvent: function (ev) { self.onEvent(ev); },
-        onPeer: function (msg, from) { if (self.screen && self.screen.onPeer) self.screen.onPeer(msg, from); },
+        onPeer: function (msg, from) { if (self.screen && self.screen.onPeer) self.screen.onPeer.call(self, msg, from); },
+        onInk: function (msg, from) {
+          // 房主旁听墨迹：留一份给中途加入的人回放（自己的笔迹也会走这里，见 room.sendInk）
+          if (!self.room.isHost || !self.host || !self.state) return;
+          var g = PN.games[self.state.mode];
+          if (g && g.onInk) g.onInk(self.host, msg, from);
+        },
         onPrivate: function (obj, from) {
           if (obj.kind === 'secret') {
             self.secrets[obj.mode] = self.secrets[obj.mode] || {};

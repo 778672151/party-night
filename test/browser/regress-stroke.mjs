@@ -45,7 +45,8 @@ const P = painter === aId ? A : B, G = painter === aId ? B : A;
 await P.waitFor('!!document.querySelector("[data-word]")', '选词卡');
 await clickUntil(P, '[data-word="0"]', 'PN.app.state.g.cur.phase === "draw"', '作画中');
 await sleep(600);
-await P.eval('window.__sends = []; const _o = PN.app.send.bind(PN.app); PN.app.send = a => { window.__sends.push(a); return _o(a); }');
+// 画笔画现在走墨迹直达通道（sendInk），钩子跟着换
+await P.eval('window.__ink = []; const _i = PN.app.sendInk.bind(PN.app); PN.app.sendInk = m => { window.__ink.push(m); return _i(m); };');
 
 async function touchStroke(page, pts, gapMs) {
   const box = await page.box('.dg-stage canvas');
@@ -70,7 +71,7 @@ console.log('\n[2] 再正常速度画一笔，检查有没有「一截一截」'
 await touchStroke(P, line(30, 0.15, 0.85, 0.55, 0.65), 12);
 await sleep(1500);
 m = JSON.parse(await P.eval(MEASURE)); o = JSON.parse(await G.eval(MEASURE));
-const strokes = JSON.parse(await P.eval('JSON.stringify([...new Set(window.__sends.filter(a=>a.t==="peer"&&a.msg&&a.msg.t==="stroke").map(a=>a.msg.id))])'));
+const strokes = JSON.parse(await P.eval('JSON.stringify([...new Set(window.__ink.filter(m=>m.t==="stroke").map(m=>m.id))])'));
 console.log('  画家 ink=' + m.ink + ' comps=' + m.comps + ' | 彼端 ink=' + o.ink + ' comps=' + o.comps + ' | 共发出 ' + strokes.length + ' 笔');
 assert(o.ink > m.ink * 0.85, '两笔都同步过去了（另一端墨迹 ≥ 画家 85%）');
 assert(o.comps <= strokes.length + 1, '另一端墨迹块数 ≈ 笔画数（' + o.comps + ' ≤ ' + (strokes.length + 1) + '），没有碎成一截一截');
@@ -101,7 +102,30 @@ console.log('  中间走廊墨迹：画家 ' + bandP + ' 像素，彼端 ' + ban
 assert(bandP < 20, '画家画布两笔之间没有多余连线');
 assert(bandG < 20, '另一端两笔之间没有多余连线（旧现象：起点和终点之间突然连一道）');
 
-console.log('\n[4] 猜词者的掩码必须和房主状态逐字一致，且只会越揭越多');
+console.log('\n[4] 注入丢包：每 3 块丢 1 块，补发必须把笔画还原（QoS0 公共 broker 真的会丢）');
+await P.eval('PN.app.room.inkDropEvery = 3');
+const inkBefore = JSON.parse(await P.eval('JSON.stringify({ sent: window.__ink.length, dropped: PN.app.room._inkOut.dropped })'));
+await touchStroke(P, line(24, 0.15, 0.85, 0.45, 0.5), 70);
+await sleep(3000);
+const inkAfter = JSON.parse(await P.eval('JSON.stringify({ sent: window.__ink.length, dropped: PN.app.room._inkOut.dropped })'));
+await P.eval('PN.app.room.inkDropEvery = 0');
+const dropped = inkAfter.dropped - inkBefore.dropped;
+// 补发是异步的（要等公共 broker 往返，且补发包本身也可能再丢），等对端墨迹稳定下来再比
+const m4 = JSON.parse(await P.eval(MEASURE));
+let o4 = { ink: -1, comps: -1 }, stable = 0;
+for (let i = 0; i < 60; i++) {
+  o4 = JSON.parse(await G.eval(MEASURE));
+  if (o4.ink === o4.prev) {} //
+  if (i > 0 && o4.ink === (globalThis.__lastInk === undefined ? -1 : globalThis.__lastInk)) { if (++stable >= 4) break; } else { stable = 0; }
+  globalThis.__lastInk = o4.ink;
+  await sleep(500);
+}
+console.log('  丢了 ' + dropped + ' 块 | 画家 ink=' + m4.ink + ' comps=' + m4.comps + ' | 彼端 ink=' + o4.ink + ' comps=' + o4.comps);
+assert(dropped >= 2, '确实丢掉了 ' + dropped + ' 块（模拟公共 broker 丢包）');
+assert(o4.ink >= m4.ink * 0.95, '补发之后对端墨迹与画家一致（' + o4.ink + ' vs ' + m4.ink + '）');
+assert(o4.comps <= m4.comps + 1, '补发之后笔画没有碎掉（块数 ' + o4.comps + ' vs ' + m4.comps + '）');
+
+console.log('\n[5] 猜词者的掩码必须和房主状态逐字一致，且只会越揭越多');
 const expectMask = async (page) => page.eval(`(() => {
   const cur = PN.app.state.g.cur || {};
   const len = cur.wordLen || 0, hint = cur.hint || {};
@@ -123,12 +147,15 @@ for (let i = 0; i < 6; i++) {
 console.log('  掩码采样 =', JSON.stringify(last), '揭开字数 =', revealed);
 assert(ok, '掩码与房主状态始终一致、且揭开的字不会回退（旧现象：词一直变）');
 
-console.log('\n[5] 猜词者不该看到任何 HTML 源码');
+console.log('\n[6] 猜词者不该看到任何 HTML 源码');
 const hint = await G.eval("document.querySelector('.dg-hint') ? document.querySelector('.dg-hint').innerText : ''");
 const hintHtml = await G.eval("document.querySelector('.dg-hint') ? document.querySelector('.dg-hint').innerHTML : ''");
-console.log('  提示行文本 =', JSON.stringify(hint), '| HTML =', JSON.stringify(hintHtml).slice(0, 90));
-assert(!hint.includes('<span') && !hint.includes('class='), '提示行显示的是掩码，不是 <span> 源码');
-assert(hint.includes('＿'), '提示行确实有掩码字符');
+const phase6 = await G.eval('PN.app.state.g.cur ? PN.app.state.g.cur.phase : "?"');
+console.log('  阶段 =', phase6, '| 提示行文本 =', JSON.stringify(hint), '| HTML =', JSON.stringify(hintHtml).slice(0, 90));
+assert(!hint.includes('<span') && !hint.includes('class='), '提示行显示的是渲染后的内容，不是 <span> 源码');
+// 开奖阶段提示行本来就会显示答案（这是设计），只有作画阶段才必须是掩码
+if (phase6 === 'draw') assert(hint.includes('＿'), '作画阶段提示行是掩码');
+else assert(hint.length > 0, '开奖阶段提示行显示了答案');
 
 const hintShot = await G.shot('stroke-guesser');
 console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');

@@ -50,11 +50,6 @@
     return _rounds[r];
   }
 
-  /** 广播 peer 消息（画布数据，不走 state） */
-  function peer(host, msg) {
-    if (host.room && host.room.sendPeer) host.room.sendPeer(msg);
-  }
-
   function nameOf(host, id) {
     var p = host.player(id);
     return p ? p.name : '玩家';
@@ -358,32 +353,10 @@
         return;
       }
 
-      // ----- 画笔数据（peer 转发，不进 state；房主留一份用于回放） -----
-      if (action.t === 'peer') {
-        var msg = action.msg;
-        if (!msg) return;
-        if (g.cur && g.cur.phase === 'draw') {
-          var rd = getRD(g.round);
-          if (msg.t === 'stroke' && msg.s && msg.s.length) {
-            rd.segments.push({ id: msg.id, r: msg.r, color: msg.color, w: msg.w, s: msg.s });
-            while (rd.segments.length > 900) rd.segments.shift();
-          } else if (msg.t === 'undo') {
-            rd.segments = rd.segments.filter(function (c) { return c.id !== msg.id; });
-          } else if (msg.t === 'clear') {
-            rd.segments = [];
-          }
-        }
-        peer(host, msg);
-        return;
-      }
-      if (action.t === 'clear') {
-        if (g.cur && g.cur.phase === 'draw') getRD(g.round).segments = [];
-        peer(host, { t: 'clear' });
-        return;
-      }
-      if (action.t === 'style') {
-        peer(host, { t: 'style', color: action.color, w: action.w });
-        return;
+      // 画笔数据不再走动作通道：客户端直接广播到墨迹通道（见 src/wire.js），
+      // 房主在这里旁听一份，用于中途加入的回放。带 i0 落位，补发的块晚到也不会把笔画写歪。
+      if (action.t === 'peer' || action.t === 'clear' || action.t === 'style') {
+        return; // 老客户端才会发这些；现在统一走墨迹通道
       }
 
       if (!from) return;
@@ -435,6 +408,21 @@
           host.emit();
         }
         return;
+      }
+    },
+
+    /** 房主旁听墨迹通道：留一份回放数据（自己画的也会回调进来） */
+    onInk: function (host, msg, from) {
+      var g = host.g();
+      if (!g || !g.cur || g.cur.phase !== 'draw') return;
+      var rd = getRD(g.round);
+      if (msg.t === 'stroke' && msg.s && msg.s.length) {
+        rd.segments.push({ id: msg.id, i0: msg.i0 || 0, r: msg.r, color: msg.color, w: msg.w, s: msg.s });
+        while (rd.segments.length > 900) rd.segments.shift();
+      } else if (msg.t === 'undo') {
+        rd.segments = rd.segments.filter(function (c) { return c.id !== msg.id; });
+      } else if (msg.t === 'clear') {
+        rd.segments = [];
       }
     },
 

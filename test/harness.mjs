@@ -16,7 +16,7 @@ export function loadPN() {
     draw: JSON.parse(read('data/draw.json')),
   };
   globalThis.PN = { games: {}, pick: {}, Banks: {} };
-  const core = ['src/data.js', 'src/crypto.js', 'src/mqtt.js', 'src/room.js', 'src/host.js',
+  const core = ['src/data.js', 'src/crypto.js', 'src/mqtt.js', 'src/wire.js', 'src/room.js', 'src/host.js',
     'src/games/drawgame.js', 'src/games/mostlikely.js', 'src/games/undercover.js', 'src/games/wavelength.js'];
   for (const p of core) eval(read(p));
   return globalThis.PN;
@@ -50,7 +50,14 @@ function makeFactory(code) {
       onAction: (action, from) => { if (client.host && client.isHost) client.host.dispatch(action, from); },
       onEvent: (ev) => client.events.push(ev),
       onPrivate: (obj) => client.secrets.push(obj),
-      onPeer: () => {}
+      onPeer: () => {},
+      // 房主旁听墨迹通道留回放（浏览器里是 ui.js 干的，harness 要等价，否则回放永远是空的）
+      onInk: (msg, from) => {
+        if (client.host && client.isHost) {
+          const g = globalThis.PN.games[client.host.state.mode];
+          if (g && g.onInk) g.onInk(client.host, msg, from);
+        }
+      }
     });
     client.room = room;
     room.start().then(() => resolve(client));

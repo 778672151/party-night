@@ -43,6 +43,7 @@ w.eval(`
     overButtons: function () { return '<div></div>'; }
   };
 `);
+w.eval(readFileSync(P + 'wire.js', 'utf8'));          // 墨迹分块/补发（v4 传输层）
 w.eval(readFileSync(P + 'ui.js', 'utf8'));           // 真实 ui.js：要测的就是它的 deferRender 钩子
 w.eval(readFileSync(P + 'screens-drawgame.js', 'utf8'));
 
@@ -75,6 +76,7 @@ function makeFakeUI(state, id) {
     state, secrets: {},
     pid: () => id || 'p1',
     send: (a) => sent.push(a),
+  sendInk: (m) => sent.push({ t: 'ink', msg: m }), // 画笔画走墨迹直达通道
     renderTopbar: () => {},
     renderGameFooter: () => doc.createElement('div')
   };
@@ -134,7 +136,7 @@ const after = calls.filter(c => c[0] === 'lineTo').length;
 ok(after > before, '重建风波之后笔画继续画（lineTo ' + before + ' → ' + after + '）');
 
 pointer(cv1, 'pointerup', 300, 150);
-const msgs = ui1.sent.filter(a => a.t === 'peer' && a.msg && a.msg.t === 'stroke');
+const msgs = ui1.sent.filter(a => a.t === 'ink' && a.msg && a.msg.t === 'stroke');
 ok(msgs.length >= 1 && msgs[msgs.length - 1].msg.s.length >= 2, '抬手把笔画发出去（' + msgs.length + ' 块）');
 ok(rectCalls <= 6, '整笔只量了 ' + rectCalls + ' 次矩形（旧代码每次 pointermove 都量 → 强制整页重排）');
 
@@ -184,7 +186,7 @@ S.mounted.call(ui3, doc.getElementById('pn-root').firstElementChild);
 pointer(cvA, 'pointerdown', 40, 40);
 pointer(cvA, 'pointermove', 120, 120);
 pointer(cvA, 'pointerup', 120, 120);
-ok(ui3.sent.some(a => a.t === 'peer' && a.msg.t === 'stroke' && a.msg.r === 1), '第 1 轮画了一笔（带轮次标记 r=1）');
+ok(ui3.sent.some(a => a.t === 'ink' && a.msg.t === 'stroke' && a.msg.r === 1), '第 1 轮画了一笔（带轮次标记 r=1）');
 
 const st2 = baseState(3000); // 同一局：startedAt 与第 1 轮完全相同
 st2.g.round = 2;

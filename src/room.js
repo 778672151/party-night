@@ -158,7 +158,14 @@
       return;
     }
     if (k === 'e') { if (msg.from !== self.me.id) self.cb.onEvent && self.cb.onEvent(msg); return; }
-    if (k === 'x') { if (msg.from !== self.me.id) self.cb.onPeer && self.cb.onPeer(msg, msg.from); return; }
+    if (k === 'x') {
+      if (msg.from === self.me.id) return;
+      if (!PN.Wire.isV4(msg)) return; // 协议版本不匹配：整条丢弃，不和老实现对暗号
+      if (msg.t === 'ink-ask') { if (msg.to === self.me.id) self._answerInk(msg); return; }
+      if (self.cb.onInk) self.cb.onInk(msg, msg.from, false);
+      self.cb.onPeer && self.cb.onPeer(msg, msg.from);
+      return;
+    }
     if (k === 'k') {
       if (msg.to !== self.me.id) return;
       var pd = self._pending[msg.mid];
@@ -288,7 +295,49 @@
     this._sendAct(rec);
   };
   Room.prototype.sendEvent = function (ev) { ev.from = this.me.id; this.publishRaw('e', ev); };
-  Room.prototype.sendPeer = function (msg) { msg.from = this.me.id; this.publishRaw('x', msg); };
+  Room.prototype.sendPeer = function (msg) {
+    msg.from = this.me.id;
+    this.publishRaw('x', PN.Wire.pack('x', msg, msg.r));
+  };
+
+  /** 墨迹直达：不再走「画家→房主→转发」两跳，直接广播给全房（房主也订阅，照常留一份回放） */
+  Room.prototype.sendInk = function (msg) {
+    var self = this;
+    if (!self._inkOut) self._inkOut = new PN.Wire.Out(4);
+    msg.from = self.me.id;
+    if (msg.t === 'stroke') {
+      msg = self._inkOut.pack(msg.id, msg.i0, msg.s, { r: msg.r, color: msg.color, w: msg.w });
+      msg.from = self.me.id;
+    }
+    // 自测钩子：每 N 块丢 1 块（QoS0 的公共 broker 真的会丢），用来验证补发能把笔画还原
+    if (self.inkDropEvery) {
+      self._inkSent = (self._inkSent || 0) + 1;
+      if (self._inkSent % self.inkDropEvery === 0) { self._inkOut.dropped++; return; }
+    }
+    self.publishRaw('x', PN.Wire.pack('x', msg, msg.r));
+    // 自己发出去的也回调一次：房主自己画的时候，回放数据同样要留一份
+    if (self.cb.onInk) self.cb.onInk(msg, self.me.id, true);
+  };
+
+  /** 发现缺号：向发送者要一次补发（补发是广播的，一次就能同时修好所有人） */
+  Room.prototype.askInk = function (to, id, fromIdx) {
+    if (!to || !this.mqtt) return;
+    // 注意别叫 from：from 已经是「发起人」这个信封字段了，再叫 from 会把「缺到哪个下标」覆盖掉
+    this.publishRaw('x', PN.Wire.pack('x', { t: 'ink-ask', to: to, id: id, fromIdx: fromIdx, from: this.me.id }));
+  };
+
+  Room.prototype._answerInk = function (ask) {
+    if (!this._inkOut) return;
+    var chunks = this._inkOut.missing(ask.id, ask.fromIdx);
+    for (var i = 0; i < chunks.length; i++) {
+      var c = {}, k;
+      for (k in chunks[i]) if (Object.prototype.hasOwnProperty.call(chunks[i], k)) c[k] = chunks[i][k];
+      c.from = this.me.id;
+      c.re = 1; // 标记：这是补发
+      // 补发也必须过信封！否则会被接收端的版本校验（isV4）当成老消息丢掉，补发等于没发
+      this.publishRaw('x', PN.Wire.pack('x', c, c.r));
+    }
+  };
   Room.prototype._trimSeen = function () {
     var keys = Object.keys(this._seen);
     if (keys.length <= 300) return;
