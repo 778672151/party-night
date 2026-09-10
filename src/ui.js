@@ -44,10 +44,14 @@
     var self = this;
     var row = this.el('div', 'row mt16');
     row.style.justifyContent = 'center';
-    var back = this.el('button', 'btn ghost sm', '🏠 回大厅');
+    var host = this.isHost();
+    // 非房主不能替全房切回大厅（大厅是房主的状态），所以对他来说是「退出房间」。
+    // 以前这里对非房主直接 room.leave() 却不刷新：MQTT 连接被关掉了，屏幕却还停在游戏页，
+    // 之后收不到任何状态，看起来就是「点了回大厅没反应」。
+    var back = this.el('button', 'btn ghost sm', host ? '🏠 回大厅' : '🚪 退出房间');
     back.addEventListener('click', function () {
-      if (self.isHost()) self.send({ t: 'lobby' });
-      else self.room.leave(false);
+      if (self.isHost()) { self.send({ t: 'lobby' }); return; }
+      if (confirm('退出房间？这一局就少你一个人了')) { self.room.leave(false); location.reload(); }
     });
     row.appendChild(back);
     return row;

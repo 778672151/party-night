@@ -477,6 +477,12 @@
       if (isNew) st = addStroke(msg.id, msg.color, msg.w, msg.r);
       var from = st.pts.length;
       st.pts = st.pts.concat(msg.s);
+      // 这里必须传 from（paintTail 内部从 from-1 起笔），传 from+1 会从本块第一个点起笔，
+      // 于是「上一块的末点 → 本块的起点」那一段永远不画 —— 每 55ms 一块，块块之间全是缝，
+      // 看起来就是「藕断丝连」。（本机跟手没问题，因为本机那条路径的 from 算法是对的。）
+      // 这里必须传 from（paintTail 内部从 from-1 起笔），传 from+1 会从本块第一个点起笔，
+      // 于是「上一块的末点 → 本块的起点」那一段永远不画 —— 每 55ms 一块，块块之间全是缝，
+      // 慢画（一块只含 1 个点）时更是一整段都画不出来。看起来就是「藕断丝连 / 别人看不到」。
       if (local.w) { if (isNew) paintStroke(st); else paintTail(st, from + 1); }
     },
 

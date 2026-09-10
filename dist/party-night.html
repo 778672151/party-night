@@ -3970,6 +3970,12 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
       if (isNew) st = addStroke(msg.id, msg.color, msg.w, msg.r);
       var from = st.pts.length;
       st.pts = st.pts.concat(msg.s);
+      // 这里必须传 from（paintTail 内部从 from-1 起笔），传 from+1 会从本块第一个点起笔，
+      // 于是「上一块的末点 → 本块的起点」那一段永远不画 —— 每 55ms 一块，块块之间全是缝，
+      // 看起来就是「藕断丝连」。（本机跟手没问题，因为本机那条路径的 from 算法是对的。）
+      // 这里必须传 from（paintTail 内部从 from-1 起笔），传 from+1 会从本块第一个点起笔，
+      // 于是「上一块的末点 → 本块的起点」那一段永远不画 —— 每 55ms 一块，块块之间全是缝，
+      // 慢画（一块只含 1 个点）时更是一整段都画不出来。看起来就是「藕断丝连 / 别人看不到」。
       if (local.w) { if (isNew) paintStroke(st); else paintTail(st, from + 1); }
     },
 
@@ -4049,10 +4055,14 @@ window.__PN_BANKS__ = {"undercover":{"version":1,"pairs":[{"a":"泡面","b":"拌
     var self = this;
     var row = this.el('div', 'row mt16');
     row.style.justifyContent = 'center';
-    var back = this.el('button', 'btn ghost sm', '🏠 回大厅');
+    var host = this.isHost();
+    // 非房主不能替全房切回大厅（大厅是房主的状态），所以对他来说是「退出房间」。
+    // 以前这里对非房主直接 room.leave() 却不刷新：MQTT 连接被关掉了，屏幕却还停在游戏页，
+    // 之后收不到任何状态，看起来就是「点了回大厅没反应」。
+    var back = this.el('button', 'btn ghost sm', host ? '🏠 回大厅' : '🚪 退出房间');
     back.addEventListener('click', function () {
-      if (self.isHost()) self.send({ t: 'lobby' });
-      else self.room.leave(false);
+      if (self.isHost()) { self.send({ t: 'lobby' }); return; }
+      if (confirm('退出房间？这一局就少你一个人了')) { self.room.leave(false); location.reload(); }
     });
     row.appendChild(back);
     return row;
