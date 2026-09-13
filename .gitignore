@@ -1,4 +1,7 @@
-# 本地跑测试时产生的临时物，不要提交
-node_modules/          # jsdom 用例会临时软链到这里（ln -sfn /tmp/pnt/node_modules node_modules）
-pn-shots/              # 真浏览器套件的截图目录（可用 PN_SHOTS 改到别处）
+# 本地跑测试时产生的临时物，不要提交。
+# 注意：gitignore 只在【行首】认 # 注释，写在模式后面会被当成模式的一部分 —— 那样就永远匹配不上。
+node_modules/
+# jsdom 用例会临时软链到这里：ln -sfn /tmp/pnt/node_modules node_modules
+pn-shots/
+# 真浏览器套件的截图目录（可用 PN_SHOTS 改到别处）
 *.log

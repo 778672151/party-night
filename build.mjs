@@ -11,6 +11,7 @@ const scripts = [
   'src/data.js',
   'src/crypto.js',
   'src/mqtt.js',
+  'src/wire.js',
   'src/room.js',
   'src/host.js',
   ...readdirSync(join(root, 'src/games')).filter(f => f.endsWith('.js')).sort().map(f => 'src/games/' + f),
