@@ -12,6 +12,7 @@
 | ⚫ 五子棋 | 2 | 黑先白后，先连成五子的人赢 | 悔棋要商量，边下边聊 |
 | 🐰 跳一跳 | 2 | 按住蓄力、松手起跳，轮流比总分 | 同一颗种子同一条跑道，公平比手感 |
 | 💣 扫雷 | 2 | 共享一张雷图，轮流点一格一起扫干净 | 合作排雷，踩雷扣团队的命 |
+| 🐳 鲸鱼推箱子 | 2 | 轮流推一步，把箱子都推到花点上 | 10 关原创关卡，一起解谜 |
 
 🎮 **在线直接玩：<https://778672151.github.io/party-night/>**（GitHub Pages，永久链接）
 
@@ -94,6 +95,18 @@
 
 > 插旗只是做笔记，不计分也不限次数（合作时方便商量）。点已经翻开的格子不会消耗回合，手滑不惩罚。
 
+## 玩法八：鲸鱼推箱子（合作双人）
+
+1. 房主在大厅选 **🐳 鲸鱼推箱子** → 开始（⚙️ 里可选 3 关 / 5 关 / 10 关全通）
+2. **两个人轮流推一步**：方向键 / WASD / 屏幕上的十字键都行
+3. 把 📦 全部推到花点上（推上去会变成 🐚 并变绿）；箱子只能推、不能拉，一次只能推一个
+4. 走不动（撞墙或推不动）**不算一步**，不消耗回合，不会白送对手
+5. 卡住了点 **🔄 重来本关**（谁都可以点，合作模式没有使坏动机）
+6. 每通一关双方各 +2 分；打完全部关卡就一起通关
+
+> 10 关是**该作品的原创关卡**（源码里明确声明不是抄 Microban 等公开合集），par 步数也来自它的校验脚本；
+> 界面里会显示「参考步数」，可以拿它对比自己走了多少步。
+
 ## 🧩 入口系统：一份目录驱动全部游戏（阶段三升级）
 
 大厅不再是「联机游戏一套卡片、小游戏另一套卡片」，而是**一份目录 + 一个卡片函数**：
@@ -123,6 +136,19 @@ PN.gameCommon.gameCard()  // 两类游戏共用同一个卡片（内部元素统
 
 > ⚠️ 有几款依赖外网 CDN（`cdn.jsdelivr.net` 的库、Google Fonts 字体）：断网时会缺样式或功能。其余是自包含的。
 > 少数游戏是为键鼠做的（拳皇/双截龙/超级马里奥），手机上最好是横屏 + 外接键盘，或者就在电脑上两个人玩。
+
+### 鲸鱼推箱子的来源与差异
+
+《鲸鱼推箱子》的**规则实现与 10 关关卡数据**来自 <https://deepdemos.top> 作品《鲸鱼推箱子（审美 Plus 版）》（slug `plus-2265f7c6`，作者 HWDyzzZ）。
+关卡采用标准 XSB 文本格式；那 10 关是**该作品的原创设计**（其 `src/game/levels.js` 注释里明确声明不是抄 Microban 或任何公开合集），par 步数由它自己的 `tools/verify-levels.mjs` 校验得出。
+该作品与站点同样**没有许可证声明**，经项目使用者确认可直接取用后才移植。差异：
+
+| 原作品 | 本项目 | 说明 |
+| --- | --- | --- |
+| 单机 + 3D 渲染（需要 WebGL） | **双人合作 + CSS grid 纯 DOM** | 手机省电、无需 WebGL；马卡龙画风按阶段二方案 |
+| 无联网 | 轮流推一步 + 房主权威判定 + 全量同步 | 两个人在同一张棋盘上一起解谜 |
+| 自己走 | **走不动不算一步**（不消耗回合） | 合作模式下避免「手滑白送对手一步」的挫败感 |
+| 无 | **🔄 重来本关** | 卡住时谁都能重置，不惩罚 |
 
 ### 扫雷的来源与差异
 
@@ -229,6 +255,7 @@ PN.gameCommon.gameCard()  // 两类游戏共用同一个卡片（内部元素统
     node test/mini-test.mjs               # 小游戏厅：清单与文件一致/没有空壳/没有死链（11 项）
     node test/hop-test.mjs                # 跳一跳：同种子公平/原作公式/连击封顶/掉命换人/换轮结算（51 项）
     node test/mine-test.mjs               # 扫雷：首点安全/布雷计数/泛洪/踩雷扣命/插旗/自动插旗/清盘（40 项）
+    node test/soko-test.mjs               # 推箱子：关卡合法性/走撞推规则/par 通关/换关结算/重来（38 项）
     node test/catalog-test.mjs            # 入口系统：目录/分区/统一卡片/向后兼容/新增游戏零改入口（22 项）
     node test/version-test.mjs            # 发布一致性：VERSION ↔ version.json ↔ 产物内嵌版本 ↔ md5（17 项）
     node test/browser/update-tip.mjs      # 更新提示实测：临时造一个更高版本 → 页面提示刷新（跑完自动还原）
@@ -241,7 +268,7 @@ PN.gameCommon.gameCard()  // 两类游戏共用同一个卡片（内部元素统
 
 真浏览器端到端（Windows Edge + CDP，多个浏览器上下文 = 两个玩家；用法见 \`test/browser/README.md\`）：
 
-    node test/browser/regress.mjs         # 11 组：lobby / mini / rejoin / migration / tacit / memory / codraw / gomoku / mine / hop / fullgame
+    node test/browser/regress.mjs         # 12 组：lobby / mini / rejoin / migration / tacit / memory / codraw / gomoku / mine / soko / hop / fullgame
     node test/browser/regress.mjs memory  # 也可以只跑其中一组（换成自己想跑的名字）
     node test/browser/regress-stroke.mjs  # 画笔专项：慢画快画、丢包注入、掩码、不许出现「起点连终点」
     node test/browser/mobile-audit.mjs    # 各手机视口下不许横向溢出

@@ -25,6 +25,7 @@ const scripts = [
   'src/screens-gomoku.js',
   'src/screens-hop.js',
   'src/screens-mine.js',
+  'src/screens-soko.js',
   'src/ui.js',
   'src/app.js',
 ];

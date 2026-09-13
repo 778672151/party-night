@@ -561,7 +561,9 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'mine') {
+    if (mode === 'soko') {
+      rows.push(seg('关卡数', 'levels', [[3, '3 关'], [5, '5 关'], [10, '10 关全通']]));
+    } else if (mode === 'mine') {
       rows.push(seg('难度', 'level', [[1, '9×9 · 10 雷'], [2, '12×12 · 24 雷'], [3, '15×15 · 40 雷']]));
       rows.push(seg('团队命数', 'lives', [[1, '1 条'], [3, '3 条'], [5, '5 条']]));
     } else if (mode === 'hop') {
