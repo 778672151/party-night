@@ -143,6 +143,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '同一道题各自悄悄选，看看你们有多懂对方 💞',
+    meta: { group: 'online', tags: ['问答', '默契'] },
     minPlayers: 2,
     maxPlayers: 2,
 

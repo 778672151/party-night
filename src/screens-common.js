@@ -75,9 +75,83 @@
       '<button class="btn ghost" data-over="lobby">🏠 回大厅</button></div>';
   }
 
+  /* ===== 统一游戏卡片 + 游戏目录（入口系统升级） =====
+   * 以前大厅有"联机游戏卡片"和"小游戏厅卡片"两套渲染代码，加一款游戏要改两处。
+   * 现在两款卡片共用同一个函数与同一套视觉，入口只依赖 catalog()：新增游戏只写数据。
+   * 兼容：卡片同时保留旧类名（modecard / mini-card），旧的查询与测试不受影响。 */
+  function gameCard(o) {
+    o = o || {};
+    var cls = 'gcard ' + (o.kind === 'mini' ? 'mini-card' : 'modecard');
+    var attrs = '';
+    if (o.kind === 'mini') attrs = ' data-mini="' + esc(o.id) + '"';
+    else attrs = ' data-mode="' + esc(o.id) + '"';
+    var tags = (o.tags || []).filter(Boolean).map(function (t) {
+      return '<span class="gc-tag">' + esc(t) + '</span>';
+    }).join('');
+    var meta = [];
+    if (o.kind === 'mini') meta.push('单机/同屏');
+    else if (o.players) meta.push(o.players + ' 人');
+    return '<div class="' + cls + '"' + attrs + '>' +
+      '<div class="gc-ico">' + (o.emoji || '🎮') + '</div>' +
+      '<div class="gc-nm">' + esc(o.title || '') + '</div>' +
+      '<div class="gc-desc">' + esc(o.desc || '') + '</div>' +
+      '<div class="gc-meta">' + (tags ? '<span class="gc-tags">' + tags + '</span>' : '') +
+      (meta.length ? '<span class="gc-num">' + esc(meta.join(' · ')) + '</span>' : '') + '</div>' +
+      (o.actions || '') +
+      '</div>';
+  }
+
+  /** 游戏目录：联机游戏（PN.games）+ 小游戏厅（data/mini.json）合成一份视图 */
+  function catalog() {
+    var list = [];
+    for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
+      var g = PN.games[k], m = g.meta || {};
+      list.push({
+        kind: 'online', id: k, emoji: g.emoji, title: g.name, desc: g.blurb,
+        group: m.group || 'online', tags: m.tags || [], origin: m.origin || null,
+        players: g.maxPlayers && g.maxPlayers > (g.minPlayers || 2)
+          ? (g.minPlayers || 2) + '–' + g.maxPlayers : ((g.minPlayers || 2) + '')
+      });
+    }
+    var minis = (PN.Banks && PN.Banks.mini) ? PN.Banks.mini() : [];
+    for (var i = 0; i < minis.length; i++) {
+      var mm = minis[i];
+      list.push({
+        kind: 'mini', id: mm.id, emoji: mm.emoji, title: mm.title, desc: mm.desc,
+        group: 'mini', tags: [mm.cat], dir: mm.dir,
+        origin: { site: 'deepdemos.top', slug: mm.id }
+      });
+    }
+    return list;
+  }
+
+  /** 目录分区：固定顺序 = 联机双人 → 小游戏厅 → 其它（同组内保持原顺序） */
+  var GROUP_ORDER = ['online', 'mini', 'solo'];
+  function sections(list) {
+    var by = {}, out = [];
+    (list || []).forEach(function (it) { (by[it.group] = by[it.group] || []).push(it); });
+    GROUP_ORDER.forEach(function (g) { if (by[g] && by[g].length) { out.push({ group: g, items: by[g] }); delete by[g]; } });
+    Object.keys(by).forEach(function (g) { out.push({ group: g, items: by[g] }); });
+    return out;
+  }
+
+  var GROUP_TITLE = {
+    online: '👫 两个人一起玩（联机）',
+    mini: '🎮 小游戏厅',
+    solo: '🧸 一个人玩'
+  };
+  var GROUP_SUB = {
+    online: '两个人各拿一台设备，房间号对上就能一起玩',
+    mini: '单机 / 同屏双人 · 点开就能玩，不用等对方',
+    solo: '自己玩的小游戏'
+  };
+
   PN.gameCommon = {
     gameHeader: gameHeader, deadlineChip: deadlineChip, fmtLeft: fmtLeft,
-    playerGrid: playerGrid, scoreboard: scoreboard, overButtons: overButtons
+    playerGrid: playerGrid, scoreboard: scoreboard, overButtons: overButtons,
+    // 入口系统（阶段三新增）
+    gameCard: gameCard, catalog: catalog, sections: sections,
+    groupTitle: GROUP_TITLE, groupSub: GROUP_SUB
   };
 
   /* 全局 1s 倒计时刷新（只动计时 chip，不整页重渲） */

@@ -467,37 +467,34 @@
         '<span class="sc">' + (p.score || 0) + ' 分</span>' +
         '</div>';
     }).join('');
-    var modes = [];
+    /* ===== 入口系统（阶段三升级）：一份目录驱动全部卡片 =====
+     * 以前"联机游戏卡片"和"小游戏厅卡片"是两段各自渲染的代码，加游戏要改两处。
+     * 现在统一走 PN.gameCommon.catalog() + gameCard() + sections()：
+     * 以后新增游戏只写数据（PN.games 的 meta 或 data/mini.json），入口一行都不用动。 */
+    var GC = PN.gameCommon;
     var cfgOpen = this._cfgOpen || (this._cfgOpen = {}); // 展开状态记在实例上，重建后还能保持
-    for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
-      var g = PN.games[k];
-      modes.push(
-        '<div class="modecard" data-mode="' + k + '">' +
-        '<div class="ico">' + g.emoji + '</div>' +
-        '<div class="nm">' + g.name + '</div>' +
-        '<div class="blurb">' + g.blurb + '</div>' +
-        '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
-        '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' + (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
-        '<div class="settings' + (cfgOpen[k] ? ' open' : '') + '" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
-        '</div>'
-      );
-    }
-    // ===== 🎮 小游戏厅：从 deepdemos.top 下载的成品小游戏（单机 / 同屏双人）=====
-    // 这些不需要联机：各玩各的，或者两个人凑着一个屏幕玩。点开在浮层里跑，退出就回到大厅。
-    var minis = PN.Banks && PN.Banks.mini ? PN.Banks.mini() : [];
-    var miniCards = minis.map(function (m) {
-      return '<div class="mini-card" data-mini="' + m.id + '">' +
-        '<div class="mini-ico">' + m.emoji + '</div>' +
-        '<div class="mini-nm">' + m.title + '</div>' +
-        '<div class="mini-desc">' + (m.desc || '') + '</div>' +
-        '<div class="mini-cat">' + (m.cat || '') + '</div>' +
-        '</div>';
+    var sectionsHtml = GC.sections(GC.catalog()).map(function (sec) {
+      var isMini = sec.group === 'mini';
+      var cards = sec.items.map(function (it) {
+        if (isMini) {
+          return GC.gameCard({ kind: 'mini', id: it.id, emoji: it.emoji, title: it.title, desc: it.desc, tags: it.tags });
+        }
+        return GC.gameCard({
+          kind: 'online', id: it.id, emoji: it.emoji, title: it.title, desc: it.desc,
+          tags: it.tags, players: it.players,
+          actions: '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
+            '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' +
+            (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
+            '<div class="settings' + (cfgOpen[it.id] ? ' open' : '') + '" id="cfg-' + it.id + '">' + self.settingsHtml(it.id, s) + '</div>'
+        });
+      }).join('');
+      if (!cards) return '';
+      return '<div class="' + (isMini ? 'mini-sec' : 'game-sec') + '">' +
+        '<div class="' + (isMini ? 'mini-head' : 'game-head') + '">' +
+        '<b>' + GC.groupTitle[sec.group] + '</b>' +
+        '<span class="muted">' + GC.groupSub[sec.group] + '</span></div>' +
+        '<div class="' + (isMini ? 'mini-grid' : 'modegrid') + '">' + cards + '</div></div>';
     }).join('');
-    var miniHtml = minis.length
-      ? '<div class="mini-sec"><div class="mini-head"><b>🎮 小游戏厅</b>' +
-        '<span class="muted">单机 / 同屏双人 · 点开就能玩，不用等对方</span></div>' +
-        '<div class="mini-grid">' + miniCards + '</div></div>'
-      : '';
     wrap.appendChild(this.h(
       '<div>' + // 必须包一层：h() 只保留第一个顶层元素
       '<div class="roomcode card row">' +
@@ -509,8 +506,7 @@
       (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到对方了。</div></div>' : '') +
       '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的人（' + (s.players || []).length + '）</div>' +
       '<div class="players">' + (playersHtml || '<div class="muted">还差一个人，把对方叫进来吧～</div>') + '</div></div>' +
-      '<div class="modegrid">' + modes.join('') + '</div>' +
-      miniHtml +
+      sectionsHtml +
       '<div class="row mt16" style="justify-content:center;gap:8px">' +
       '<button class="btn ghost sm" id="pn-edit">✏️ 改昵称</button>' +
       (self.isHost() ? '<button class="btn warn sm" id="pn-reset">清零积分</button><button class="btn warn sm" id="pn-disband">解散房间</button>' : '<button class="btn warn sm" id="pn-leave">离开</button>') +

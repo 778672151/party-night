@@ -382,6 +382,29 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .mini-title{font-weight:900;font-size:15px}
 .mini-tip{flex:1;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .mini-frame{flex:1;width:100%;border:0;background:#fff}
+
+/* ===== 入口系统：统一游戏卡片（阶段三）===== */
+.game-sec{margin-top:18px}
+.game-head{display:flex;align-items:baseline;gap:8px;margin:0 2px 10px;font-size:15px}
+.game-head .muted{font-size:11px}
+.gcard{display:block}
+.gcard:active{transform:scale(.98)}
+/* 联机游戏卡片（沿用 .modecard 外壳，内部改用统一 .gc-* 元素） */
+.modecard .gc-ico{font-size:34px;animation:qfloat 3s var(--spring) infinite}
+.modecard .gc-nm{font-weight:900;font-size:18px;margin-top:6px}
+.modecard .gc-desc{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.55}
+/* 小游戏卡片（沿用 .mini-card 外壳） */
+.mini-card .gc-ico{font-size:30px;line-height:1.15}
+.mini-card .gc-nm{font-weight:800;font-size:14px;margin-top:4px}
+.mini-card .gc-desc{font-size:11px;color:var(--ink2);margin-top:4px;line-height:1.35}
+/* 两类共用：标签行与人数/类型提示 */
+.gc-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;min-height:18px}
+.mini-card .gc-meta{justify-content:center}
+.gc-tags{display:flex;gap:4px;flex-wrap:wrap}
+.gc-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;
+  background:var(--bg2);border:2px solid var(--line);color:var(--ink2)}
+.gc-num{font-size:10px;color:var(--ink2)}
+.modecard .gc-num{margin-left:auto}
 </style>
 </head>
 <body>
@@ -2017,6 +2040,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
     name: NAME,
     emoji: EMOJI,
     blurb: '同一个题目各自画一张，揭晓才知道想到的是不是一回事 🎐',
+    meta: { group: 'online', tags: ['画画', '默契'] },
     minPlayers: 2,
     maxPlayers: 2,
 
@@ -2428,6 +2452,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
     name: NAME,
     emoji: EMOJI,
     blurb: '你画我猜，灵魂画手集合！🎨',
+    meta: { group: 'online', tags: ['画画', '猜词'] },
     minPlayers: 2,
     maxPlayers: 12,
 
@@ -2734,6 +2759,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
     name: NAME,
     emoji: EMOJI,
     blurb: '黑先白后，先连成五子的人赢 ⚫⚪',
+    meta: { group: 'online', tags: ['棋类', '对弈'], origin: { site: 'deepdemos.top', slug: 'demo-ce927755' } },
     minPlayers: 2,
     maxPlayers: 2,
 
@@ -2982,6 +3008,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
     name: NAME,
     emoji: EMOJI,
     blurb: '两个人轮流翻牌，一起把这副牌配完 🍀',
+    meta: { group: 'online', tags: ['翻牌', '记忆'] },
     minPlayers: 2,
     maxPlayers: 2,
 
@@ -3224,6 +3251,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
     name: NAME,
     emoji: EMOJI,
     blurb: '同一道题各自悄悄选，看看你们有多懂对方 💞',
+    meta: { group: 'online', tags: ['问答', '默契'] },
     minPlayers: 2,
     maxPlayers: 2,
 
@@ -3388,9 +3416,83 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
       '<button class="btn ghost" data-over="lobby">🏠 回大厅</button></div>';
   }
 
+  /* ===== 统一游戏卡片 + 游戏目录（入口系统升级） =====
+   * 以前大厅有"联机游戏卡片"和"小游戏厅卡片"两套渲染代码，加一款游戏要改两处。
+   * 现在两款卡片共用同一个函数与同一套视觉，入口只依赖 catalog()：新增游戏只写数据。
+   * 兼容：卡片同时保留旧类名（modecard / mini-card），旧的查询与测试不受影响。 */
+  function gameCard(o) {
+    o = o || {};
+    var cls = 'gcard ' + (o.kind === 'mini' ? 'mini-card' : 'modecard');
+    var attrs = '';
+    if (o.kind === 'mini') attrs = ' data-mini="' + esc(o.id) + '"';
+    else attrs = ' data-mode="' + esc(o.id) + '"';
+    var tags = (o.tags || []).filter(Boolean).map(function (t) {
+      return '<span class="gc-tag">' + esc(t) + '</span>';
+    }).join('');
+    var meta = [];
+    if (o.kind === 'mini') meta.push('单机/同屏');
+    else if (o.players) meta.push(o.players + ' 人');
+    return '<div class="' + cls + '"' + attrs + '>' +
+      '<div class="gc-ico">' + (o.emoji || '🎮') + '</div>' +
+      '<div class="gc-nm">' + esc(o.title || '') + '</div>' +
+      '<div class="gc-desc">' + esc(o.desc || '') + '</div>' +
+      '<div class="gc-meta">' + (tags ? '<span class="gc-tags">' + tags + '</span>' : '') +
+      (meta.length ? '<span class="gc-num">' + esc(meta.join(' · ')) + '</span>' : '') + '</div>' +
+      (o.actions || '') +
+      '</div>';
+  }
+
+  /** 游戏目录：联机游戏（PN.games）+ 小游戏厅（data/mini.json）合成一份视图 */
+  function catalog() {
+    var list = [];
+    for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
+      var g = PN.games[k], m = g.meta || {};
+      list.push({
+        kind: 'online', id: k, emoji: g.emoji, title: g.name, desc: g.blurb,
+        group: m.group || 'online', tags: m.tags || [], origin: m.origin || null,
+        players: g.maxPlayers && g.maxPlayers > (g.minPlayers || 2)
+          ? (g.minPlayers || 2) + '–' + g.maxPlayers : ((g.minPlayers || 2) + '')
+      });
+    }
+    var minis = (PN.Banks && PN.Banks.mini) ? PN.Banks.mini() : [];
+    for (var i = 0; i < minis.length; i++) {
+      var mm = minis[i];
+      list.push({
+        kind: 'mini', id: mm.id, emoji: mm.emoji, title: mm.title, desc: mm.desc,
+        group: 'mini', tags: [mm.cat], dir: mm.dir,
+        origin: { site: 'deepdemos.top', slug: mm.id }
+      });
+    }
+    return list;
+  }
+
+  /** 目录分区：固定顺序 = 联机双人 → 小游戏厅 → 其它（同组内保持原顺序） */
+  var GROUP_ORDER = ['online', 'mini', 'solo'];
+  function sections(list) {
+    var by = {}, out = [];
+    (list || []).forEach(function (it) { (by[it.group] = by[it.group] || []).push(it); });
+    GROUP_ORDER.forEach(function (g) { if (by[g] && by[g].length) { out.push({ group: g, items: by[g] }); delete by[g]; } });
+    Object.keys(by).forEach(function (g) { out.push({ group: g, items: by[g] }); });
+    return out;
+  }
+
+  var GROUP_TITLE = {
+    online: '👫 两个人一起玩（联机）',
+    mini: '🎮 小游戏厅',
+    solo: '🧸 一个人玩'
+  };
+  var GROUP_SUB = {
+    online: '两个人各拿一台设备，房间号对上就能一起玩',
+    mini: '单机 / 同屏双人 · 点开就能玩，不用等对方',
+    solo: '自己玩的小游戏'
+  };
+
   PN.gameCommon = {
     gameHeader: gameHeader, deadlineChip: deadlineChip, fmtLeft: fmtLeft,
-    playerGrid: playerGrid, scoreboard: scoreboard, overButtons: overButtons
+    playerGrid: playerGrid, scoreboard: scoreboard, overButtons: overButtons,
+    // 入口系统（阶段三新增）
+    gameCard: gameCard, catalog: catalog, sections: sections,
+    groupTitle: GROUP_TITLE, groupSub: GROUP_SUB
   };
 
   /* 全局 1s 倒计时刷新（只动计时 chip，不整页重渲） */
@@ -5177,37 +5279,34 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
         '<span class="sc">' + (p.score || 0) + ' 分</span>' +
         '</div>';
     }).join('');
-    var modes = [];
+    /* ===== 入口系统（阶段三升级）：一份目录驱动全部卡片 =====
+     * 以前"联机游戏卡片"和"小游戏厅卡片"是两段各自渲染的代码，加游戏要改两处。
+     * 现在统一走 PN.gameCommon.catalog() + gameCard() + sections()：
+     * 以后新增游戏只写数据（PN.games 的 meta 或 data/mini.json），入口一行都不用动。 */
+    var GC = PN.gameCommon;
     var cfgOpen = this._cfgOpen || (this._cfgOpen = {}); // 展开状态记在实例上，重建后还能保持
-    for (var k in PN.games) if (Object.prototype.hasOwnProperty.call(PN.games, k)) {
-      var g = PN.games[k];
-      modes.push(
-        '<div class="modecard" data-mode="' + k + '">' +
-        '<div class="ico">' + g.emoji + '</div>' +
-        '<div class="nm">' + g.name + '</div>' +
-        '<div class="blurb">' + g.blurb + '</div>' +
-        '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
-        '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' + (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
-        '<div class="settings' + (cfgOpen[k] ? ' open' : '') + '" id="cfg-' + k + '">' + this.settingsHtml(k, s) + '</div>' +
-        '</div>'
-      );
-    }
-    // ===== 🎮 小游戏厅：从 deepdemos.top 下载的成品小游戏（单机 / 同屏双人）=====
-    // 这些不需要联机：各玩各的，或者两个人凑着一个屏幕玩。点开在浮层里跑，退出就回到大厅。
-    var minis = PN.Banks && PN.Banks.mini ? PN.Banks.mini() : [];
-    var miniCards = minis.map(function (m) {
-      return '<div class="mini-card" data-mini="' + m.id + '">' +
-        '<div class="mini-ico">' + m.emoji + '</div>' +
-        '<div class="mini-nm">' + m.title + '</div>' +
-        '<div class="mini-desc">' + (m.desc || '') + '</div>' +
-        '<div class="mini-cat">' + (m.cat || '') + '</div>' +
-        '</div>';
+    var sectionsHtml = GC.sections(GC.catalog()).map(function (sec) {
+      var isMini = sec.group === 'mini';
+      var cards = sec.items.map(function (it) {
+        if (isMini) {
+          return GC.gameCard({ kind: 'mini', id: it.id, emoji: it.emoji, title: it.title, desc: it.desc, tags: it.tags });
+        }
+        return GC.gameCard({
+          kind: 'online', id: it.id, emoji: it.emoji, title: it.title, desc: it.desc,
+          tags: it.tags, players: it.players,
+          actions: '<div class="row mt8"><button class="btn sm ghost" data-act="cfg">⚙️</button>' +
+            '<button class="btn primary sm go" data-act="start" ' + (self.isHost() ? '' : 'disabled') + '>' +
+            (self.isHost() ? '开始' : '等房主开') + '</button></div>' +
+            '<div class="settings' + (cfgOpen[it.id] ? ' open' : '') + '" id="cfg-' + it.id + '">' + self.settingsHtml(it.id, s) + '</div>'
+        });
+      }).join('');
+      if (!cards) return '';
+      return '<div class="' + (isMini ? 'mini-sec' : 'game-sec') + '">' +
+        '<div class="' + (isMini ? 'mini-head' : 'game-head') + '">' +
+        '<b>' + GC.groupTitle[sec.group] + '</b>' +
+        '<span class="muted">' + GC.groupSub[sec.group] + '</span></div>' +
+        '<div class="' + (isMini ? 'mini-grid' : 'modegrid') + '">' + cards + '</div></div>';
     }).join('');
-    var miniHtml = minis.length
-      ? '<div class="mini-sec"><div class="mini-head"><b>🎮 小游戏厅</b>' +
-        '<span class="muted">单机 / 同屏双人 · 点开就能玩，不用等对方</span></div>' +
-        '<div class="mini-grid">' + miniCards + '</div></div>'
-      : '';
     wrap.appendChild(this.h(
       '<div>' + // 必须包一层：h() 只保留第一个顶层元素
       '<div class="roomcode card row">' +
@@ -5219,8 +5318,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
       (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到对方了。</div></div>' : '') +
       '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的人（' + (s.players || []).length + '）</div>' +
       '<div class="players">' + (playersHtml || '<div class="muted">还差一个人，把对方叫进来吧～</div>') + '</div></div>' +
-      '<div class="modegrid">' + modes.join('') + '</div>' +
-      miniHtml +
+      sectionsHtml +
       '<div class="row mt16" style="justify-content:center;gap:8px">' +
       '<button class="btn ghost sm" id="pn-edit">✏️ 改昵称</button>' +
       (self.isHost() ? '<button class="btn warn sm" id="pn-reset">清零积分</button><button class="btn warn sm" id="pn-disband">解散房间</button>' : '<button class="btn warn sm" id="pn-leave">离开</button>') +

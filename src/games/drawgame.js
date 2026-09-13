@@ -295,6 +295,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '你画我猜，灵魂画手集合！🎨',
+    meta: { group: 'online', tags: ['画画', '猜词'] },
     minPlayers: 2,
     maxPlayers: 12,
 

@@ -101,6 +101,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '黑先白后，先连成五子的人赢 ⚫⚪',
+    meta: { group: 'online', tags: ['棋类', '对弈'], origin: { site: 'deepdemos.top', slug: 'demo-ce927755' } },
     minPlayers: 2,
     maxPlayers: 2,
 

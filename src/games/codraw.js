@@ -147,6 +147,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '同一个题目各自画一张，揭晓才知道想到的是不是一回事 🎐',
+    meta: { group: 'online', tags: ['画画', '默契'] },
     minPlayers: 2,
     maxPlayers: 2,
 

@@ -76,6 +76,12 @@ S.lobby = async (cdp) => {
   assert(modes === '["codraw","drawgame","gomoku","memory","tacit"]', '大厅有五款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋（' + modes + '）');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'gomoku\']")'), '大厅有五子棋的入口卡片');
+  // 阶段三：入口系统升级后的分区与统一卡片
+  assert(await A.eval('!!document.querySelector(".game-sec .game-head")'), '联机游戏有独立分区标题');
+  assert(await A.eval('document.querySelectorAll(".gcard").length') >= 20, '两类游戏共用统一卡片（.gcard 共 ' + await A.eval('document.querySelectorAll(".gcard").length') + ' 张）');
+  assert(await A.eval('!!document.querySelector(".modecard .gc-ico") && !!document.querySelector(".mini-card .gc-ico")'), '联机与小游戏卡片内部元素一致（.gc-ico）');
+  assert(await A.eval('!!document.querySelector(".modecard .gc-tag") || !!document.querySelector(".mini-card .gc-tag")'), '卡片带标签（画风/类型）');
+  await A.shot('lobby-hall');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'memory\']")'), '大厅有合作翻牌的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'drawgame\']")'), '大厅有画猜的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'tacit\']")'), '大厅有默契大考验的入口卡片');
@@ -396,7 +402,7 @@ S.mini = async (cdp) => {
   await A.waitFor('!!document.querySelector(".mini-sec")', '大厅出现小游戏厅', 25000);
   const n = await A.eval('document.querySelectorAll(".mini-card").length');
   assert(n >= 10, '小游戏厅里有 ' + n + ' 款游戏卡片');
-  assert(await A.eval('!!document.querySelector(".mini-card .mini-ico")'), '卡片有图标');
+  assert(await A.eval('!!document.querySelector(".mini-card .gc-ico")'), '卡片有图标');
   assert(await A.eval('document.querySelector(".mini-sec").textContent.indexOf("同屏双人") >= 0'), '标了"同屏双人"这类玩法标签');
   assert(await A.eval('PN.app.state.mode === "lobby"'), '打开小游戏不需要切模式（还在大厅）');
   await A.eval('document.querySelector(".mini-sec").scrollIntoView({ block: "start" })');

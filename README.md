@@ -68,6 +68,21 @@
 
 > 棋盘、轮到谁、胜负、悔棋全部由房主判定后广播，客户端只负责画和把点击换算成坐标。
 
+## 🧩 入口系统：一份目录驱动全部游戏（阶段三升级）
+
+大厅不再是「联机游戏一套卡片、小游戏另一套卡片」，而是**一份目录 + 一个卡片函数**：
+
+```
+PN.gameCommon.catalog()   // 联机游戏(PN.games) + 小游戏厅(data/mini.json) 合成一份视图
+PN.gameCommon.sections()  // 分区：👫 两个人一起玩（联机） → 🎮 小游戏厅
+PN.gameCommon.gameCard()  // 两类游戏共用同一个卡片（内部元素统一 .gc-*）
+```
+
+- **新增游戏零改入口**：联机游戏只要在 `src/games/<id>.js` 末尾注册 `PN.games[ID]`（可选 `meta:{group,tags,origin}`），小游戏只要加进 `data/mini.json`，大厅自动出现，`ui.js` 一行都不用动。
+- **向后兼容**：卡片同时保留旧类名（`.modecard` / `.mini-card`）与旧数据钩子（`data-mode` / `data-mini`），旧脚本与旧测试不受影响；没有 `meta` 的老游戏默认归入联机分区，不会报错。
+- **来源可追溯**：`meta.origin` 会带进目录（如五子棋 `origin.slug = demo-ce927755`），方便在界面上标注出处。
+- 用例：`node test/catalog-test.mjs`（22 项，含「动态新增一款游戏 → 入口零改动自动出现」的扩展性验证）。
+
 ## 🎮 小游戏厅（16 款成品小游戏）
 
 大厅最下方是**小游戏厅**：这些是**不需要联机**的成品小游戏（单机 / 同屏双人），点开在一个浮层里直接玩，退出就回大厅（房间不丢、分数不动）。
@@ -161,6 +176,7 @@
     node test/codraw-test.mjs             # 心有灵犀：两块画布不串/揭晓才给对方的画/交卷与表态/兜底/换主（34 项）
     node test/gomoku-test.mjs             # 五子棋：落子规则/四方向连五+长连/平局/悔棋需对方同意/换主（35 项）
     node test/mini-test.mjs               # 小游戏厅：清单与文件一致/没有空壳/没有死链（11 项）
+    node test/catalog-test.mjs            # 入口系统：目录/分区/统一卡片/向后兼容/新增游戏零改入口（22 项）
     node test/style-check.mjs             # CSS 静态检查：注释成对/括号成对/没有空选择器（防「漏 */ 吞掉整段样式」）
     node test/regress-fixes.mjs           # 核心缺陷护栏：答案泄露 / 设置失效 / 房主迁移 / 掉线丢分 / 挂机兜底 / 整段回放自愈（24 项）
     node test/integration-drawgame.mjs    # 真实 broker 跑完整一局（选词→作画→猜中→揭晓→回放→换轮）

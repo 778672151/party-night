@@ -132,6 +132,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '两个人轮流翻牌，一起把这副牌配完 🍀',
+    meta: { group: 'online', tags: ['翻牌', '记忆'] },
     minPlayers: 2,
     maxPlayers: 2,
 
