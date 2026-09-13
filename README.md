@@ -77,7 +77,7 @@
     node test/wire-test.mjs               # 墨迹通道：信封/按位落位/缺号检测/补发缓冲（16 项）
 node test/tacit-test.mjs              # 默契大考验：答案不泄露/一致才加分/超时兜底/换主重答/人数上限（31 项）
 node test/memory-test.mjs             # 合作翻牌：牌堆不泄露/回合规则/翻错换人/记忆策略打完整局/挂机保护（29 项）
-    node test/regress-fixes.mjs           # 核心缺陷护栏：答案泄露 / 设置失效 / 房主迁移 / 掉线丢分 / 挂机兜底（18 项）
+    node test/regress-fixes.mjs           # 核心缺陷护栏：答案泄露 / 设置失效 / 房主迁移 / 掉线丢分 / 挂机兜底 / 整段回放自愈（24 项）
     node test/integration-drawgame.mjs    # 真实 broker 跑完整一局（选词→作画→猜中→揭晓→回放→换轮）
     node test/mqtt-smoke.mjs              # broker 连通性
     ln -sfn /tmp/pnt/node_modules node_modules && node test/regress-drawgame-screen.mjs; rm -f node_modules
@@ -92,7 +92,7 @@ node test/memory-test.mjs             # 合作翻牌：牌堆不泄露/回合规
 
 - 浏览器用例跑的是**真实公共 broker**：偶发进不了同一个房间（免费公共服务的兜底问题，不是产品缺陷）时，重跑一次即可；用例里对这类情况有带说明的重试。
 
-当前实测结果：wire **16 / 0**、tacit **31 / 0**、memory **29 / 0**、regress-fixes **18 / 0**、jsdom **32 / 0**、
+当前实测结果：wire **16 / 0**、tacit **31 / 0**、memory **29 / 0**、regress-fixes **24 / 0**、jsdom **32 / 0**、
 真 broker 一局 **PASS**、真浏览器 **六组全部通过**（画猜四组 + 默契大考验 + 合作翻牌的双人闭环；
 含手机 420px 与桌面 1280px 无横向溢出、翻牌 3D 动画与点按回弹确实在跑、刷新后笔迹由回放补齐）。
 

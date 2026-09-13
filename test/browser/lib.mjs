@@ -198,7 +198,7 @@ export async function createRoom(cdp, name) {
  * 而备用是另一套话题空间 —— 这个人会变成「一个人一个房」，和产品逻辑无关。
  * 真实用户看到的是大厅里那句「刷新一下一般就能看到群友了」。
  */
-export async function joinRoom(cdp, name, code, tries = 3) {
+export async function joinRoom(cdp, name, code, tries = 5) {
   for (let i = 0; i < tries; i++) {
     const p = await newPage(cdp, APP + '#' + code);
     await p.fill('#pn-name', name);
@@ -211,7 +211,7 @@ export async function joinRoom(cdp, name, code, tries = 3) {
     if (!lonely) return p;
     console.log('  [环境重试] ' + name + ' 落在了另一台公共服务器，重新进房…');
     await p.dispose();
-    await sleep(1000);
+    await sleep(2500);           // 给公共 broker 一点时间把下一次连接分配回同一台
   }
   throw new Error(name + ' 连续 ' + tries + ' 次都没能和房主进到同一个房间（公共 broker 兜底导致，非产品缺陷）');
 }
