@@ -73,7 +73,8 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["drawgame","memory","tacit"]', '大厅有三款游戏：你画我猜 + 合作翻牌 + 默契大考验（' + modes + '）');
+  assert(modes === '["codraw","drawgame","memory","tacit"]', '大厅有四款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀（' + modes + '）');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'memory\']")'), '大厅有合作翻牌的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'drawgame\']")'), '大厅有画猜的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'tacit\']")'), '大厅有默契大考验的入口卡片');
@@ -388,8 +389,141 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 7. 心有灵犀：双人同时作画 → 揭晓并排 → 表态 → 再来一局 ============ */
+S.codraw = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  await startGame(H, 'codraw');
+  const inDraw = 'PN.app.state.mode === "codraw" && PN.app.state.g && PN.app.state.g.phase === "draw"';
+  await H.waitFor(inDraw, '进入作画', 30000);
+  await O.waitFor(inDraw, '对方进入作画', 30000);
+
+  assert(await H.eval('PN.app.state.g.prompt') === await O.eval('PN.app.state.g.prompt'), '两人拿到同一个题目：' + await H.eval('PN.app.state.g.prompt'));
+  assert(await H.eval('document.querySelectorAll("canvas").length') === 1, '作画阶段页面上只有自己那一块画布');
+  await H.shot('codraw-1-draw');
+
+  // 量画布上的着色像素（比看内部数组更硬：它验证的是"真的画出来了"）
+  const canvasInk = (p, sel) => p.eval(`(() => {
+    const cv = document.querySelector('${sel}');
+    if (!cv) return -1;
+    const c = cv.getContext('2d');
+    const d = c.getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 40) if (d[i] > 20) n++;
+    return n;
+  })()`);
+
+  // 两边各自画一笔
+  await H.touchDrag('.cd-cv', [0.2, 0.3], [0.8, 0.7], 14);
+  await O.touchDrag('.cd-cv', [0.8, 0.2], [0.2, 0.6], 14);
+  await sleep(1400);
+  const myInk = await canvasInk(H, '.cd-cv');
+  assert(myInk > 30, '自己画的笔迹真的落在画布上（' + myInk + ' 个着色采样）');
+  assert(await O.eval('document.querySelectorAll(".cd-sv").length') === 0, '作画阶段对方页面上没有我的画（看不到才叫灵犀）');
+  assert(await H.eval('!!document.querySelector(".cd-dot")'), '有颜色选择器');
+  await H.click('.cd-dot');
+  await H.shot('codraw-2-drawn');
+
+  // 都点「我画好了」→ 立刻揭晓
+  await H.click('[data-ready]');
+  await sleep(600);
+  assert(await H.eval('PN.app.state.g.phase') === 'draw', '一个人交卷后还在等对方');
+  assert(await H.eval('!!document.querySelector("[data-ready]")'), '自己已交卷的按钮还在（不能重复交）');
+  await O.click('[data-ready]');
+  await O.waitFor('PN.app.state.g.phase === "reveal"', '揭晓', 20000);
+  await sleep(900);
+
+  assert(await H.eval('document.querySelectorAll(".cd-sv").length') === 2, '揭晓阶段并排两块画布');
+  const mineInk = await canvasInk(H, '.cd-one:nth-child(1) .cd-sv');
+  const theirsInk = await canvasInk(H, '.cd-one:nth-child(2) .cd-sv');
+  assert(mineInk > 30 && theirsInk > 30, '两张画都有内容（我 ' + mineInk + ' / TA ' + theirsInk + '）');
+  await H.shot('codraw-3-reveal');
+  console.log('  [报错检查@揭晓] 房主=' + (await H.consoleErrors()) + ' 对方=' + (await O.consoleErrors()));
+
+  // 互相表态
+  await H.click('[data-rate="1"]');
+  await sleep(500);
+  assert(await H.eval('!document.querySelector(".cd-verdict")'), '一个人表态后还没公布，等对方');
+  await O.click('[data-rate="1"]');
+  // 揭晓只停 9 秒，一次把「结果 + 两人表态 + 分数」查完，别用多次往返把时间耗掉
+  await O.waitFor('document.querySelectorAll(".cd-r").length === 2', '公布两个人的表态', 20000);
+  const after = JSON.parse(await O.eval('JSON.stringify({match:PN.app.state.g.reveal.match,scores:PN.app.state.players.map(function(p){return p.score;}),rows:document.querySelectorAll(".cd-r").length,verdict:!!document.querySelector(".cd-verdict")})'));
+  assert(after.match === true, '两个人都说像 → 判定心有灵犀');
+  assert(after.scores.every(s => s >= 2), '两个人各 +2 分（合作）');
+  assert(after.rows === 2 && after.verdict, '公布两个人的表态（' + after.rows + ' 行）');
+  console.log('  [报错检查] 房主=' + (await H.consoleErrors()) + ' 对方=' + (await O.consoleErrors()));
+  await H.shot('codraw-4-verdict');
+
+  // 把剩下的题打完（每轮：画 → 交卷 → 都选像）
+  // 两页都处于同一阶段再操作：只按一页的状态点，另一页可能还在上一阶段，点击会打空
+  const phaseOf = (p) => p.eval('PN.app.state.g.phase');
+  for (let guard = 0; guard < 80; guard++) {
+    const phH = await phaseOf(H);
+    if (phH === 'over') break;
+    const phO = await phaseOf(O);
+    if (phH !== phO) { await sleep(500); continue; }
+    if (phH === 'draw') {
+      await H.touchDrag('.cd-cv', [0.25, 0.25], [0.75, 0.75], 10).catch(() => {});
+      await sleep(250);
+      await O.touchDrag('.cd-cv', [0.75, 0.25], [0.25, 0.75], 10).catch(() => {});
+      await sleep(350);
+      await H.click('[data-ready]').catch(() => {});
+      await sleep(250);
+      await O.click('[data-ready]').catch(() => {});
+    } else if (phH === 'reveal') {
+      if (!(await H.eval('!!document.querySelector(".cd-verdict")'))) {
+        await H.click('[data-rate="1"]').catch(() => {});
+        await sleep(250);
+        await O.click('[data-rate="1"]').catch(() => {});
+      }
+    }
+    await sleep(900);
+  }
+  assert(await H.eval('PN.app.state.g.phase') === 'over', '走完全部题目进入结算');
+  const sum = JSON.parse(await H.eval('JSON.stringify(PN.app.state.g.summary)'));
+  assert(sum.total === 3 && sum.matched >= 2, '结算给出灵犀指数：' + sum.matched + '/' + sum.total + ' = ' + sum.percent + '%');
+  assert(await H.eval('!!document.querySelector(".cd-percent")'), '结算页显示大大的灵犀指数');
+  await H.shot('codraw-5-over');
+
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+  // 画布要在视口里看全（手机端最容易出的"画面显示问题"）
+  await btnHostClick(H, O, 'codraw');
+  await H.waitFor('PN.app.state.g.phase === "draw" && PN.app.state.g.round === 1', '再来一局', 25000);
+  assert(await H.eval('PN.app.state.g.summary') === null, '再来一局清掉上一局结算');
+
+  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".cd-cv").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fit.bottom <= fit.vh + 2, '手机视口里画布看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '）');
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(700);
+  const fitD = JSON.parse(await H.eval('(() => { const b = document.querySelector(".cd-cv").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  const ovd = JSON.parse(await overflow(H));
+  assert(fitD.bottom <= fitD.vh + 2 && !ovd.bad.length, '桌面视口画布看全且无溢出（底 ' + fitD.bottom + ' ≤ ' + fitD.vh + '，宽 ' + fitD.w + '）');
+  await H.shot('codraw-6-desktop');
+  const errH = await H.consoleErrors(), errO = await O.consoleErrors();
+  assert(errH === '[]', '房主页面全程无 JS 报错：' + errH);
+  assert(errO === '[]', '对方页面全程无 JS 报错：' + errO);
+  await A.dispose(); await B.dispose();
+};
+
+/* 只有房主侧有「再来一局」：两页探一下，在真有按钮的那页点 */
+async function btnHostClick(H, O, tag) {
+  const probe = (p) => p.eval('JSON.stringify({host:PN.app.isHost(),again:!!document.querySelector(\'[data-over="again"]\')})').then(JSON.parse);
+  const a = await probe(H), b = await probe(O);
+  console.log('  [探针] ' + tag + ' 房主页=' + JSON.stringify(a) + ' 对方页=' + JSON.stringify(b));
+  const target = a.again ? H : (b.again ? O : null);
+  assert(!!target, tag + '：结算页有「再来一局」（房主侧）');
+  await target.click('[data-over="again"]');
+}
+
 const name = process.argv[2];
-const list = name ? [name] : Object.keys(S);
+// 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
+// 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
+const ORDER = ['lobby', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'fullgame'];
+const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);
 for (const n of list) {

@@ -76,6 +76,10 @@ export class Page {
   }
   /** 真实点击（走浏览器输入管线，会生成可信 pointer 事件） */
   async click(sel) {
+    // 先滚到可见区再点：大厅里游戏变多以后，目标卡片可能在视口外，
+    // 用坐标点击就会落在屏幕外（真实用户也会先滑动一下）
+    await this.eval('(() => { const el = document.querySelector(' + JSON.stringify(sel) + '); if (el && el.scrollIntoView) el.scrollIntoView({ block: "center" }); return true; })()').catch(() => {});
+    await new Promise(r => setTimeout(r, 150));
     const b = await this.box(sel);
     if (!b) throw new Error('找不到可点元素: ' + sel);
     await this.mouse('mouseMoved', b.x, b.y, { button: 'none' });

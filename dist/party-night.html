@@ -306,6 +306,42 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .mem-turns{font-size:19px;font-weight:900;margin-top:6px}
 .mem-combo{margin-top:8px;font-size:14px;font-weight:900;color:var(--acc)}
 .pill.mem-cb{background:linear-gradient(160deg,#ffe3ef,#ffd0e4);color:#d1578f;border-color:var(--acc)}
+
+/* ===== 心有灵犀 ===== */
+.cd-prompt .t{font-size:23px;font-weight:900;line-height:1.4;animation:qpop .34s var(--spring) both}
+.cd-stage{max-width:clamp(240px,calc(100vh - 430px),460px);margin:0 auto}
+.cd-stage canvas,.cd-one canvas{display:block;width:100%;aspect-ratio:1/1;background:#fff;
+  border:2.5px solid var(--stroke);border-radius:22px;box-shadow:var(--soft);touch-action:none;cursor:crosshair}
+.cd-tip{text-align:center;font-size:12px;color:var(--ink2);margin:8px 0 2px}
+.cd-tools{display:flex;align-items:center;justify-content:center;gap:9px;margin:10px 0 2px}
+.cd-dot{width:34px;height:34px;border-radius:50%;border:2.5px solid var(--stroke);
+  box-shadow:0 3px 0 rgba(107,85,136,.2);transition:transform .12s var(--spring)}
+.cd-dot.on{transform:translateY(-3px) scale(1.08);box-shadow:0 5px 0 rgba(107,85,136,.28)}
+.cd-wide{display:flex;align-items:center;justify-content:center;width:40px;height:34px;border-radius:14px;
+  background:var(--card);border:2.5px solid var(--stroke);transition:transform .12s var(--spring)}
+.cd-wide.on{background:linear-gradient(160deg,#ffe3ef,#ffd0e4);transform:translateY(-3px)}
+.cd-wide i{display:block;width:20px;background:var(--stroke);border-radius:6px}
+.cd-reveal{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cd-one{animation:qslideL .38s var(--spring) both}
+.cd-one:nth-child(2){animation-name:qslideR}
+.cd-lbl{text-align:center;font-size:12px;font-weight:800;margin-top:6px;color:var(--ink2)}
+.cd-rate{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.cd-verdict{margin-top:14px;text-align:center;font-size:16px;font-weight:900;padding:12px;border-radius:var(--r2);
+  animation:qpop .4s var(--spring) both}
+.cd-verdict.ok{background:linear-gradient(160deg,#ffe3ef,#ffd0e4);color:#d1578f;border:2.5px solid var(--acc)}
+.cd-verdict.no{background:var(--bg2);color:var(--ink2);border:2.5px dashed var(--line)}
+.cd-rt{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.cd-r{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}
+.cd-r .em{font-size:18px}
+.cd-r b{margin-left:auto;font-size:12px;padding:3px 8px;border-radius:999px}
+.cd-r b.yes{background:#ffe3ef;color:#d1578f}
+.cd-r b.noo{background:var(--bg2);color:var(--ink2)}
+.cd-hero{padding:24px 16px}
+.cd-percent{font-size:62px;font-weight:900;line-height:1;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.25);
+  animation:qpop .5s var(--spring) both}
+.cd-percent span{font-size:24px;margin-left:2px}
+.cd-word{font-size:13px;color:var(--ink2);margin-top:4px;letter-spacing:2px}
+.cd-quote{margin-top:12px;font-size:16px;font-weight:800}
 </style>
 </head>
 <body>
@@ -313,7 +349,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
   <div class="loading"><div class="logo">🧸</div><div>两个人的游戏厅</div><div class="sub">正在连线…</div></div>
 </div>
 <script>
-window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"tag":"动物"},{"w":"大象","level":1,"tag":"动物"},{"w":"企鹅","level":1,"tag":"动物"},{"w":"熊猫","level":1,"tag":"动物"},{"w":"猫","level":1,"tag":"动物"},{"w":"狗","level":1,"tag":"动物"},{"w":"兔子","level":1,"tag":"动物"},{"w":"老虎","level":1,"tag":"动物"},{"w":"狮子","level":1,"tag":"动物"},{"w":"猴子","level":1,"tag":"动物"},{"w":"蛇","level":1,"tag":"动物"},{"w":"鱼","level":1,"tag":"动物"},{"w":"鸟","level":1,"tag":"动物"},{"w":"蝴蝶","level":1,"tag":"动物"},{"w":"蜗牛","level":1,"tag":"动物"},{"w":"鲨鱼","level":1,"tag":"动物"},{"w":"海豚","level":1,"tag":"动物"},{"w":"鲸鱼","level":1,"tag":"动物"},{"w":"螃蟹","level":1,"tag":"动物"},{"w":"乌龟","level":1,"tag":"动物"},{"w":"青蛙","level":1,"tag":"动物"},{"w":"孔雀","level":1,"tag":"动物"},{"w":"老鹰","level":1,"tag":"动物"},{"w":"鹦鹉","level":1,"tag":"动物"},{"w":"蜜蜂","level":1,"tag":"动物"},{"w":"蚂蚁","level":1,"tag":"动物"},{"w":"蜻蜓","level":1,"tag":"动物"},{"w":"瓢虫","level":1,"tag":"动物"},{"w":"蜘蛛","level":1,"tag":"动物"},{"w":"壁虎","level":1,"tag":"动物"},{"w":"考拉","level":1,"tag":"动物"},{"w":"北极熊","level":1,"tag":"动物"},{"w":"梅花鹿","level":1,"tag":"动物"},{"w":"松鼠","level":1,"tag":"动物"},{"w":"刺猬","level":1,"tag":"动物"},{"w":"河马","level":1,"tag":"动物"},{"w":"犀牛","level":1,"tag":"动物"},{"w":"骆驼","level":1,"tag":"动物"},{"w":"斑马","level":1,"tag":"动物"},{"w":"鳄鱼","level":1,"tag":"动物"},{"w":"苹果","level":1,"tag":"食物"},{"w":"西瓜","level":1,"tag":"食物"},{"w":"草莓","level":1,"tag":"食物"},{"w":"香蕉","level":1,"tag":"食物"},{"w":"葡萄","level":1,"tag":"食物"},{"w":"菠萝","level":1,"tag":"食物"},{"w":"樱桃","level":1,"tag":"食物"},{"w":"冰淇淋","level":1,"tag":"食物"},{"w":"蛋糕","level":1,"tag":"食物"},{"w":"汉堡","level":1,"tag":"食物"},{"w":"披萨","level":1,"tag":"食物"},{"w":"面条","level":1,"tag":"食物"},{"w":"饺子","level":1,"tag":"食物"},{"w":"包子","level":1,"tag":"食物"},{"w":"月饼","level":1,"tag":"食物"},{"w":"粽子","level":1,"tag":"食物"},{"w":"糖葫芦","level":1,"tag":"食物"},{"w":"火锅","level":1,"tag":"食物"},{"w":"寿司","level":1,"tag":"食物"},{"w":"热狗","level":1,"tag":"食物"},{"w":"鸡腿","level":1,"tag":"食物"},{"w":"薯条","level":1,"tag":"食物"},{"w":"爆米花","level":1,"tag":"食物"},{"w":"棉花糖","level":1,"tag":"食物"},{"w":"棒棒糖","level":1,"tag":"食物"},{"w":"鸡蛋","level":1,"tag":"食物"},{"w":"牛奶","level":1,"tag":"食物"},{"w":"面包","level":1,"tag":"食物"},{"w":"饼干","level":1,"tag":"食物"},{"w":"巧克力","level":1,"tag":"食物"},{"w":"雨伞","level":1,"tag":"物品"},{"w":"手机","level":1,"tag":"物品"},{"w":"电脑","level":1,"tag":"物品"},{"w":"眼镜","level":1,"tag":"物品"},{"w":"帽子","level":1,"tag":"物品"},{"w":"钥匙","level":1,"tag":"物品"},{"w":"剪刀","level":1,"tag":"物品"},{"w":"牙刷","level":1,"tag":"物品"},{"w":"闹钟","level":1,"tag":"物品"},{"w":"灯泡","level":1,"tag":"物品"},{"w":"镜子","level":1,"tag":"物品"},{"w":"椅子","level":1,"tag":"物品"},{"w":"桌子","level":1,"tag":"物品"},{"w":"书包","level":1,"tag":"物品"},{"w":"信封","level":1,"tag":"物品"},{"w":"蜡烛","level":1,"tag":"物品"},{"w":"气球","level":1,"tag":"物品"},{"w":"风筝","level":1,"tag":"物品"},{"w":"吉他","level":1,"tag":"物品"},{"w":"钢琴","level":1,"tag":"物品"},{"w":"相机","level":1,"tag":"物品"},{"w":"日历","level":1,"tag":"物品"},{"w":"地图","level":1,"tag":"物品"},{"w":"地球仪","level":1,"tag":"物品"},{"w":"自行车","level":1,"tag":"交通"},{"w":"汽车","level":1,"tag":"交通"},{"w":"飞机","level":1,"tag":"交通"},{"w":"火车","level":1,"tag":"交通"},{"w":"轮船","level":1,"tag":"交通"},{"w":"火箭","level":1,"tag":"交通"},{"w":"热气球","level":1,"tag":"交通"},{"w":"摩托车","level":1,"tag":"交通"},{"w":"公交车","level":1,"tag":"交通"},{"w":"直升机","level":1,"tag":"交通"},{"w":"地铁","level":1,"tag":"交通"},{"w":"电动车","level":1,"tag":"交通"},{"w":"太阳","level":1,"tag":"自然"},{"w":"月亮","level":1,"tag":"自然"},{"w":"星星","level":1,"tag":"自然"},{"w":"彩虹","level":1,"tag":"自然"},{"w":"雪花","level":1,"tag":"自然"},{"w":"山","level":1,"tag":"自然"},{"w":"眼睛","level":1,"tag":"身体"},{"w":"耳朵","level":1,"tag":"身体"},{"w":"手","level":1,"tag":"身体"},{"w":"脚","level":1,"tag":"身体"},{"w":"牙齿","level":1,"tag":"身体"},{"w":"头发","level":1,"tag":"身体"},{"w":"医生","level":1,"tag":"职业"},{"w":"警察","level":1,"tag":"职业"},{"w":"厨师","level":1,"tag":"职业"},{"w":"消防员","level":1,"tag":"职业"},{"w":"教师","level":1,"tag":"职业"},{"w":"宇航员","level":1,"tag":"职业"},{"w":"堵车","level":2,"tag":"场景"},{"w":"下雨","level":2,"tag":"场景"},{"w":"下雪","level":2,"tag":"场景"},{"w":"日出","level":2,"tag":"场景"},{"w":"日落","level":2,"tag":"场景"},{"w":"流星","level":2,"tag":"场景"},{"w":"火灾","level":2,"tag":"场景"},{"w":"雪人","level":2,"tag":"场景"},{"w":"沙滩","level":2,"tag":"场景"},{"w":"瀑布","level":2,"tag":"场景"},{"w":"火山爆发","level":2,"tag":"场景"},{"w":"海底世界","level":2,"tag":"场景"},{"w":"游乐园","level":2,"tag":"场景"},{"w":"动物园","level":2,"tag":"场景"},{"w":"演唱会","level":2,"tag":"场景"},{"w":"电影院","level":2,"tag":"场景"},{"w":"图书馆","level":2,"tag":"场景"},{"w":"超市","level":2,"tag":"场景"},{"w":"菜市场","level":2,"tag":"场景"},{"w":"地铁站","level":2,"tag":"场景"},{"w":"火车站","level":2,"tag":"场景"},{"w":"机场","level":2,"tag":"场景"},{"w":"医院","level":2,"tag":"场景"},{"w":"学校","level":2,"tag":"场景"},{"w":"公园","level":2,"tag":"场景"},{"w":"游泳池","level":2,"tag":"场景"},{"w":"篮球场","level":2,"tag":"场景"},{"w":"滑雪场","level":2,"tag":"场景"},{"w":"海边","level":2,"tag":"场景"},{"w":"露营","level":2,"tag":"场景"},{"w":"野餐","level":2,"tag":"场景"},{"w":"烧烤","level":2,"tag":"场景"},{"w":"咖啡店","level":2,"tag":"场景"},{"w":"健身房","level":2,"tag":"场景"},{"w":"电梯","level":2,"tag":"场景"},{"w":"楼梯","level":2,"tag":"场景"},{"w":"隧道","level":2,"tag":"场景"},{"w":"桥","level":2,"tag":"场景"},{"w":"摩天轮","level":2,"tag":"场景"},{"w":"旋转木马","level":2,"tag":"场景"},{"w":"过山车","level":2,"tag":"场景"},{"w":"刷牙","level":2,"tag":"动作"},{"w":"洗脸","level":2,"tag":"动作"},{"w":"洗澡","level":2,"tag":"动作"},{"w":"梳头","level":2,"tag":"动作"},{"w":"化妆","level":2,"tag":"动作"},{"w":"刮胡子","level":2,"tag":"动作"},{"w":"做饭","level":2,"tag":"动作"},{"w":"洗碗","level":2,"tag":"动作"},{"w":"扫地","level":2,"tag":"动作"},{"w":"拖地","level":2,"tag":"动作"},{"w":"洗衣服","level":2,"tag":"动作"},{"w":"晾衣服","level":2,"tag":"动作"},{"w":"叠被子","level":2,"tag":"动作"},{"w":"系鞋带","level":2,"tag":"动作"},{"w":"打伞","level":2,"tag":"动作"},{"w":"跳绳","level":2,"tag":"运动"},{"w":"踢毽子","level":2,"tag":"运动"},{"w":"打篮球","level":2,"tag":"运动"},{"w":"踢足球","level":2,"tag":"运动"},{"w":"打乒乓球","level":2,"tag":"运动"},{"w":"游泳","level":2,"tag":"运动"},{"w":"跑步","level":2,"tag":"运动"},{"w":"钓鱼","level":2,"tag":"动作"},{"w":"爬山","level":2,"tag":"运动"},{"w":"拍照","level":2,"tag":"动作"},{"w":"自拍","level":2,"tag":"动作"},{"w":"唱歌","level":2,"tag":"动作"},{"w":"跳舞","level":2,"tag":"动作"},{"w":"弹吉他","level":2,"tag":"动作"},{"w":"弹钢琴","level":2,"tag":"动作"},{"w":"打游戏","level":2,"tag":"动作"},{"w":"看手机","level":2,"tag":"动作"},{"w":"看书","level":2,"tag":"动作"},{"w":"写字","level":2,"tag":"动作"},{"w":"画画","level":2,"tag":"动作"},{"w":"打电话","level":2,"tag":"动作"},{"w":"遛狗","level":2,"tag":"动作"},{"w":"喂猫","level":2,"tag":"动作"},{"w":"种花","level":2,"tag":"动作"},{"w":"浇花","level":2,"tag":"动作"},{"w":"排队","level":2,"tag":"场景"},{"w":"考试","level":2,"tag":"场景"},{"w":"考试作弊","level":2,"tag":"动作"},{"w":"睡觉","level":2,"tag":"动作"},{"w":"做梦","level":2,"tag":"动作"},{"w":"起床","level":2,"tag":"动作"},{"w":"上班","level":2,"tag":"场景"},{"w":"下班","level":2,"tag":"场景"},{"w":"迟到","level":2,"tag":"场景"},{"w":"加班","level":2,"tag":"场景"},{"w":"熬夜","level":2,"tag":"动作"},{"w":"煮面","level":2,"tag":"动作"},{"w":"煎蛋","level":2,"tag":"动作"},{"w":"泡茶","level":2,"tag":"动作"},{"w":"喝咖啡","level":2,"tag":"动作"},{"w":"吃火锅","level":2,"tag":"动作"},{"w":"吃烧烤","level":2,"tag":"动作"},{"w":"旅游","level":2,"tag":"动作"},{"w":"购物","level":2,"tag":"场景"},{"w":"散步","level":2,"tag":"动作"},{"w":"打喷嚏","level":2,"tag":"动作"},{"w":"打哈欠","level":2,"tag":"动作"},{"w":"伸懒腰","level":2,"tag":"动作"},{"w":"滑雪","level":2,"tag":"运动"},{"w":"滑冰","level":2,"tag":"运动"},{"w":"冲浪","level":2,"tag":"运动"},{"w":"潜水","level":2,"tag":"运动"},{"w":"跳伞","level":2,"tag":"运动"},{"w":"蹦极","level":2,"tag":"运动"},{"w":"画蛇添足","level":3,"tag":"成语"},{"w":"守株待兔","level":3,"tag":"成语"},{"w":"掩耳盗铃","level":3,"tag":"成语"},{"w":"亡羊补牢","level":3,"tag":"成语"},{"w":"井底之蛙","level":3,"tag":"成语"},{"w":"对牛弹琴","level":3,"tag":"成语"},{"w":"杯弓蛇影","level":3,"tag":"成语"},{"w":"鹤立鸡群","level":3,"tag":"成语"},{"w":"鸡飞狗跳","level":3,"tag":"成语"},{"w":"虎头蛇尾","level":3,"tag":"成语"},{"w":"狼吞虎咽","level":3,"tag":"成语"},{"w":"龙飞凤舞","level":3,"tag":"成语"},{"w":"马到成功","level":3,"tag":"成语"},{"w":"鸟语花香","level":3,"tag":"成语"},{"w":"鱼目混珠","level":3,"tag":"成语"},{"w":"鼠目寸光","level":3,"tag":"成语"},{"w":"狐假虎威","level":3,"tag":"成语"},{"w":"叶公好龙","level":3,"tag":"成语"},{"w":"一箭双雕","level":3,"tag":"成语"},{"w":"三心二意","level":3,"tag":"成语"},{"w":"七上八下","level":3,"tag":"成语"},{"w":"九牛一毛","level":3,"tag":"成语"},{"w":"十全十美","level":3,"tag":"成语"},{"w":"百发百中","level":3,"tag":"成语"},{"w":"千军万马","level":3,"tag":"成语"},{"w":"鸡犬升天","level":3,"tag":"成语"},{"w":"画龙点睛","level":3,"tag":"成语"},{"w":"坐井观天","level":3,"tag":"成语"},{"w":"人山人海","level":3,"tag":"成语"},{"w":"惊天动地","level":3,"tag":"成语"},{"w":"emo了","level":3,"tag":"网络"},{"w":"破防了","level":3,"tag":"网络"},{"w":"躺平","level":3,"tag":"网络"},{"w":"内卷","level":3,"tag":"网络"},{"w":"摆烂","level":3,"tag":"网络"},{"w":"摸鱼","level":3,"tag":"网络"},{"w":"上头","level":3,"tag":"网络"},{"w":"无语","level":3,"tag":"网络"},{"w":"社死","level":3,"tag":"网络"},{"w":"社恐","level":3,"tag":"网络"},{"w":"吃瓜","level":3,"tag":"网络"},{"w":"自闭","level":3,"tag":"网络"},{"w":"凡尔赛","level":3,"tag":"网络"},{"w":"我酸了","level":3,"tag":"网络"},{"w":"划水","level":3,"tag":"网络"},{"w":"卷王","level":3,"tag":"网络"},{"w":"吐槽","level":3,"tag":"网络"},{"w":"点赞","level":3,"tag":"网络"},{"w":"关注","level":3,"tag":"网络"},{"w":"转发","level":3,"tag":"网络"},{"w":"加好友","level":3,"tag":"网络"},{"w":"发朋友圈","level":3,"tag":"网络"},{"w":"刷视频","level":3,"tag":"网络"},{"w":"弹幕","level":3,"tag":"网络"},{"w":"表情包","level":3,"tag":"网络"},{"w":"拍一拍","level":3,"tag":"网络"},{"w":"冒泡","level":3,"tag":"网络"},{"w":"告辞","level":3,"tag":"网络"},{"w":"厉害了","level":3,"tag":"网络"},{"w":"玩手机","level":2,"tag":"动作"},{"w":"戴耳机","level":2,"tag":"动作"},{"w":"晒太阳","level":2,"tag":"动作"},{"w":"吹蜡烛","level":2,"tag":"动作"},{"w":"放烟花","level":2,"tag":"场景"},{"w":"打雪仗","level":2,"tag":"运动"},{"w":"走马观花","level":3,"tag":"成语"}]},"tacit":{"version":1,"note":"默契大考验题库：type=who 的选项是两个玩家的名字（按参与者顺序）；type=pick 用自带的 options","questions":[{"q":"谁更可能先睡着？","type":"who"},{"q":"谁起床更磨蹭？","type":"who"},{"q":"谁更爱拍照？","type":"who"},{"q":"谁吃饭更慢？","type":"who"},{"q":"谁更怕冷？","type":"who"},{"q":"谁更容易迷路？","type":"who"},{"q":"谁更爱笑？","type":"who"},{"q":"谁更会安慰人？","type":"who"},{"q":"谁更爱收拾房间？","type":"who"},{"q":"谁更爱说「随便」？","type":"who"},{"q":"谁更容易被感动？","type":"who"},{"q":"谁更爱熬夜？","type":"who"},{"q":"谁更会挑餐厅？","type":"who"},{"q":"谁更爱撒娇？","type":"who"},{"q":"谁更像「小太阳」？","type":"who"},{"q":"谁更容易紧张？","type":"who"},{"q":"谁更爱看剧？","type":"who"},{"q":"谁更爱吃甜食？","type":"who"},{"q":"谁更爱唱歌？","type":"who"},{"q":"谁更会哄人开心？","type":"who"},{"q":"谁更容易心软？","type":"who"},{"q":"谁更爱逛街？","type":"who"},{"q":"谁更爱待在家？","type":"who"},{"q":"谁更记得住纪念日？","type":"who"},{"q":"周末更想怎么过？","type":"pick","options":["在家躺着","出门走走","见朋友","去旅行"]},{"q":"今晚吃什么？","type":"pick","options":["火锅","烧烤","家常菜","点外卖"]},{"q":"更喜欢的季节？","type":"pick","options":["春天","夏天","秋天","冬天"]},{"q":"心情不好时更想要什么？","type":"pick","options":["抱抱","安静待着","出门散心","一起吃好吃的"]},{"q":"更喜欢的饮料？","type":"pick","options":["奶茶","咖啡","果汁","白开水"]},{"q":"理想的约会是什么样？","type":"pick","options":["看电影","散步","逛展","待在家"]},{"q":"更喜欢的天气？","type":"pick","options":["大晴天","小雨","下雪","阴天"]},{"q":"收到什么会更开心？","type":"pick","options":["小礼物","一句夸奖","一起吃饭","一次旅行"]},{"q":"更喜欢的宠物？","type":"pick","options":["猫","狗","仓鼠","先不养"]},{"q":"放假更想去哪？","type":"pick","options":["海边","山里","大城市","家里"]},{"q":"更喜欢哪样甜品？","type":"pick","options":["蛋糕","冰淇淋","布丁","不太甜"]},{"q":"更喜欢的电影类型？","type":"pick","options":["喜剧","悬疑","动画","爱情"]},{"q":"更喜欢的音乐？","type":"pick","options":["流行","民谣","摇滚","纯音乐"]},{"q":"更喜欢的早餐？","type":"pick","options":["豆浆油条","面包牛奶","小笼包","不吃"]},{"q":"更喜欢的运动？","type":"pick","options":["跑步","游泳","羽毛球","躺着不动"]},{"q":"最想去的地方？","type":"pick","options":["日本","欧洲","云南","川西"]},{"q":"什么最能让你放松？","type":"pick","options":["听音乐","睡一觉","散散步","找人聊天"]},{"q":"更喜欢怎么表达关心？","type":"pick","options":["说出口","做顿饭","默默陪着","发条消息"]},{"q":"更喜欢哪种花？","type":"pick","options":["玫瑰","向日葵","满天星","郁金香"]},{"q":"更喜欢哪个颜色？","type":"pick","options":["粉色","蓝色","绿色","黄色"]},{"q":"更喜欢什么样的礼物？","type":"pick","options":["实用的","好看的","手作的","惊喜的"]},{"q":"生日更想怎么过？","type":"pick","options":["热闹聚会","两个人过","收礼物","当普通一天"]},{"q":"更喜欢哪种相处方式？","type":"pick","options":["每天聊天","见面最要紧","各忙各的","一起做点事"]},{"q":"更喜欢的作息？","type":"pick","options":["早睡早起","晚睡晚起","看情况","完全不固定"]}]},"memory":{"version":1,"note":"合作翻牌的牌面池：每局从一套里随机取 8 对（16 张），牌堆由房主生成、只把已经翻开的牌广播出去","sets":{"动物园":["🐱","🐶","🐰","🐼","🦊","🐷","🐸","🐵","🐨","🐯","🦁","🐮","🐔","🐧"],"甜品店":["🍰","🍩","🍪","🍬","🍭","🧁","🍦","🍫","🍮","🥧","🍯","🍡","🍓","🥐"],"小花园":["🌸","🌻","🌷","🍀","🌵","🌿","🍄","🌴","🌺","🌼","🪴","🎋","🌾","🪷"]}}};
+window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"tag":"动物"},{"w":"大象","level":1,"tag":"动物"},{"w":"企鹅","level":1,"tag":"动物"},{"w":"熊猫","level":1,"tag":"动物"},{"w":"猫","level":1,"tag":"动物"},{"w":"狗","level":1,"tag":"动物"},{"w":"兔子","level":1,"tag":"动物"},{"w":"老虎","level":1,"tag":"动物"},{"w":"狮子","level":1,"tag":"动物"},{"w":"猴子","level":1,"tag":"动物"},{"w":"蛇","level":1,"tag":"动物"},{"w":"鱼","level":1,"tag":"动物"},{"w":"鸟","level":1,"tag":"动物"},{"w":"蝴蝶","level":1,"tag":"动物"},{"w":"蜗牛","level":1,"tag":"动物"},{"w":"鲨鱼","level":1,"tag":"动物"},{"w":"海豚","level":1,"tag":"动物"},{"w":"鲸鱼","level":1,"tag":"动物"},{"w":"螃蟹","level":1,"tag":"动物"},{"w":"乌龟","level":1,"tag":"动物"},{"w":"青蛙","level":1,"tag":"动物"},{"w":"孔雀","level":1,"tag":"动物"},{"w":"老鹰","level":1,"tag":"动物"},{"w":"鹦鹉","level":1,"tag":"动物"},{"w":"蜜蜂","level":1,"tag":"动物"},{"w":"蚂蚁","level":1,"tag":"动物"},{"w":"蜻蜓","level":1,"tag":"动物"},{"w":"瓢虫","level":1,"tag":"动物"},{"w":"蜘蛛","level":1,"tag":"动物"},{"w":"壁虎","level":1,"tag":"动物"},{"w":"考拉","level":1,"tag":"动物"},{"w":"北极熊","level":1,"tag":"动物"},{"w":"梅花鹿","level":1,"tag":"动物"},{"w":"松鼠","level":1,"tag":"动物"},{"w":"刺猬","level":1,"tag":"动物"},{"w":"河马","level":1,"tag":"动物"},{"w":"犀牛","level":1,"tag":"动物"},{"w":"骆驼","level":1,"tag":"动物"},{"w":"斑马","level":1,"tag":"动物"},{"w":"鳄鱼","level":1,"tag":"动物"},{"w":"苹果","level":1,"tag":"食物"},{"w":"西瓜","level":1,"tag":"食物"},{"w":"草莓","level":1,"tag":"食物"},{"w":"香蕉","level":1,"tag":"食物"},{"w":"葡萄","level":1,"tag":"食物"},{"w":"菠萝","level":1,"tag":"食物"},{"w":"樱桃","level":1,"tag":"食物"},{"w":"冰淇淋","level":1,"tag":"食物"},{"w":"蛋糕","level":1,"tag":"食物"},{"w":"汉堡","level":1,"tag":"食物"},{"w":"披萨","level":1,"tag":"食物"},{"w":"面条","level":1,"tag":"食物"},{"w":"饺子","level":1,"tag":"食物"},{"w":"包子","level":1,"tag":"食物"},{"w":"月饼","level":1,"tag":"食物"},{"w":"粽子","level":1,"tag":"食物"},{"w":"糖葫芦","level":1,"tag":"食物"},{"w":"火锅","level":1,"tag":"食物"},{"w":"寿司","level":1,"tag":"食物"},{"w":"热狗","level":1,"tag":"食物"},{"w":"鸡腿","level":1,"tag":"食物"},{"w":"薯条","level":1,"tag":"食物"},{"w":"爆米花","level":1,"tag":"食物"},{"w":"棉花糖","level":1,"tag":"食物"},{"w":"棒棒糖","level":1,"tag":"食物"},{"w":"鸡蛋","level":1,"tag":"食物"},{"w":"牛奶","level":1,"tag":"食物"},{"w":"面包","level":1,"tag":"食物"},{"w":"饼干","level":1,"tag":"食物"},{"w":"巧克力","level":1,"tag":"食物"},{"w":"雨伞","level":1,"tag":"物品"},{"w":"手机","level":1,"tag":"物品"},{"w":"电脑","level":1,"tag":"物品"},{"w":"眼镜","level":1,"tag":"物品"},{"w":"帽子","level":1,"tag":"物品"},{"w":"钥匙","level":1,"tag":"物品"},{"w":"剪刀","level":1,"tag":"物品"},{"w":"牙刷","level":1,"tag":"物品"},{"w":"闹钟","level":1,"tag":"物品"},{"w":"灯泡","level":1,"tag":"物品"},{"w":"镜子","level":1,"tag":"物品"},{"w":"椅子","level":1,"tag":"物品"},{"w":"桌子","level":1,"tag":"物品"},{"w":"书包","level":1,"tag":"物品"},{"w":"信封","level":1,"tag":"物品"},{"w":"蜡烛","level":1,"tag":"物品"},{"w":"气球","level":1,"tag":"物品"},{"w":"风筝","level":1,"tag":"物品"},{"w":"吉他","level":1,"tag":"物品"},{"w":"钢琴","level":1,"tag":"物品"},{"w":"相机","level":1,"tag":"物品"},{"w":"日历","level":1,"tag":"物品"},{"w":"地图","level":1,"tag":"物品"},{"w":"地球仪","level":1,"tag":"物品"},{"w":"自行车","level":1,"tag":"交通"},{"w":"汽车","level":1,"tag":"交通"},{"w":"飞机","level":1,"tag":"交通"},{"w":"火车","level":1,"tag":"交通"},{"w":"轮船","level":1,"tag":"交通"},{"w":"火箭","level":1,"tag":"交通"},{"w":"热气球","level":1,"tag":"交通"},{"w":"摩托车","level":1,"tag":"交通"},{"w":"公交车","level":1,"tag":"交通"},{"w":"直升机","level":1,"tag":"交通"},{"w":"地铁","level":1,"tag":"交通"},{"w":"电动车","level":1,"tag":"交通"},{"w":"太阳","level":1,"tag":"自然"},{"w":"月亮","level":1,"tag":"自然"},{"w":"星星","level":1,"tag":"自然"},{"w":"彩虹","level":1,"tag":"自然"},{"w":"雪花","level":1,"tag":"自然"},{"w":"山","level":1,"tag":"自然"},{"w":"眼睛","level":1,"tag":"身体"},{"w":"耳朵","level":1,"tag":"身体"},{"w":"手","level":1,"tag":"身体"},{"w":"脚","level":1,"tag":"身体"},{"w":"牙齿","level":1,"tag":"身体"},{"w":"头发","level":1,"tag":"身体"},{"w":"医生","level":1,"tag":"职业"},{"w":"警察","level":1,"tag":"职业"},{"w":"厨师","level":1,"tag":"职业"},{"w":"消防员","level":1,"tag":"职业"},{"w":"教师","level":1,"tag":"职业"},{"w":"宇航员","level":1,"tag":"职业"},{"w":"堵车","level":2,"tag":"场景"},{"w":"下雨","level":2,"tag":"场景"},{"w":"下雪","level":2,"tag":"场景"},{"w":"日出","level":2,"tag":"场景"},{"w":"日落","level":2,"tag":"场景"},{"w":"流星","level":2,"tag":"场景"},{"w":"火灾","level":2,"tag":"场景"},{"w":"雪人","level":2,"tag":"场景"},{"w":"沙滩","level":2,"tag":"场景"},{"w":"瀑布","level":2,"tag":"场景"},{"w":"火山爆发","level":2,"tag":"场景"},{"w":"海底世界","level":2,"tag":"场景"},{"w":"游乐园","level":2,"tag":"场景"},{"w":"动物园","level":2,"tag":"场景"},{"w":"演唱会","level":2,"tag":"场景"},{"w":"电影院","level":2,"tag":"场景"},{"w":"图书馆","level":2,"tag":"场景"},{"w":"超市","level":2,"tag":"场景"},{"w":"菜市场","level":2,"tag":"场景"},{"w":"地铁站","level":2,"tag":"场景"},{"w":"火车站","level":2,"tag":"场景"},{"w":"机场","level":2,"tag":"场景"},{"w":"医院","level":2,"tag":"场景"},{"w":"学校","level":2,"tag":"场景"},{"w":"公园","level":2,"tag":"场景"},{"w":"游泳池","level":2,"tag":"场景"},{"w":"篮球场","level":2,"tag":"场景"},{"w":"滑雪场","level":2,"tag":"场景"},{"w":"海边","level":2,"tag":"场景"},{"w":"露营","level":2,"tag":"场景"},{"w":"野餐","level":2,"tag":"场景"},{"w":"烧烤","level":2,"tag":"场景"},{"w":"咖啡店","level":2,"tag":"场景"},{"w":"健身房","level":2,"tag":"场景"},{"w":"电梯","level":2,"tag":"场景"},{"w":"楼梯","level":2,"tag":"场景"},{"w":"隧道","level":2,"tag":"场景"},{"w":"桥","level":2,"tag":"场景"},{"w":"摩天轮","level":2,"tag":"场景"},{"w":"旋转木马","level":2,"tag":"场景"},{"w":"过山车","level":2,"tag":"场景"},{"w":"刷牙","level":2,"tag":"动作"},{"w":"洗脸","level":2,"tag":"动作"},{"w":"洗澡","level":2,"tag":"动作"},{"w":"梳头","level":2,"tag":"动作"},{"w":"化妆","level":2,"tag":"动作"},{"w":"刮胡子","level":2,"tag":"动作"},{"w":"做饭","level":2,"tag":"动作"},{"w":"洗碗","level":2,"tag":"动作"},{"w":"扫地","level":2,"tag":"动作"},{"w":"拖地","level":2,"tag":"动作"},{"w":"洗衣服","level":2,"tag":"动作"},{"w":"晾衣服","level":2,"tag":"动作"},{"w":"叠被子","level":2,"tag":"动作"},{"w":"系鞋带","level":2,"tag":"动作"},{"w":"打伞","level":2,"tag":"动作"},{"w":"跳绳","level":2,"tag":"运动"},{"w":"踢毽子","level":2,"tag":"运动"},{"w":"打篮球","level":2,"tag":"运动"},{"w":"踢足球","level":2,"tag":"运动"},{"w":"打乒乓球","level":2,"tag":"运动"},{"w":"游泳","level":2,"tag":"运动"},{"w":"跑步","level":2,"tag":"运动"},{"w":"钓鱼","level":2,"tag":"动作"},{"w":"爬山","level":2,"tag":"运动"},{"w":"拍照","level":2,"tag":"动作"},{"w":"自拍","level":2,"tag":"动作"},{"w":"唱歌","level":2,"tag":"动作"},{"w":"跳舞","level":2,"tag":"动作"},{"w":"弹吉他","level":2,"tag":"动作"},{"w":"弹钢琴","level":2,"tag":"动作"},{"w":"打游戏","level":2,"tag":"动作"},{"w":"看手机","level":2,"tag":"动作"},{"w":"看书","level":2,"tag":"动作"},{"w":"写字","level":2,"tag":"动作"},{"w":"画画","level":2,"tag":"动作"},{"w":"打电话","level":2,"tag":"动作"},{"w":"遛狗","level":2,"tag":"动作"},{"w":"喂猫","level":2,"tag":"动作"},{"w":"种花","level":2,"tag":"动作"},{"w":"浇花","level":2,"tag":"动作"},{"w":"排队","level":2,"tag":"场景"},{"w":"考试","level":2,"tag":"场景"},{"w":"考试作弊","level":2,"tag":"动作"},{"w":"睡觉","level":2,"tag":"动作"},{"w":"做梦","level":2,"tag":"动作"},{"w":"起床","level":2,"tag":"动作"},{"w":"上班","level":2,"tag":"场景"},{"w":"下班","level":2,"tag":"场景"},{"w":"迟到","level":2,"tag":"场景"},{"w":"加班","level":2,"tag":"场景"},{"w":"熬夜","level":2,"tag":"动作"},{"w":"煮面","level":2,"tag":"动作"},{"w":"煎蛋","level":2,"tag":"动作"},{"w":"泡茶","level":2,"tag":"动作"},{"w":"喝咖啡","level":2,"tag":"动作"},{"w":"吃火锅","level":2,"tag":"动作"},{"w":"吃烧烤","level":2,"tag":"动作"},{"w":"旅游","level":2,"tag":"动作"},{"w":"购物","level":2,"tag":"场景"},{"w":"散步","level":2,"tag":"动作"},{"w":"打喷嚏","level":2,"tag":"动作"},{"w":"打哈欠","level":2,"tag":"动作"},{"w":"伸懒腰","level":2,"tag":"动作"},{"w":"滑雪","level":2,"tag":"运动"},{"w":"滑冰","level":2,"tag":"运动"},{"w":"冲浪","level":2,"tag":"运动"},{"w":"潜水","level":2,"tag":"运动"},{"w":"跳伞","level":2,"tag":"运动"},{"w":"蹦极","level":2,"tag":"运动"},{"w":"画蛇添足","level":3,"tag":"成语"},{"w":"守株待兔","level":3,"tag":"成语"},{"w":"掩耳盗铃","level":3,"tag":"成语"},{"w":"亡羊补牢","level":3,"tag":"成语"},{"w":"井底之蛙","level":3,"tag":"成语"},{"w":"对牛弹琴","level":3,"tag":"成语"},{"w":"杯弓蛇影","level":3,"tag":"成语"},{"w":"鹤立鸡群","level":3,"tag":"成语"},{"w":"鸡飞狗跳","level":3,"tag":"成语"},{"w":"虎头蛇尾","level":3,"tag":"成语"},{"w":"狼吞虎咽","level":3,"tag":"成语"},{"w":"龙飞凤舞","level":3,"tag":"成语"},{"w":"马到成功","level":3,"tag":"成语"},{"w":"鸟语花香","level":3,"tag":"成语"},{"w":"鱼目混珠","level":3,"tag":"成语"},{"w":"鼠目寸光","level":3,"tag":"成语"},{"w":"狐假虎威","level":3,"tag":"成语"},{"w":"叶公好龙","level":3,"tag":"成语"},{"w":"一箭双雕","level":3,"tag":"成语"},{"w":"三心二意","level":3,"tag":"成语"},{"w":"七上八下","level":3,"tag":"成语"},{"w":"九牛一毛","level":3,"tag":"成语"},{"w":"十全十美","level":3,"tag":"成语"},{"w":"百发百中","level":3,"tag":"成语"},{"w":"千军万马","level":3,"tag":"成语"},{"w":"鸡犬升天","level":3,"tag":"成语"},{"w":"画龙点睛","level":3,"tag":"成语"},{"w":"坐井观天","level":3,"tag":"成语"},{"w":"人山人海","level":3,"tag":"成语"},{"w":"惊天动地","level":3,"tag":"成语"},{"w":"emo了","level":3,"tag":"网络"},{"w":"破防了","level":3,"tag":"网络"},{"w":"躺平","level":3,"tag":"网络"},{"w":"内卷","level":3,"tag":"网络"},{"w":"摆烂","level":3,"tag":"网络"},{"w":"摸鱼","level":3,"tag":"网络"},{"w":"上头","level":3,"tag":"网络"},{"w":"无语","level":3,"tag":"网络"},{"w":"社死","level":3,"tag":"网络"},{"w":"社恐","level":3,"tag":"网络"},{"w":"吃瓜","level":3,"tag":"网络"},{"w":"自闭","level":3,"tag":"网络"},{"w":"凡尔赛","level":3,"tag":"网络"},{"w":"我酸了","level":3,"tag":"网络"},{"w":"划水","level":3,"tag":"网络"},{"w":"卷王","level":3,"tag":"网络"},{"w":"吐槽","level":3,"tag":"网络"},{"w":"点赞","level":3,"tag":"网络"},{"w":"关注","level":3,"tag":"网络"},{"w":"转发","level":3,"tag":"网络"},{"w":"加好友","level":3,"tag":"网络"},{"w":"发朋友圈","level":3,"tag":"网络"},{"w":"刷视频","level":3,"tag":"网络"},{"w":"弹幕","level":3,"tag":"网络"},{"w":"表情包","level":3,"tag":"网络"},{"w":"拍一拍","level":3,"tag":"网络"},{"w":"冒泡","level":3,"tag":"网络"},{"w":"告辞","level":3,"tag":"网络"},{"w":"厉害了","level":3,"tag":"网络"},{"w":"玩手机","level":2,"tag":"动作"},{"w":"戴耳机","level":2,"tag":"动作"},{"w":"晒太阳","level":2,"tag":"动作"},{"w":"吹蜡烛","level":2,"tag":"动作"},{"w":"放烟花","level":2,"tag":"场景"},{"w":"打雪仗","level":2,"tag":"运动"},{"w":"走马观花","level":3,"tag":"成语"}]},"tacit":{"version":1,"note":"默契大考验题库：type=who 的选项是两个玩家的名字（按参与者顺序）；type=pick 用自带的 options","questions":[{"q":"谁更可能先睡着？","type":"who"},{"q":"谁起床更磨蹭？","type":"who"},{"q":"谁更爱拍照？","type":"who"},{"q":"谁吃饭更慢？","type":"who"},{"q":"谁更怕冷？","type":"who"},{"q":"谁更容易迷路？","type":"who"},{"q":"谁更爱笑？","type":"who"},{"q":"谁更会安慰人？","type":"who"},{"q":"谁更爱收拾房间？","type":"who"},{"q":"谁更爱说「随便」？","type":"who"},{"q":"谁更容易被感动？","type":"who"},{"q":"谁更爱熬夜？","type":"who"},{"q":"谁更会挑餐厅？","type":"who"},{"q":"谁更爱撒娇？","type":"who"},{"q":"谁更像「小太阳」？","type":"who"},{"q":"谁更容易紧张？","type":"who"},{"q":"谁更爱看剧？","type":"who"},{"q":"谁更爱吃甜食？","type":"who"},{"q":"谁更爱唱歌？","type":"who"},{"q":"谁更会哄人开心？","type":"who"},{"q":"谁更容易心软？","type":"who"},{"q":"谁更爱逛街？","type":"who"},{"q":"谁更爱待在家？","type":"who"},{"q":"谁更记得住纪念日？","type":"who"},{"q":"周末更想怎么过？","type":"pick","options":["在家躺着","出门走走","见朋友","去旅行"]},{"q":"今晚吃什么？","type":"pick","options":["火锅","烧烤","家常菜","点外卖"]},{"q":"更喜欢的季节？","type":"pick","options":["春天","夏天","秋天","冬天"]},{"q":"心情不好时更想要什么？","type":"pick","options":["抱抱","安静待着","出门散心","一起吃好吃的"]},{"q":"更喜欢的饮料？","type":"pick","options":["奶茶","咖啡","果汁","白开水"]},{"q":"理想的约会是什么样？","type":"pick","options":["看电影","散步","逛展","待在家"]},{"q":"更喜欢的天气？","type":"pick","options":["大晴天","小雨","下雪","阴天"]},{"q":"收到什么会更开心？","type":"pick","options":["小礼物","一句夸奖","一起吃饭","一次旅行"]},{"q":"更喜欢的宠物？","type":"pick","options":["猫","狗","仓鼠","先不养"]},{"q":"放假更想去哪？","type":"pick","options":["海边","山里","大城市","家里"]},{"q":"更喜欢哪样甜品？","type":"pick","options":["蛋糕","冰淇淋","布丁","不太甜"]},{"q":"更喜欢的电影类型？","type":"pick","options":["喜剧","悬疑","动画","爱情"]},{"q":"更喜欢的音乐？","type":"pick","options":["流行","民谣","摇滚","纯音乐"]},{"q":"更喜欢的早餐？","type":"pick","options":["豆浆油条","面包牛奶","小笼包","不吃"]},{"q":"更喜欢的运动？","type":"pick","options":["跑步","游泳","羽毛球","躺着不动"]},{"q":"最想去的地方？","type":"pick","options":["日本","欧洲","云南","川西"]},{"q":"什么最能让你放松？","type":"pick","options":["听音乐","睡一觉","散散步","找人聊天"]},{"q":"更喜欢怎么表达关心？","type":"pick","options":["说出口","做顿饭","默默陪着","发条消息"]},{"q":"更喜欢哪种花？","type":"pick","options":["玫瑰","向日葵","满天星","郁金香"]},{"q":"更喜欢哪个颜色？","type":"pick","options":["粉色","蓝色","绿色","黄色"]},{"q":"更喜欢什么样的礼物？","type":"pick","options":["实用的","好看的","手作的","惊喜的"]},{"q":"生日更想怎么过？","type":"pick","options":["热闹聚会","两个人过","收礼物","当普通一天"]},{"q":"更喜欢哪种相处方式？","type":"pick","options":["每天聊天","见面最要紧","各忙各的","一起做点事"]},{"q":"更喜欢的作息？","type":"pick","options":["早睡早起","晚睡晚起","看情况","完全不固定"]}]},"memory":{"version":1,"note":"合作翻牌的牌面池：每局从一套里随机取 8 对（16 张），牌堆由房主生成、只把已经翻开的牌广播出去","sets":{"动物园":["🐱","🐶","🐰","🐼","🦊","🐷","🐸","🐵","🐨","🐯","🦁","🐮","🐔","🐧"],"甜品店":["🍰","🍩","🍪","🍬","🍭","🧁","🍦","🍫","🍮","🥧","🍯","🍡","🍓","🥐"],"小花园":["🌸","🌻","🌷","🍀","🌵","🌿","🍄","🌴","🌺","🌼","🪴","🎋","🌾","🪷"]}},"codraw":{"version":1,"note":"心有灵犀题库：两人用同一个题目各画一张，看看想到的是不是一回事","prompts":[{"p":"家","h":"画你心里的那个家"},{"p":"你笑起来的样子","h":"画出你记得的笑"},{"p":"我们的第一次见面","h":"画出你印象最深的那一幕"},{"p":"一起看过的天空","h":"那天的天是什么颜色？"},{"p":"最喜欢的季节","h":"画出那个季节的一件小事"},{"p":"你的拿手菜","h":"画得好吃就行"},{"p":"一只属于我们的宠物","h":"猫猫狗狗都可以"},{"p":"未来的小家","h":"你想象里的样子"},{"p":"今天的天气","h":"用画说出你今天的天"},{"p":"我们的歌","h":"画出听到它时想到的画面"},{"p":"你最喜欢的水果","h":"切开的样子也行"},{"p":"周末的我们","h":"画一件最想一起做的事"},{"p":"想一起去的地方","h":"海边？山里？"},{"p":"一个抱抱","h":"画出你想给的抱抱"},{"p":"一朵特别的花","h":"不用是玫瑰"},{"p":"下雨天的我们","h":"在做什么呢"},{"p":"你睡着的样子","h":"偷偷画一张"},{"p":"我们一起养的植物","h":"想象它长什么样"},{"p":"最喜欢的甜点","h":"画出来就甜了"},{"p":"你戴帽子的样子","h":"或者别的配饰"},{"p":"我们的餐桌","h":"摆了什么菜"},{"p":"一起看过的一部电影","h":"画一个记得的镜头"},{"p":"夜里的星星","h":"那晚的星空"},{"p":"你最喜欢的颜色","h":"用它画点什么"},{"p":"一起去爬山","h":"山顶有什么"},{"p":"海边的我们","h":"脚印、浪花、太阳"},{"p":"小时候的你","h":"猜猜小时候的样子"},{"p":"我们的行李箱","h":"要带什么走"},{"p":"一杯给对方的饮料","h":"加冰还是加奶"},{"p":"我们的未来","h":"画一个你期待的画面"}]}};
 /* ===== src/data.js ===== */
 /* ===== 词库（构建时由 build.mjs 注入，测试可替换） ===== */
 (function (root) {
@@ -325,6 +361,7 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
   if (injected && injected.draw) PN.BANKS.draw = injected.draw;
   if (injected && injected.tacit) PN.BANKS.tacit = injected.tacit;
   if (injected && injected.memory) PN.BANKS.memory = injected.memory;
+  if (injected && injected.codraw) PN.BANKS.codraw = injected.codraw;
   PN.Banks = {
     words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; },
     questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }
@@ -754,6 +791,301 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
   }
 
   PN.Wire = { V: V, pack: pack, isV4: isV4, Out: Out, place: place };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/canvas-ink.js ===== */
+/* ===== 可复用画布：一块画布上的「画 / 发 / 收 / 补洞 / 重绘」 =====
+ *
+ * 这是从你画我猜屏幕里抽出来的通用部分：坐标归一化(0..1000)、按 55ms 分块发送并带 i0、
+ * 接收按位落位、缺号向发送者要补发、只画「从 0 开始连续」的那一段。
+ *
+ * 为什么单独抽出来：新游戏《心有灵犀》要**两块画布同时画**（一人一块、揭晓前互不显示），
+ * 而 drawgame 那条路里塞满了线上修出来的细节，不适合为它改造。
+ * 于是这里做一份干净、带测试的通用实现给新游戏用；drawgame 保持原样不动。
+ *
+ * 关键约定（和 drawgame 一致，别改）：
+ *  - 坐标一律 /1000 归一化后存取，画的时候再乘回画布尺寸 —— 两端尺寸不同也不会画歪；
+ *  - 收到的点按 i0 写进稀疏数组，pts 中间可能有洞，画之前只取连续前缀（denseLen）；
+ *  - 笔迹按「作者」分块存（board = 发送者 id），所以一个人一块画布互不串。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  function clampPt(x, y) {
+    if (x < 0) x = 0; else if (x > 1000) x = 1000;
+    if (y < 0) y = 0; else if (y > 1000) y = 1000;
+    return [x, y];
+  }
+  function measureRect(cv) {
+    var r = cv.getBoundingClientRect();
+    return { left: r.left, top: r.top, width: r.width, height: r.height };
+  }
+  /** 只有「从 0 开始连续」的那一段能画：稀疏数组里的 undefined 会让 path 抛异常/断笔 */
+  function denseLen(st) {
+    var have = (st.have === undefined) ? st.pts.length : st.have;
+    return Math.max(0, Math.min(have, st.pts.length));
+  }
+
+  function create(opts) {
+    opts = opts || {};
+    var ui = opts.ui;
+    var stores = {};        // board -> { strokes: [], byId: {} }
+    var views = [];         // { cv, ctx, board, dpr, w, h, rect }
+    var style = { color: opts.color || '#6b5588', w: opts.w || 4 };
+    var writable = opts.writable !== false;
+    var seq = 0;
+    var lastAsk = 0;
+
+    function store(board) {
+      var s = stores[board];
+      if (!s) s = stores[board] = { strokes: [], byId: {} };
+      return s;
+    }
+    function curRound() { return typeof opts.round === 'function' ? opts.round() : (opts.round || 0); }
+    function myId() { return (ui && ui.pid) ? ui.pid() : null; }
+
+    /* ---------------- 绘制 ---------------- */
+    function styleCtx(c, st) {
+      c.strokeStyle = st.color; c.fillStyle = st.color; c.lineWidth = st.w;
+      c.lineCap = 'round'; c.lineJoin = 'round';
+    }
+    function ensureSize(v) {
+      var r = v.cv.getBoundingClientRect();
+      if (!r.width || !r.height || r.width < 20) return false;   // 还没挂载/不可见 → 别写坏
+      v.rect = { left: r.left, top: r.top, width: r.width, height: r.height };
+      var dpr = Math.min(root.devicePixelRatio || 1, 2);
+      var W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+      if (v.cv.width !== W || v.cv.height !== H) {   // 赋 width/height 会清空画布，只在真变了时动
+        v.cv.width = W; v.cv.height = H;
+        v.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      v.dpr = dpr; v.w = r.width; v.h = r.height;
+      return true;
+    }
+    function paintInto(v, st) {
+      var pts = st.pts, n = denseLen(st);
+      if (!n || !v.w) return;
+      var W = v.w, H = v.h, c = v.ctx;
+      styleCtx(c, st);
+      if (n === 1) {
+        c.beginPath();
+        c.arc(pts[0][0] / 1000 * W, pts[0][1] / 1000 * H, Math.max(1, st.w / 2), 0, 6.2832);
+        c.fill();
+        return;
+      }
+      c.beginPath();
+      c.moveTo(pts[0][0] / 1000 * W, pts[0][1] / 1000 * H);
+      for (var i = 1; i < n - 1; i++) {
+        var ax = pts[i][0] / 1000 * W, ay = pts[i][1] / 1000 * H;
+        var bx = pts[i + 1][0] / 1000 * W, by = pts[i + 1][1] / 1000 * H;
+        c.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+      }
+      c.lineTo(pts[n - 1][0] / 1000 * W, pts[n - 1][1] / 1000 * H);
+      c.stroke();
+    }
+    function paintTailInto(v, st, from) {
+      var pts = st.pts, n = denseLen(st);
+      if (n < 2 || !v.w) return;
+      var W = v.w, H = v.h, c = v.ctx;
+      styleCtx(c, st);
+      var start = Math.max(0, (from || 0) - 1);
+      c.beginPath();
+      c.moveTo(pts[start][0] / 1000 * W, pts[start][1] / 1000 * H);
+      for (var i = start + 1; i < n; i++) c.lineTo(pts[i][0] / 1000 * W, pts[i][1] / 1000 * H);
+      c.stroke();
+    }
+    function redrawView(v) {
+      if (!ensureSize(v)) return;
+      v.ctx.clearRect(0, 0, v.w, v.h);
+      var list = store(v.board).strokes;
+      for (var i = 0; i < list.length; i++) paintInto(v, list[i]);
+    }
+    function redraw() { for (var i = 0; i < views.length; i++) redrawView(views[i]); }
+
+    /* ---------------- 接收 ---------------- */
+    function placeInto(board, msg, from) {
+      var s = store(board);
+      var st = s.byId[msg.id];
+      if (!st) {
+        st = { id: msg.id, color: msg.color, w: msg.w, r: msg.r, pts: [], have: 0, owner: from };
+        s.byId[msg.id] = st; s.strokes.push(st);
+      }
+      var res = PN.Wire.place(st.pts, st.have || 0, msg);
+      st.have = res.have;
+      return { st: st, res: res };
+    }
+    /** 收到一笔（对端或自己）。自己的笔迹由本地绘制负责，这里只入库，避免重复画。 */
+    function onInk(msg, from) {
+      if (!msg || msg.t !== 'stroke' || !msg.s || !msg.s.length) return null;
+      var mine = (from === myId());
+      if (!mine) {
+        // 上一轮的残尾（换轮瞬间 flush 出来的）不要画到这一轮
+        if (msg.r && curRound() && msg.r !== curRound()) return null;
+      }
+      var rec = placeInto(from, msg, from);
+      for (var i = 0; i < views.length; i++) {
+        var v = views[i];
+        if (v.board !== from) continue;
+        if (!ensureSize(v)) continue;
+        if (mine) paintTailInto(v, rec.st, rec.res.first);   // 一般走不到：本地已画
+        else redrawView(v);                                   // 对端：只在显示了这块画布时才画
+      }
+      return rec;
+    }
+    /** 缺号自愈：发现某笔里有洞就向作者要一次补发（每笔最多 12 次，400ms 冷却） */
+    function sweep() {
+      if (!ui || !ui.room || !ui.room.askInk) return 0;
+      var now = Date.now(), asked = 0;
+      if (now - lastAsk < 400) return 0;
+      for (var board in stores) {
+        if (!Object.prototype.hasOwnProperty.call(stores, board)) continue;
+        var list = stores[board].strokes;
+        for (var i = 0; i < list.length; i++) {
+          var s = list[i];
+          if (!s || !s.pts || !s.pts.length) continue;
+          var hole = -1;
+          for (var q = (s.have || 0); q < s.pts.length; q++) if (s.pts[q] === undefined) { hole = q; break; }
+          if (hole < 0) continue;
+          if ((s.askTries || 0) >= 12) continue;
+          s.askTries = (s.askTries || 0) + 1;
+          lastAsk = now;
+          ui.room.askInk(board, s.id, s.have || 0);
+          asked++;
+          break;   // 一次只要一笔，下一轮再要别的
+        }
+        if (asked) break;
+      }
+      return asked;
+    }
+
+    /* ---------------- 发送 ---------------- */
+    function bindSend(cv, board) {
+      var drawing = false, curId = null, sent = 0, lastFlush = 0, rect = null, lastPt = null;
+      function flush(force) {
+        var st = store(board).byId[curId];
+        if (!st) return;
+        var now = Date.now();
+        if (!force && now - lastFlush < 55) return;
+        if (sent >= st.pts.length) return;
+        lastFlush = now;
+        var i0 = sent;
+        var chunk = st.pts.slice(i0);
+        sent = st.pts.length;
+        // 打包/补发缓冲都在 room.sendInk 里做（它记得最近 4 笔），这里只构造语义消息
+        if (ui && ui.sendInk) ui.sendInk({ t: 'stroke', id: st.id, r: st.r, color: st.color, w: st.w, i0: i0, s: chunk });
+      }
+      function down(e) {
+        if (!writable) return;
+        if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;   // 只认左键
+        e.preventDefault();
+        try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+        rect = measureRect(cv);
+        drawing = true;
+        var p = clampPt((e.clientX - rect.left) / rect.width * 1000, (e.clientY - rect.top) / rect.height * 1000);
+        var id = 'c' + (++seq) + 'r' + curRound();
+        var s = store(board);
+        var st = { id: id, color: style.color, w: style.w, r: curRound(), pts: [p], have: 1, owner: myId() };
+        s.byId[id] = st; s.strokes.push(st);
+        curId = id; sent = 0; lastFlush = Date.now(); lastPt = p;
+        for (var i = 0; i < views.length; i++) if (views[i].board === board) { ensureSize(views[i]); paintInto(views[i], st); }
+      }
+      function move(e) {
+        if (!drawing || !writable) return;
+        e.preventDefault();
+        var evts = null;
+        try { if (e.getCoalescedEvents) evts = e.getCoalescedEvents(); } catch (err) {}
+        if (!evts || !evts.length) evts = [e];   // 规范允许返回空列表；空 = 丢点，必须回退
+        var st = store(board).byId[curId];
+        if (!st) return;
+        for (var i = 0; i < evts.length; i++) {
+          var p = clampPt((evts[i].clientX - rect.left) / rect.width * 1000, (evts[i].clientY - rect.top) / rect.height * 1000);
+          if (lastPt && p[0] === lastPt[0] && p[1] === lastPt[1]) continue;
+          st.pts.push(p); lastPt = p;
+        }
+        st.have = st.pts.length;
+        for (var j = 0; j < views.length; j++) if (views[j].board === board) paintTailInto(views[j], st, st.pts.length - evts.length);
+        flush(false);
+      }
+      function up(e) {
+        if (!drawing) return;
+        drawing = false;
+        if (e && e.preventDefault) e.preventDefault();
+        var st = store(board).byId[curId];
+        if (st) {
+          if (st.pts.length === 1 && rect) {         // 单击点：补一个极近的点，别只留一个孤点
+            st.pts.push([st.pts[0][0], st.pts[0][1]]);
+            st.have = st.pts.length;
+            for (var i = 0; i < views.length; i++) if (views[i].board === board) paintInto(views[i], st);
+          }
+          flush(true);
+        }
+        curId = null;
+      }
+      cv.addEventListener('pointerdown', down);
+      cv.addEventListener('pointermove', move);
+      cv.addEventListener('pointerup', up);
+      cv.addEventListener('pointercancel', up);
+      cv.addEventListener('pointerleave', function (e) {
+        if (!drawing) return;
+        var held = typeof cv.hasPointerCapture === 'function' && cv.hasPointerCapture(e.pointerId);
+        if (!held) up(e);   // 拖到画布外：只要还持有捕获就继续画，别把笔画截断
+      });
+      cv.addEventListener('contextmenu', function (e) { if (writable) e.preventDefault(); });
+      return { flush: function () { flush(true); } };
+    }
+
+    /* ---------------- 对外接口 ---------------- */
+    return {
+      bindSend: bindSend,
+      addView: function (cv, board) {
+        var v = { cv: cv, ctx: cv.getContext('2d'), board: board };
+        views.push(v);
+        redrawView(v);
+        return v;
+      },
+      removeView: function (cv) {
+        for (var i = views.length - 1; i >= 0; i--) if (views[i].cv === cv) views.splice(i, 1);
+      },
+      clearViews: function () { views = []; },
+      onInk: onInk,
+      sweep: sweep,
+      redraw: redraw,
+      /** 用回放替换某块画布（刷新/中途加入）。segments: [{id,i0,r,color,w,s}] */
+      replay: function (board, segments) {
+        var s = store(board);
+        s.strokes = []; s.byId = {};
+        if (!segments || !segments.length) { redraw(); return false; }
+        for (var i = 0; i < segments.length; i++) {
+          var ch = segments[i];
+          if (!ch || !ch.s) continue;
+          var st = s.byId[ch.id];
+          if (!st) { st = { id: ch.id, color: ch.color, w: ch.w, r: ch.r, pts: [], have: 0, owner: board }; s.byId[ch.id] = st; s.strokes.push(st); }
+          for (var k = 0; k < ch.s.length; k++) st.pts[(ch.i0 || 0) + k] = ch.s[k];
+        }
+        // 稀疏数组压紧：画布只认连续点（补发补进来的块顺序不保证）
+        for (var j = 0; j < s.strokes.length; j++) {
+          var t = s.strokes[j], dense = [];
+          for (var q = 0; q < t.pts.length; q++) if (t.pts[q] !== undefined) dense.push(t.pts[q]);
+          t.pts = dense; t.have = dense.length;
+        }
+        redraw();
+        return true;
+      },
+      strokes: function (board) { return store(board).strokes; },
+      hasInk: function (board) {
+        var l = store(board).strokes;
+        for (var i = 0; i < l.length; i++) if (l[i].pts && l[i].pts.length) return true;
+        return false;
+      },
+      count: function (board) { return store(board).strokes.length; },
+      reset: function () { stores = {}; views.forEach(function (v) { if (ensureSize(v)) v.ctx.clearRect(0, 0, v.w, v.h); }); },
+      setWritable: function (b) { writable = !!b; },
+      isWritable: function () { return writable; },
+      setStyle: function (c, w) { if (c) style.color = c; if (w) style.w = w; }
+    };
+  }
+
+  PN.Ink = { create: create, denseLen: denseLen };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ===== src/room.js ===== */
@@ -1491,6 +1823,269 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
   Host.prototype.destroy = function () { this.clearAll(); };
 
   PN.Host = Host;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/games/codraw.js ===== */
+/* ===== 心有灵犀：同一个题目，两个人各自画一张，看看想到的是不是一回事 =====
+ *
+ * 和「你画我猜」的区别：
+ *  - 两个人**同时**画，一人一块画布；揭晓前谁都不显示对方的（这才叫灵犀）；
+ *  - 笔迹按「作者」分开记录（board = 发送者 id），房主存两份，用于刷新/中途加入回放；
+ *  - 揭晓时两人都能看到两张画，并且互相表态（像 / 不太像）—— 这一下是"互相回应"的关键。
+ *
+ * 笔迹本身走的是广播的墨迹通道（和画猜同一条）：协议上没做私密，
+ * 但界面在揭晓前不显示对方的画。这是刻意取舍：为一次"不看"新开一条私密墨迹通道不划算。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var ID = 'codraw';
+  var NAME = '心有灵犀';
+  var EMOJI = '🎐';
+  var DEF_SEC = 60;      // 每题作画时间
+  var REVEAL_MS = 9000;  // 都表态后停留多久进下一题
+  var RATE_SEC = 30;     // 没人表态的兜底时间
+
+  // ----- 闭包：笔迹和候选题目都不进 state（state 里放不下，也不该放）-----
+  var _pv = { boards: {}, used: [] };
+
+  function bank() { return (PN.BANKS.codraw && PN.BANKS.codraw.prompts) || []; }
+
+  function pickPrompt() {
+    var all = bank();
+    if (!all.length) return { p: '我们的样子', h: '随便画点什么' };
+    var pool = all.filter(function (x) { return _pv.used.indexOf(x.p) < 0; });
+    if (!pool.length) { _pv.used = []; pool = all.slice(); }
+    var x = pool[Math.floor(Math.random() * pool.length)];
+    _pv.used.push(x.p);
+    return x;
+  }
+
+  function participants(host) { return (host.g().players || []).filter(function (id) { return !!host.player(id); }); }
+  function onlineParticipants(host) {
+    return participants(host).filter(function (id) { var p = host.player(id); return p && p.online; });
+  }
+
+  /** 给某人拼一份回放：一般只给自己的画布，揭晓阶段两张都给（要并排展示） */
+  function replayFor(host, pid, both) {
+    var g = host.g();
+    var out = { round: g.round };
+    var boards = {};
+    (g.players || []).forEach(function (id) {
+      if (!both && id !== pid) return;
+      var b = _pv.boards[id];
+      if (b && b.length) boards[id] = b;
+    });
+    if (Object.keys(boards).length) out.boards = boards;
+    return out;
+  }
+
+  function armDrawTimer(host, ms) {
+    host.clearTimer('codraw_draw');
+    host.after('codraw_draw', ms, function () {
+      if (host.g().phase === 'draw') toReveal(host);
+    });
+  }
+
+  function startRound(host) {
+    var g = host.g();
+    var q = pickPrompt();
+    _pv.boards = {};
+    g.phase = 'draw';
+    g.prompt = q.p;
+    g.hint = q.h || '不用画得像，画出你想到的第一个画面就行';
+    g.ready = {};
+    g.rated = {};
+    g.reveal = null;
+    g.deadline = host.now() + (g.sec || DEF_SEC) * 1000;
+    armDrawTimer(host, (g.sec || DEF_SEC) * 1000 + 400);
+    host.toast('🎐 第 ' + g.round + ' 题：' + q.p + '（两个人同时画，先别偷看对方）', 'good');
+    host.emit();
+  }
+
+  function toReveal(host) {
+    var g = host.g();
+    host.clearTimer('codraw_draw');
+    host.clearTimer('codraw_reveal');
+    g.phase = 'reveal';
+    g.deadline = host.now() + RATE_SEC * 1000;
+    g.reveal = { match: false, list: [] };
+    g.rated = {};
+    // 谁没画完也照常揭晓：本来就不是比赛
+    host.event({ t: 'codraw_reveal' });
+    host.emit();
+    host.after('codraw_reveal', RATE_SEC * 1000, function () {
+      var g2 = host.g();
+      if (g2.phase === 'reveal') settleRound(host, true);
+    });
+  }
+
+  /** 一轮结束：公布两人的表态，然后按停留时间进下一题 */
+  function settleRound(host, timedOut) {
+    var g = host.g();
+    host.clearTimer('codraw_reveal');
+    var ps = participants(host);
+    var list = ps.map(function (id) {
+      var p = host.player(id);
+      var v = g.rated[id];
+      return { id: id, name: p ? p.name : '?', emoji: p ? p.emoji : '🙂', v: (v === 1 || v === -1) ? v : 0 };
+    });
+    var both = list.length >= 2 && list.every(function (x) { return x.v === 1; });
+    g.reveal = { match: both, list: list, timedOut: !!timedOut };
+    if (both) {
+      g.matched = (g.matched || 0) + 1;
+      ps.forEach(function (id) { host.addScore(id, 2); });
+      host.toast('心有灵犀！你们想到一块去了 💞', 'good');
+      host.event({ t: 'codraw_match' });
+    } else {
+      host.event({ t: 'codraw_diff' });
+    }
+    host.emit();
+    host.after('codraw_next', REVEAL_MS, function () {
+      var g2 = host.g();
+      if (g2.phase !== 'reveal') return;
+      if (g2.round >= g2.total) finish(host);
+      else { g2.round++; startRound(host); }
+    });
+  }
+
+  function finish(host) {
+    var g = host.g();
+    host.clearTimer('codraw_draw');
+    host.clearTimer('codraw_reveal');
+    host.clearTimer('codraw_next');
+    var total = g.total || 3;
+    var matched = g.matched || 0;
+    g.phase = 'over';
+    g.deadline = 0;
+    g.summary = { matched: matched, total: total, percent: Math.round(matched / total * 100) };
+    if (matched >= total) host.toast('每一题都想到一块去了，这还得了 ✨', 'good');
+    host.event({
+      t: 'gameover',
+      players: participants(host).map(function (id) {
+        var p = host.player(id);
+        return { id: id, name: p ? p.name : '?', score: p ? p.score : 0 };
+      })
+    });
+    host.emit();
+  }
+
+  var game = {
+    id: ID,
+    name: NAME,
+    emoji: EMOJI,
+    blurb: '同一个题目各自画一张，揭晓才知道想到的是不是一回事 🎐',
+    minPlayers: 2,
+    maxPlayers: 2,
+
+    init: function (host) {
+      var s = host.state;
+      var settings = s.settings.codraw || (s.settings.codraw = { rounds: 3, sec: DEF_SEC });
+      s.phase = 'round';
+      var ps = host.onlinePlayers().slice(0, 2);
+      if (ps.length < 2) { host.toast('心有灵犀要两个人才能玩哦', 'info'); host.goLobby(); return; }
+
+      _pv = { boards: {}, used: [] };
+      s.g = {
+        round: 1,
+        total: Math.max(2, Math.min(5, Number(settings.rounds) || 3)),
+        sec: Math.max(30, Math.min(120, Number(settings.sec) || DEF_SEC)),
+        matched: 0,
+        players: ps.map(function (p) { return p.id; }),
+        phase: 'draw',
+        prompt: '',
+        hint: '',
+        deadline: 0,
+        ready: {},
+        rated: {},
+        reveal: null,
+        summary: null,
+        startedAt: host.now()
+      };
+      host.emit();
+      startRound(host);
+    },
+
+    action: function (host, action, from) {
+      var g = host.g();
+      if (!g) return;
+      if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
+      if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
+
+      // 画好了（提前交卷）：两个人都点了就立刻揭晓，不用干等倒计时
+      if (action.t === 'ready') {
+        if (g.phase !== 'draw' || participants(host).indexOf(from) < 0) return;
+        g.ready[from] = true;
+        host.emit();
+        var on = onlineParticipants(host);
+        if (on.length >= 2 && on.every(function (id) { return g.ready[id]; })) toReveal(host);
+        return;
+      }
+
+      // 表态：像 / 不太像
+      if (action.t === 'rate') {
+        if (g.phase !== 'reveal' || participants(host).indexOf(from) < 0) return;
+        if (g.rated[from] !== undefined) return;
+        var v = Number(action.v);
+        if (v !== 1 && v !== -1) return;
+        g.rated[from] = v;
+        host.emit();
+        var on2 = onlineParticipants(host);
+        if (on2.length >= 2 && on2.every(function (id) { return g.rated[id] !== undefined; })) settleRound(host, false);
+        return;
+      }
+
+      // 中转/刷新：把自己的画布补回去（揭晓阶段两张都要）
+      if (action.t === '_joined' || action.t === 'hi' || action.t === 'need_replay') {
+        if (!from || participants(host).indexOf(from) < 0) return;
+        var pay = replayFor(host, from, g.phase === 'reveal' || g.phase === 'over');
+        if (pay.boards) host.sendSecret(from, pay);
+        return;
+      }
+    },
+
+    /** 房主旁听墨迹：按作者分开留一份回放 */
+    onInk: function (host, msg, from) {
+      var g = host.g();
+      if (!g || g.phase !== 'draw' || !from) return;
+      if ((g.players || []).indexOf(from) < 0) return;
+      if (msg.t === 'clear') { _pv.boards[from] = []; return; }
+      if (msg.t !== 'stroke' || !msg.s || !msg.s.length) return;
+      var b = _pv.boards[from] || (_pv.boards[from] = []);
+      b.push({ id: msg.id, i0: msg.i0 || 0, r: msg.r, color: msg.color, w: msg.w, s: msg.s });
+      while (b.length > 900) b.shift();
+    },
+
+    /** 揭晓阶段也要能收到迟到的笔迹（有人手慢，最后一块揭晓后才到）*/
+    resume: function (host) {
+      var g = host.g();
+      if (!g) return;
+      var left = Math.max(0, (g.deadline || 0) - host.now());
+      if (g.phase === 'draw') armDrawTimer(host, left + 400);
+      else if (g.phase === 'reveal') {
+        // 新房主的 recorded 笔迹是空的：向两位玩家各要一次回放
+        host.event({ t: 'recover_ink', round: g.round });
+        participants(host).forEach(function (id) { if (id !== host.state.hostId) host.requestSecret(id, { recover: true, round: g.round }); });
+        host.after('codraw_reveal', Math.max(1500, left), function () {
+          var g2 = host.g();
+          if (g2.phase === 'reveal') settleRound(host, true);
+        });
+      }
+      host.emit();
+    },
+
+    onLeave: function (host, id) {
+      var g = host.g();
+      if (!g || g.phase === 'over') return;
+      if ((g.players || []).indexOf(id) < 0) return;
+      if (onlineParticipants(host).length < 2) {
+        host.toast('对方离开了，这一局先到这儿～', 'info');
+        finish(host);
+      }
+    }
+  };
+
+  PN.games[ID] = game;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ===== src/games/drawgame.js ===== */
@@ -3378,6 +3973,246 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
+/* ===== src/screens-codraw.js ===== */
+/* ===== 心有灵犀 屏幕 =====
+ * 作画阶段：一块大画布（只有自己的画）；揭晓阶段：并排两块（我 / TA）+ 互相表态。
+ * 画布用 src/canvas-ink.js 的通用实现，两块画布按作者分开，互不串。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var esc = PN.esc;
+
+  var COLORS = ['#6b5588', '#ff8fb8', '#63c7e8', '#7fd6a6', '#ffb95e'];
+  var WIDTHS = [4, 9];
+  var local = { ink: null, round: 0, phase: '', style: { color: COLORS[0], w: 4 }, asked: {}, seen: {} };
+
+  function inkFor(ui) {
+    if (!local.ink) {
+      local.ink = PN.Ink.create({
+        ui: ui,
+        color: local.style.color, w: local.style.w,
+        round: function () { return local.round; }
+      });
+    }
+    return local.ink;
+  }
+  function partnerOf(state, meId) {
+    var ps = (state.g && state.g.players) || [];
+    for (var i = 0; i < ps.length; i++) if (ps[i] !== meId) return ps[i];
+    return null;
+  }
+
+  /* 缺号自愈 + 整段缺失自愈：作画阶段丢了一段没关系（反正只给自己看），
+     但**揭晓时对方那块画布一张都没有**就得主动要一次，否则并排展示会空一半。 */
+  if (typeof setInterval === 'function') {
+    setInterval(function () {
+      var ui = local.ui;
+      if (!ui || !local.ink || !ui.state || !ui.state.g) return;
+      var g = ui.state.g;
+      local.ink.sweep();
+      if (g.phase !== 'reveal' || !g.prompt) return;
+      var me = ui.pid ? ui.pid() : null;
+      var other = partnerOf(ui.state, me);
+      if (!other) return;
+      if (local.ink.hasInk(other)) return;                    // 对方的画在这儿了
+      local.asked[g.round] = local.asked[g.round] || 0;
+      if (local.asked[g.round] >= 3) return;
+      if (Date.now() - (local.askedAt || 0) < 2500) return;
+      local.asked[g.round]++;
+      local.askedAt = Date.now();
+      ui.send({ t: 'need_replay' });
+    }, 1200);
+  }
+
+  PN.screens = PN.screens || {};
+  PN.screens.codraw = {
+    name: 'codraw',
+    render: function (state, secret) {
+      var ui = this;
+      var C = PN.gameCommon;
+      var g = state.g || {};
+      var me = ui.pid();
+      var other = partnerOf(state, me);
+      var otherP = other ? ui.p(other) : null;
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+
+      // 换回合：清空两块画布，避免上一题的画串到这一题
+      if (local.round !== g.round) { local.round = g.round; local.asked = {}; if (local.ink) local.ink.reset(); }
+
+      var phaseText = g.phase === 'draw' ? (g.ready && g.ready[me] ? '你画好了' : '一起画')
+        : (g.phase === 'reveal' ? '揭晓' : '本局结束');
+      var extra = g.phase === 'draw' && g.deadline ? C.deadlineChip(g.deadline) : '';
+      wrap.appendChild(ui.h(C.gameHeader(ui, state, '🎐 心有灵犀',
+        '第 ' + (g.round || 1) + '/' + (g.total || 3) + ' 题 · ' + phaseText, extra)));
+
+      var body = ui.el('div');
+      var ink = inkFor(ui);
+      ink.setWritable(g.phase === 'draw' && !(g.ready && g.ready[me]));
+      ink.setStyle(local.style.color, local.style.w);
+      ink.clearViews();          // DOM 每次重建，视图要重新挂
+
+      /* ---------------- 作画 ---------------- */
+      if (g.phase === 'draw') {
+        body.appendChild(ui.h('<div class="card center cd-prompt"><div class="t">' + esc(g.prompt || '') + '</div>' +
+          '<div class="muted mt8">' + esc(g.hint || '') + '</div></div>'));
+
+        var stage = ui.el('div', 'cd-stage');
+        var cv = ui.el('canvas', 'cd-cv');
+        stage.appendChild(cv);
+        body.appendChild(stage);
+        local.ui = ui;
+        body.appendChild(ui.h('<div class="cd-tip">🖌️ 在画布上画 · 揭晓前看不到对方的画</div>'));
+
+        var tools = ui.el('div', 'cd-tools');
+        COLORS.forEach(function (col) {
+          var b = ui.el('button', 'cd-dot' + (local.style.color === col ? ' on' : ''));
+          b.style.background = col;
+          b.addEventListener('click', function () {
+            local.style.color = col;
+            if (local.ink) local.ink.setStyle(col, local.style.w);
+            // 就地换高亮：不走整页重渲，免得重建 DOM 把正在画的那一笔打断
+            tools.querySelectorAll('.cd-dot').forEach(function (x) { x.classList.remove('on'); });
+            b.classList.add('on');
+          });
+          tools.appendChild(b);
+        });
+        WIDTHS.forEach(function (w) {
+          var b = ui.el('button', 'cd-wide' + (local.style.w === w ? ' on' : ''));
+          b.innerHTML = '<i style="height:' + Math.max(2, Math.round(w / 2)) + 'px"></i>';
+          b.addEventListener('click', function () {
+            local.style.w = w;
+            if (local.ink) local.ink.setStyle(local.style.color, w);
+            tools.querySelectorAll('.cd-wide').forEach(function (x) { x.classList.remove('on'); });
+            b.classList.add('on');
+          });
+          tools.appendChild(b);
+        });
+        body.appendChild(tools);
+
+        var ready = !!(g.ready && g.ready[me]);
+        var otherReady = !!(other && g.ready && g.ready[other]);
+        var rbtn = ui.el('button', 'btn ' + (ready ? 'ghost' : 'primary') + ' block mt8', ready ? '✅ 已经画好了' : '✏️ 我画好了');
+        rbtn.setAttribute('data-ready', '1');
+        if (!ready) rbtn.addEventListener('click', function () { ui.send({ t: 'ready' }); });
+        rbtn.disabled = ready;
+        body.appendChild(rbtn);
+        body.appendChild(ui.h('<div class="muted center mt8">' +
+          (ready ? (otherReady ? '两个人都画好了，马上揭晓～' : '等对方画完…（TA 随时可能点「我画好了」）')
+                 : (otherReady ? '对方已经画好了，还在等你 ✨' : '两个人都在画，不许偷看哦')) + '</div>'));
+
+        // 画布要等挂进文档、量得到尺寸之后再挂：① 绑定画笔事件 ② 挂渲染视图
+        setTimeout(function () {
+          ink.bindSend(cv, me);
+          ink.addView(cv, me);
+          ink.redraw();
+        }, 0);
+      /* ---------------- 揭晓 ---------------- */
+      } else if (g.phase === 'reveal') {
+        body.appendChild(ui.h('<div class="card center cd-prompt"><div class="t">' + esc(g.prompt || '') + '</div>' +
+          '<div class="muted mt8">' + esc(g.hint || '') + '</div></div>'));
+
+        var row = ui.el('div', 'cd-reveal');
+        var pair = [[me, '我画的'], [other, otherP ? otherP.name + ' 画的' : 'TA 画的']];
+        var cvs = [];
+        pair.forEach(function (pr) {
+          var one = ui.el('div', 'cd-one');
+          var c = ui.el('canvas', 'cd-sv');
+          one.appendChild(c);
+          one.appendChild(ui.h('<div class="cd-lbl">' + esc(pr[1]) + '</div>'));
+          row.appendChild(one);
+          cvs.push([c, pr[0]]);
+        });
+        body.appendChild(row);
+        setTimeout(function () {
+          cvs.forEach(function (p) { if (p[1]) ink.addView(p[0], p[1]); });
+          ink.redraw();
+        }, 0);
+
+        var rev = g.reveal || {};
+        var settled = g.reveal && ((rev.list && rev.list.length >= 2) ? true : false) && g.phase === 'reveal' && g.settled !== false;
+        var mine = g.rated ? g.rated[me] : undefined;
+        var otherRate = other && g.rated ? g.rated[other] : undefined;
+        var bothRated = mine !== undefined && otherRate !== undefined;
+        if (!bothRated) {
+          var rate = ui.el('div', 'cd-rate');
+          var ok = ui.el('button', 'btn primary' + (mine === 1 ? ' on' : ''), '💞 想到一块去了');
+          var no = ui.el('button', 'btn ghost' + (mine === -1 ? ' on' : ''), '🌈 各画各的');
+          ok.setAttribute('data-rate', '1'); no.setAttribute('data-rate', '-1');
+          if (mine === undefined) {
+            ok.addEventListener('click', function () { ui.send({ t: 'rate', v: 1 }); });
+            no.addEventListener('click', function () { ui.send({ t: 'rate', v: -1 }); });
+          } else { ok.disabled = true; no.disabled = true; }
+          rate.appendChild(ok); rate.appendChild(no);
+          body.appendChild(rate);
+          body.appendChild(ui.h('<div class="muted center mt8">' + (mine === undefined ? '看着两张画，选一个你的感觉' : '已经表态，等对方也看一眼…') + '</div>'));
+        } else {
+          var list = rev.list || [];
+          var m = rev.match;
+          // 注意：ui.h() 只取第一个根元素 —— 多个并列根会被静默丢掉，
+          // 所以这里必须包一层，否则表态那几行永远渲染不出来（浏览器用例抓到的坑）。
+          var html = '<div class="cd-res"><div class="cd-verdict ' + (m ? 'ok' : 'no') + '">' +
+            (m ? '心有灵犀 💞 两个人都觉得像' : '各画各的也挺好 🌈 下次接着练') + '</div><div class="cd-rt">';
+          list.forEach(function (x) {
+            html += '<div class="cd-r"><span class="em">' + esc(x.emoji || '🙂') + '</span>' + esc(x.name) +
+              '<b class="' + (x.v === 1 ? 'yes' : 'noo') + '">' + (x.v === 1 ? '想到一块了' : x.v === -1 ? '各画各的' : '没表态') + '</b></div>';
+          });
+          html += '</div></div>';
+          body.appendChild(ui.h(html));
+        }
+      /* ---------------- 结算 ---------------- */
+      } else {
+        var s = g.summary || { matched: 0, total: 0, percent: 0 };
+        body.appendChild(ui.h('<div class="card center cd-hero">' +
+          '<div class="cd-percent">' + s.percent + '<span>%</span></div>' +
+          '<div class="cd-word">灵犀指数</div>' +
+          '<div class="muted mt8">' + s.total + ' 题里，有 <b>' + s.matched + '</b> 题你们想到了一块</div>' +
+          '<div class="cd-quote">' + (s.percent >= 100 ? '这不就是同一个脑子吗 ✨' : s.percent >= 60 ? '默契得很舒服 💞' : s.percent >= 30 ? '各有各的有趣 🌷' : '两个有趣的灵魂 ☁️') + '</div>' +
+          '</div>'));
+        body.appendChild(ui.h(C.scoreboard(state)));
+        var btns = ui.h(C.overButtons(ui, 'codraw'));
+        body.appendChild(btns);
+        PN.wireOver(btns, ui);
+      }
+
+      wrap.appendChild(body);
+      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
+      return wrap;
+    },
+
+    /* 墨迹：分块到达 → 入库 + 该显示的时候显示 */
+    onPeer: function (msg, from) {
+      var ui = this;
+      if (!local.ink) return;
+      local.ink.onInk(msg, from);
+    },
+
+    /* 私密回放：换回合/刷新/换主时房主把画布补回来 */
+    onPrivate: function (obj) {
+      if (!local.ink || !obj || !obj.boards) return;
+      Object.keys(obj.boards).forEach(function (pid) {
+        local.ink.replay(pid, obj.boards[pid]);
+      });
+    },
+
+    /* 整段回放的事件通知（新房主向各端要上报时） */
+    onRecover: function () {
+      if (!local.ink) return;
+      var ui = local.ui;
+      var me = ui && ui.pid ? ui.pid() : null;
+      // 把自己画布上的笔迹重发一遍（走墨迹通道的自发自收，房主会记下来）
+      var list = me ? local.ink.strokes(me) : [];
+      for (var i = 0; i < list.length; i++) {
+        var st = list[i];
+        if (!st || !st.pts || !st.pts.length) continue;
+        var n = (st.have === undefined) ? st.pts.length : Math.min(st.have, st.pts.length);
+        if (!n) continue;
+        ui.sendInk({ t: 'stroke', id: st.id, r: st.r, color: st.color, w: st.w, i0: 0, s: st.pts.slice(0, n) });
+      }
+    }
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
 /* ===== src/ui.js ===== */
 /* ===== UI 核心：落地页 + 大厅 + 通用渲染骨架 ===== */
 (function (root) {
@@ -3877,7 +4712,10 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'memory') {
+    if (mode === 'codraw') {
+      rows.push(seg('题数', 'rounds', [[2, '2 题'], [3, '3 题'], [4, '4 题']]));
+      rows.push(seg('每题作画', 'sec', [[45, '45 秒'], [60, '60 秒'], [90, '90 秒']]));
+    } else if (mode === 'memory') {
       rows.push(seg('对数', 'pairs', [[4, '4 对'], [6, '6 对'], [8, '8 对']]));
     } else if (mode === 'tacit') {
       rows.push(seg('题目数量', 'rounds', [[6, '6'], [8, '8'], [10, '10'], [12, '12']]));

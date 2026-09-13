@@ -8,6 +8,7 @@
   if (injected && injected.draw) PN.BANKS.draw = injected.draw;
   if (injected && injected.tacit) PN.BANKS.tacit = injected.tacit;
   if (injected && injected.memory) PN.BANKS.memory = injected.memory;
+  if (injected && injected.codraw) PN.BANKS.codraw = injected.codraw;
   PN.Banks = {
     words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; },
     questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }
