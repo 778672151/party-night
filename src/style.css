@@ -335,3 +335,23 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .cd-percent span{font-size:24px;margin-left:2px}
 .cd-word{font-size:13px;color:var(--ink2);margin-top:4px;letter-spacing:2px}
 .cd-quote{margin-top:12px;font-size:16px;font-weight:800}
+
+/* ===== 五子棋 ===== */
+.gm-turn{display:flex;flex-direction:column;align-items:center;gap:2px;margin:2px 0 12px;font-size:14px;color:var(--ink2);
+  padding:10px;border-radius:var(--r2);background:var(--card2);border:2px dashed var(--line)}
+.gm-turn b{font-size:16px;color:var(--ink)}
+.gm-turn.mine{background:linear-gradient(160deg,#fff0f6,#ffe3ef);border-color:var(--acc);border-style:solid;
+  animation:qpop .34s var(--spring) both}
+.gm-turn.mine b{color:#d1578f}
+.gm-stage{max-width:clamp(240px,calc(100vh - 400px),460px);margin:0 auto}
+.gm-cv{display:block;width:100%;aspect-ratio:1/1;border-radius:22px;border:2.5px solid var(--stroke);
+  box-shadow:var(--soft);touch-action:manipulation;cursor:pointer}
+.gm-ops{display:flex;justify-content:center;gap:10px;margin-top:10px}
+.gm-pending{margin-top:12px;text-align:center;font-size:14px;font-weight:800;color:var(--ink2);
+  padding:10px;border-radius:var(--r2);background:var(--bg2);border:2.5px dashed var(--line)}
+.gm-ask{margin-top:12px;padding:12px;border-radius:var(--r2);background:linear-gradient(160deg,#fff0f6,#ffe3ef);
+  border:2.5px solid var(--acc);animation:qpop .34s var(--spring) both;display:flex;flex-direction:column;gap:10px;align-items:center}
+.gm-ask-txt{font-size:14px;font-weight:800}
+.gm-hero{padding:24px 16px}
+.gm-result{font-size:28px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
+  animation:qpop .5s var(--spring) both}

@@ -21,6 +21,7 @@ const scripts = [
   'src/screens-tacit.js',
   'src/screens-memory.js',
   'src/screens-codraw.js',
+  'src/screens-gomoku.js',
   'src/ui.js',
   'src/app.js',
 ];

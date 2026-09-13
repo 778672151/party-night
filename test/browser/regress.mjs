@@ -73,8 +73,9 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["codraw","drawgame","memory","tacit"]', '大厅有四款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀（' + modes + '）');
+  assert(modes === '["codraw","drawgame","gomoku","memory","tacit"]', '大厅有五款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋（' + modes + '）');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'gomoku\']")'), '大厅有五子棋的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'memory\']")'), '大厅有合作翻牌的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'drawgame\']")'), '大厅有画猜的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'tacit\']")'), '大厅有默契大考验的入口卡片');
@@ -389,6 +390,133 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 8. 五子棋：双人真人对局（画布点击 → 同步 → 悔棋协商 → 连五结算） ============ */
+S.gomoku = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  await startGame(H, 'gomoku');
+  const inPlay = 'PN.app.state.mode === "gomoku" && PN.app.state.g && PN.app.state.g.phase === "play"';
+  await H.waitFor(inPlay, '进入对局', 30000);
+  await O.waitFor(inPlay, '对方进入对局', 30000);
+
+  const n = await H.eval('PN.app.state.g.n');
+  assert(n === 15, '默认 15×15 棋盘（可在 ⚙️ 改成 9/13）');
+  assert(await H.eval('PN.app.state.g.board.every(function (v) { return v === 0; })'), '开局棋盘全空');
+  assert(await H.eval('document.querySelectorAll(".gm-cv").length') === 1, '页面上有一块棋盘');
+  await H.shot('gomoku-1-board');
+
+  // 谁执黑（先手）
+  const blackId = await H.eval('PN.app.state.g.players[0]');
+  const pidA = await A.eval('PN.app.me().id');
+  const pageOf = (pid) => (pid === pidA ? A : B);
+  const turnPage = async () => pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turn - 1]'));
+
+  // 真 CDP 点击：把格子坐标算出来，点画布真实位置（不是合成事件）
+  const tapCell = async (p, x, y) => {
+    await p.eval('(() => { const c = document.querySelector(".gm-cv"); if (c && c.scrollIntoView) c.scrollIntoView({ block: "center" }); return true; })()').catch(() => {});
+    await sleep(200);
+    const xy = JSON.parse(await p.eval(`(() => {
+      const cv = document.querySelector('.gm-cv');
+      const r = cv.getBoundingClientRect();
+      const pad = Math.round(r.width * 0.055);
+      const step = (r.width - pad * 2) / (${n} - 1);
+      return JSON.stringify([r.left + pad + ${x} * step, r.top + pad + ${y} * step]);
+    })()`));
+    await p.mouse('mouseMoved', xy[0], xy[1], { button: 'none' });
+    await p.mouse('mousePressed', xy[0], xy[1], { buttons: 1 });
+    await p.mouse('mouseReleased', xy[0], xy[1], { buttons: 0 });
+    await sleep(400);
+  };
+
+  // 先手落两子 + 对方落一子 → 双方棋盘要一致
+  const P1 = await turnPage();
+  const P2 = P1 === A ? B : A;
+  await tapCell(P1, 0, 0);
+  assert(await H.eval('PN.app.state.g.moves.length') === 1, '先手落子后手数 = 1');
+  assert(await H.eval('PN.app.state.g.board[0]') > 0, '黑棋出现在 (0,0)');
+  await O.waitFor('PN.app.state.g.moves.length === 1', '对端棋盘同步', 15000);
+  assert(true, '对端棋盘同步（也看到 1 手）');
+  await tapCell(P1, 5, 5);
+  assert(await H.eval('PN.app.state.g.moves.length') === 1, '不是自己的回合点不动（防乱点）');
+  await tapCell(P2, 8, 8);
+  await P1.waitFor('PN.app.state.g.moves.length === 2', '对端落子同步回我这边', 15000);
+  assert(true, '对方落子后我这边也同步了');
+  const ink = await H.eval(`(() => {
+    const cv = document.querySelector('.gm-cv');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0; for (let i = 0; i < d.length; i += 40) if (d[i + 3] > 10) n++;
+    return n;
+  })()`);
+  assert(ink > 500, '棋盘真的画出来了（' + ink + ' 个着色采样）');
+  // 棋盘的"看全"要在对局阶段查（结算页没有画布）
+  const fitP = JSON.parse(await H.eval('(() => { const b = document.querySelector(".gm-cv").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fitP.bottom <= fitP.vh + 2, '手机视口里棋盘看全（底 ' + fitP.bottom + ' ≤ ' + fitP.vh + '，宽 ' + fitP.w + '）');
+  await H.shot('gomoku-2-stones');
+
+  // 悔棋：请求 → 对方看到同意/不同意 → 同意后双方都少一子
+  await P2.click('[data-undo]');
+  await sleep(600);
+  assert(await P1.eval('!!document.querySelector(".gm-ask")'), '被请求方看到「想悔一步棋 / 同意 / 不同意」');
+  await P1.click('[data-undo-ok]');
+  await sleep(700);
+  assert(await H.eval('PN.app.state.g.moves.length') === 1, '同意悔棋后手数回到 1');
+  assert(await H.eval('PN.app.state.g.board[80]') === 0, '(8,8) 那子被撤掉了');
+  assert(await P2.eval('PN.app.state.g.moves.length') === 1, '两边一致（对端也少一子）');
+  await H.shot('gomoku-3-undo');
+
+  // 一路走到连五：黑棋横向 (0,0)..(4,0)，白棋在别处随便应
+  // 黑棋补到 (0,0)-(4,0) 五连；白棋在 y=14 隔着下（不相邻，自己不会连成五）。
+  // 每一步都按「现在轮到谁」点对应页面 —— 悔棋之后轮到谁是不确定的，写死下标必然错位。
+  const blackWants = [[1, 0], [2, 0], [3, 0], [4, 0]];
+  const whiteFill = [[0, 14], [2, 14], [4, 14], [6, 14]];
+  let bi = 0, wi = 0, guard = 0;
+  while (await H.eval('PN.app.state.g.phase') === 'play' && guard++ < 30) {
+    const st = JSON.parse(await H.eval('JSON.stringify({turn:PN.app.state.g.turn,players:PN.app.state.g.players})'));
+    const cur = st.players[st.turn - 1];
+    const p = pageOf(cur);
+    if (cur === blackId) {
+      if (bi >= blackWants.length) break;
+      await tapCell(p, blackWants[bi][0], blackWants[bi][1]); bi++;
+    } else {
+      if (wi >= whiteFill.length) break;
+      await tapCell(p, whiteFill[wi][0], whiteFill[wi][1]); wi++;
+    }
+  }
+  await H.waitFor('PN.app.state.g.phase === "over"', '连五结束', 20000);
+  assert(await H.eval('PN.app.state.g.winner > 0'), '有人连成五子（winner=' + await H.eval('PN.app.state.g.winner') + '）');
+  assert(await H.eval('PN.app.state.g.winCells.length') >= 5, '广播了连五坐标，双方都能画高亮线');
+  const winPage = pageOf(blackId), losePage = winPage === A ? B : A;
+  // 两页都要先收到结束态（公共 broker 有延迟，只等一页会看到"对端还在下"）
+  await winPage.waitFor('PN.app.state.g.phase === "over"', '赢家页进入结算', 20000);
+  await losePage.waitFor('PN.app.state.g.phase === "over"', '输家页进入结算', 20000);
+  assert(await winPage.eval('!!document.querySelector(".gm-result")'), '赢家页面显示结算');
+  assert(await winPage.eval('document.querySelector(".gm-result").textContent.indexOf("你赢了") >= 0'), '赢家看到「你赢了」');
+  assert(await losePage.eval('!!document.querySelector(".gm-result")'), '输家页面也显示结算（不是白屏）');
+  assert(await H.eval('PN.app.state.players.some(function (p) { return p.score >= 2; })'), '赢家拿到分数');
+  await winPage.shot('gomoku-4-win');
+
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+
+  await btnHostClick(H, O, 'gomoku');
+  await H.waitFor('PN.app.state.g.phase === "play" && PN.app.state.g.board.every(function (v) { return v === 0; })', '再来一局', 25000);
+  assert(await H.eval('PN.app.state.g.moves.length') === 0, '再来一局把棋盘清空了（分数保留）');
+
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(700);
+  const fitD = JSON.parse(await H.eval('(() => { const b = document.querySelector(".gm-cv").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  const ovD = JSON.parse(await overflow(H));
+  assert(fitD.bottom <= fitD.vh + 2 && !ovD.bad.length, '桌面视口棋盘看全且无溢出（底 ' + fitD.bottom + ' ≤ ' + fitD.vh + '，宽 ' + fitD.w + '）');
+  await H.shot('gomoku-5-desktop');
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
+  await A.dispose(); await B.dispose();
+};
+
 /* ============ 7. 心有灵犀：双人同时作画 → 揭晓并排 → 表态 → 再来一局 ============ */
 S.codraw = async (cdp) => {
   const A = await createRoom(cdp, '小桃');
@@ -522,7 +650,7 @@ async function btnHostClick(H, O, tag) {
 const name = process.argv[2];
 // 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
 // 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
-const ORDER = ['lobby', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'fullgame'];
+const ORDER = ['lobby', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'fullgame'];
 const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);

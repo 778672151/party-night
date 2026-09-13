@@ -496,7 +496,9 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'codraw') {
+    if (mode === 'gomoku') {
+      rows.push(seg('棋盘', 'size', [[9, '9×9 快棋'], [13, '13×13'], [15, '15×15 标准']]));
+    } else if (mode === 'codraw') {
       rows.push(seg('题数', 'rounds', [[2, '2 题'], [3, '3 题'], [4, '4 题']]));
       rows.push(seg('每题作画', 'sec', [[45, '45 秒'], [60, '60 秒'], [90, '90 秒']]));
     } else if (mode === 'memory') {
