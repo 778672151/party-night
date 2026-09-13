@@ -73,9 +73,10 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["codraw","drawgame","gomoku","memory","tacit"]', '大厅有五款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋（' + modes + '）');
+  assert(modes === '["codraw","drawgame","gomoku","hop","memory","tacit"]', '大厅有六款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳（' + modes + '）');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'gomoku\']")'), '大厅有五子棋的入口卡片');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'hop\']")'), '大厅有跳一跳的入口卡片');
   // 阶段三：入口系统升级后的分区与统一卡片
   assert(await A.eval('!!document.querySelector(".game-sec .game-head")'), '联机游戏有独立分区标题');
   assert(await A.eval('document.querySelectorAll(".gcard").length') >= 20, '两类游戏共用统一卡片（.gcard 共 ' + await A.eval('document.querySelectorAll(".gcard").length') + ' 张）');
@@ -393,6 +394,103 @@ S.memory = async (cdp) => {
   await H.shot('memory-4-desktop');
   assert((await H.consoleErrors()) === '[]', '房主页面全程无 JS 报错');
   assert((await O.consoleErrors()) === '[]', '对方页面全程无 JS 报错');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 10. 跳一跳：双人真人对局（蓄力→起跳→同步→换人→换轮） ============ */
+S.hop = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  await startGame(H, 'hop');
+  const inPlay = 'PN.app.state.mode === "hop" && PN.app.state.g && PN.app.state.g.phase === "play" && !!PN.app.state.g.attempt';
+  await H.waitFor(inPlay, '进入对局', 30000);
+  await O.waitFor(inPlay, '对方进入对局', 30000);
+
+  const g0 = JSON.parse(await H.eval('JSON.stringify({seed:PN.app.state.g.seed, rounds:PN.app.state.g.rounds, lives:PN.app.state.g.lives, pid:PN.app.state.g.attempt.pid, players:PN.app.state.g.players})'));
+  assert(g0.rounds === 3 && g0.lives === 3, '默认 3 轮、每人 3 条命（⚙️可改）');
+  assert(await H.eval('document.querySelectorAll(".hop-cv").length') === 1, '页面上有一块跳一跳画布');
+  const seedBoth = await O.eval('PN.app.state.g.seed');
+  assert(seedBoth === g0.seed, '两端拿到同一颗种子（跑道一致：' + g0.seed + '）');
+  const ink = await H.eval(`(() => {
+    const cv = document.querySelector('.hop-cv');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0; for (let i = 0; i < d.length; i += 60) if (d[i + 3] > 10) n++;
+    return n;
+  })()`);
+  assert(ink > 300, '画布真的画出来了（' + ink + ' 个着色采样）');
+  await H.shot('hop-1-start');
+
+  // 谁先手，就在谁那一页按住画布蓄力再松手（真指针事件）
+  const pageOf = (pid) => {
+    const pidA = A.pidCache;
+    return pid === pidA ? A : B;
+  };
+  A.pidCache = await A.eval('PN.app.me().id');
+  B.pidCache = await B.eval('PN.app.me().id');
+  const holder = pageOf(g0.pid);
+  const waiter = holder === A ? B : A;
+  const box = JSON.parse(await holder.eval('(() => { const c = document.querySelector(".hop-cv"); if (c.scrollIntoView) c.scrollIntoView({ block: "center" }); const r = c.getBoundingClientRect(); return JSON.stringify({x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2)}); })()'));
+  await sleep(200);
+  const box2 = JSON.parse(await holder.eval('(() => { const r = document.querySelector(".hop-cv").getBoundingClientRect(); return JSON.stringify({x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2)}); })()'));
+  await holder.mouse('mouseMoved', box2.x, box2.y, { button: 'none' });
+  await holder.mouse('mousePressed', box2.x, box2.y, { buttons: 1 });
+  await sleep(500);
+  await holder.waitFor('PN.app.state.g.attempt.charging === true', '蓄力中', 15000);
+  assert(true, '按住画布 → 房主确认进入蓄力（charging=true）');
+  await waiter.waitFor('PN.app.state.g.attempt.charging === true', '对手也看得到蓄力', 15000);
+  assert(true, '对手页面同步到"他在蓄力"（可以看着他攒劲）');
+  const pow = await waiter.eval('PN.app.state.g.power');
+  assert(typeof pow === 'number', '对手能看到蓄力进度（当前 ' + pow + '）');
+  await sleep(700);
+  await holder.mouse('mouseReleased', box2.x, box2.y, { buttons: 0 });
+  await H.waitFor('!!PN.app.state.g.attempt.fly', '起跳', 15000);
+  const fly = JSON.parse(await H.eval('JSON.stringify(PN.app.state.g.attempt.fly)'));
+  assert(typeof fly.kind === 'string', '房主判定出结果：' + fly.kind + '（得分 ' + fly.gain + '）');
+  await H.waitFor('PN.app.state.g.attempt.fly === null || PN.app.state.g.attempt.charging === false', '落地', 15000);
+  const after = JSON.parse(await H.eval('JSON.stringify({idx:PN.app.state.g.attempt.idx, score:PN.app.state.g.attempt.score, lives:PN.app.state.g.attempt.lives})'));
+  assert(after.idx >= 1 || after.lives < 3, '跳完有结果：要么前进到第 ' + after.idx + ' 块，要么掉命（剩 ' + after.lives + ' 条）');
+  await H.shot('hop-2-jumped');
+
+  // 提前收工 → 换人（同一颗种子，公平对比）
+  await holder.click('[data-giveup]');
+  await H.waitFor('PN.app.state.g.attempt && PN.app.state.g.attempt.pid !== "' + g0.pid + '"', '换人', 20000);
+  const g1 = JSON.parse(await H.eval('JSON.stringify({seed:PN.app.state.g.seed, tot:PN.app.state.g.totals, pid:PN.app.state.g.attempt.pid, lives:PN.app.state.g.attempt.lives})'));
+  assert(g1.seed === g0.seed, '换人后还是同一颗种子（公平）');
+  assert(g1.lives === 3, '新回合从 3 条命开始');
+  assert(Object.keys(g1.tot).length === 1, '先手这轮的成绩已记入总分：' + JSON.stringify(g1.tot));
+  const other = pageOf(g1.pid);
+  // 先等对方页面收到新状态并重渲染，再断言按钮（公共 broker 有延迟，抢跑会误报）
+  await other.waitFor('!!document.querySelector(".hop-turn.mine")', '对方看到"轮到你了"', 20000);
+  assert(true, '对方页面提示"轮到你了"（不会被晾着）');
+  assert(await other.eval('!!document.querySelector("[data-giveup]")'), '现在轮到对方，他页面上出现操作按钮（不是我）');
+  assert(!(await holder.eval('!!document.querySelector("[data-giveup]")')), '我这边不再是本人回合（按钮收起）');
+
+  // 第二个人也收工 → 进入第 2 轮
+  await other.click('[data-giveup]');
+  await H.waitFor('PN.app.state.g.round === 2', '进入第 2 轮', 25000);
+  const g2 = JSON.parse(await H.eval('JSON.stringify({round:PN.app.state.g.round, seed:PN.app.state.g.seed, pid:PN.app.state.g.attempt.pid})'));
+  assert(g2.seed !== g0.seed, '第 2 轮换了新种子（' + g0.seed + ' → ' + g2.seed + '）');
+  assert(g2.pid === g0.pid, '第 2 轮仍由先手先跳');
+  assert(await H.eval('!!PN.app.state.g.attempt && PN.app.state.g.attempt.lives === 3'), '第 2 轮正常开局（不是卡死的空回合）');
+
+  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".hop-cv").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fit.bottom <= fit.vh + 2, '手机视口画布看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '）');
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(700);
+  const fitD = JSON.parse(await H.eval('(() => { const b = document.querySelector(".hop-cv").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  const ovD = JSON.parse(await overflow(H));
+  assert(fitD.bottom <= fitD.vh + 2 && !ovD.bad.length, '桌面视口画布看全且无溢出（底 ' + fitD.bottom + ' ≤ ' + fitD.vh + '，宽 ' + fitD.w + '）');
+  await H.shot('hop-3-desktop');
+
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
   await A.dispose(); await B.dispose();
 };
 
@@ -714,7 +812,7 @@ async function btnHostClick(H, O, tag) {
 const name = process.argv[2];
 // 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
 // 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
-const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'fullgame'];
+const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'hop', 'fullgame'];
 const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);

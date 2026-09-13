@@ -409,3 +409,24 @@ input[type=range]{width:120px;accent-color:var(--acc)}
   background:var(--card);border:2.5px solid var(--stroke);box-shadow:var(--pop);
   font-size:12.5px;font-weight:700;color:var(--ink);animation:qdrop .4s var(--spring) both;max-width:94vw}
 .update-tip b{color:var(--acc)}
+
+/* ===== 跳一跳 ===== */
+.hop-turn{display:flex;flex-direction:column;align-items:center;gap:2px;margin:2px 0 10px;font-size:14px;color:var(--ink2);
+  padding:10px;border-radius:var(--r2);background:var(--card2);border:2px dashed var(--line)}
+.hop-turn b{font-size:16px;color:var(--ink)}
+.hop-turn.mine{background:linear-gradient(160deg,#fff0f6,#ffe3ef);border-color:var(--acc);border-style:solid;
+  animation:qpop .34s var(--spring) both}
+.hop-turn.mine b{color:#d1578f}
+.hop-hud{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px}
+.hop-stat{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:var(--ink);
+  background:var(--card);border:2.5px solid var(--stroke);border-radius:999px;padding:4px 11px;box-shadow:var(--soft)}
+.hop-stat i{font-style:normal}
+.hop-stat.hot{border-color:var(--acc);color:#d1578f;animation:qdone .5s var(--spring)}
+.hop-stage{max-width:clamp(240px,calc(100vh - 430px),520px);margin:0 auto}
+.hop-cv{display:block;width:100%;border-radius:22px;border:2.5px solid var(--stroke);box-shadow:var(--soft);
+  touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.hop-ops{display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:10px}
+.hop-ops .btn{width:min(100%,320px)}
+.hop-hero{padding:24px 16px}
+.hop-result{font-size:28px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
+  animation:qpop .5s var(--spring) both}

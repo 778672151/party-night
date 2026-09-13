@@ -28,7 +28,7 @@ function loadPage() {
   vm.runInContext('var PN = { games: {}, pick: {}, Banks: {} };', ctx);
   for (const f of ['src/data.js', 'src/screens-common.js']) vm.runInContext(read(f), ctx, { filename: ROOT + f });
   // 把 5 个玩法文件的注册表也挂进来（只要 PN.games[id]，不跑游戏逻辑）
-  for (const f of ['drawgame', 'tacit', 'memory', 'codraw', 'gomoku']) {
+  for (const f of ['drawgame', 'tacit', 'memory', 'codraw', 'gomoku', 'hop']) {
     const src = read('src/games/' + f + '.js').replace(/^[\s\S]*?PN\.games\[ID\] = game;/m, 'PN.games["' + f + '"] = game;');
     const only = src.replace(/\(\(function[\s\S]*?$/, '');
     vm.runInContext(read('src/games/' + f + '.js'), ctx, { filename: ROOT + f });
@@ -42,7 +42,7 @@ console.log('[1] 目录：联机游戏 + 小游戏厅合成一份视图');
 const cat = GC.catalog();
 const online = cat.filter(x => x.kind === 'online');
 const mini = cat.filter(x => x.kind === 'mini');
-ok(online.length === 5, '目录里有 5 款联机游戏：' + online.map(x => x.id).join(','));
+ok(online.length === 6, '目录里有 6 款联机游戏：' + online.map(x => x.id).join(','));
 ok(mini.length === 16, '目录里有 16 款小游戏');
 ok(cat.every(x => x.id && x.title && x.emoji && x.group), '每一项都有 id/标题/图标/分组');
 ok(cat.every(x => x.desc !== undefined), '每一项都有说明（可为空串）');
@@ -55,7 +55,7 @@ console.log('\n[2] 分区：联机在前、小游戏厅在后');
 const secs = GC.sections(cat);
 ok(secs.length === 2, '分成 2 个区（联机 / 小游戏厅），实际 ' + secs.length);
 ok(secs[0].group === 'online' && secs[1].group === 'mini', '顺序是 online → mini');
-ok(secs[0].items.length === 5 && secs[1].items.length === 16, '每区数量正确（5 / 16）');
+ok(secs[0].items.length === 6 && secs[1].items.length === 16, '每区数量正确（6 / 16）');
 ok(!!GC.groupTitle.online && !!GC.groupTitle.mini, '每个区有标题与副标题：' + GC.groupTitle.online + ' | ' + GC.groupTitle.mini);
 
 console.log('\n[3] 卡片：两种游戏共用同一个函数，且保留旧类名（向后兼容）');
@@ -75,7 +75,7 @@ const after = GC.catalog();
 ok(after.length === before + 1, '目录自动多出一项（' + before + ' → ' + after.length + '），没有任何入口代码改动');
 const added = after.filter(x => x.id === 'demoNew')[0];
 ok(added && added.title === '新游戏' && added.players === '2', '新游戏信息自动出现在目录里');
-ok(GC.sections(after)[0].items.length === 6, '新游戏自动归入联机分区（5 → 6）');
+ok(GC.sections(after)[0].items.length === 7, '新游戏自动归入联机分区（6 → 7）');
 
 console.log('\n[5] 没有 meta 的老游戏也不能崩');
 P.vm.runInContext('PN.games.demoLegacy = { id: "demoLegacy", name: "老游戏", emoji: "📦", blurb: "没有 meta", minPlayers: 2, maxPlayers: 4 };', P.ctx);

@@ -23,6 +23,7 @@ const scripts = [
   'src/screens-memory.js',
   'src/screens-codraw.js',
   'src/screens-gomoku.js',
+  'src/screens-hop.js',
   'src/ui.js',
   'src/app.js',
 ];

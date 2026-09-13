@@ -561,7 +561,10 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'gomoku') {
+    if (mode === 'hop') {
+      rows.push(seg('轮数', 'rounds', [[1, '1 轮'], [2, '2 轮'], [3, '3 轮'], [5, '5 轮']]));
+      rows.push(seg('每人命数', 'lives', [[1, '1 条命'], [3, '3 条命'], [5, '5 条命']]));
+    } else if (mode === 'gomoku') {
       rows.push(seg('棋盘', 'size', [[9, '9×9 快棋'], [13, '13×13'], [15, '15×15 标准']]));
     } else if (mode === 'codraw') {
       rows.push(seg('题数', 'rounds', [[2, '2 题'], [3, '3 题'], [4, '4 题']]));
