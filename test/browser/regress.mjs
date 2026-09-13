@@ -56,8 +56,9 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["drawgame"]', '游戏注册表里只剩「你画我猜」：' + modes);
+  assert(modes === '["drawgame","tacit"]', '大厅有两款游戏：你画我猜 + 默契大考验（' + modes + '）');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'drawgame\']")'), '大厅有画猜的入口卡片');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'tacit\']")'), '大厅有默契大考验的入口卡片');
   await A.shot('01-lobby');
   assert((await A.consoleErrors()) === '[]', '房主页面无 JS 报错');
   assert((await B.consoleErrors()) === '[]', '加入者页面无 JS 报错');
@@ -136,6 +137,116 @@ S.migration = async (cdp) => {
   assert(phaseBefore === 'draw', '换主前正在作画（' + phaseBefore + '）');
   await B.shot('05-migration');
   await B.dispose();
+};
+
+/** 横向溢出检查：手机端最典型的「显示 bug」 */
+const overflow = (page) => page.eval(`(() => {
+  const vw = window.innerWidth, bad = [];
+  document.querySelectorAll('#pn-root *, .overlay, .toasts').forEach(function (el) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+    if (r.right > vw + 0.5 || r.left < -0.5) bad.push((el.className || el.tagName) + '@' + Math.round(r.left) + '..' + Math.round(r.right));
+  });
+  return JSON.stringify({ vw: vw, scrollW: document.documentElement.scrollWidth, bad: bad.slice(0, 6) });
+})()`);
+
+/* ============ 5. 默契大考验：双人闭环（作答 → 揭晓 → 结算 → 再来一局）============ */
+S.tacit = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  await startGame(H, 'tacit');
+  // 两页都要等到作答阶段：公共 broker 下对方的 retained 状态可能晚一两秒到
+  const inAnswer = 'PN.app.state.mode === "tacit" && PN.app.state.g && PN.app.state.g.cur && PN.app.state.g.cur.phase === "answer"';
+  await H.waitFor(inAnswer, '房主进入作答', 30000);
+  await O.waitFor(inAnswer, '对方进入作答', 30000);
+  assert(await H.eval('PN.app.state.g.cur.q') === await O.eval('PN.app.state.g.cur.q'), '两人看到同一道题');
+  assert(await H.eval('PN.app.state.g.total') === 8, '默认 8 题（可在 ⚙️ 里改）');
+  await H.shot('tacit-1-answer');
+
+  // 动效不能只是"写了样式"，要真的在跑（截图看不出动效，所以直接查 DOM 上正在运行的动画）
+  const anim = JSON.parse(await H.eval(`(() => {
+    const o = document.querySelector('.tac-opt');
+    const cs = getComputedStyle(o);
+    const sheet = document.getElementById('pncss') ? document.getElementById('pncss').textContent : '';
+    const running = (document.getAnimations ? document.getAnimations() : [])
+      .map(a => a.animationName || a.transitionProperty || a.constructor.name);
+    return JSON.stringify({
+      name: cs.animationName, trans: cs.transitionProperty,
+      active: /\.tac-opt:active\{[^}]*translateY/.test(sheet),
+      slide: /@keyframes qslideL/.test(sheet), dots: /@keyframes qdot/.test(sheet),
+      running: Array.from(new Set(running)).slice(0, 8)
+    });
+  })()`));
+  assert(anim.name && anim.name !== 'none', '选项按钮有入场动画：' + anim.name);
+  assert(anim.trans.indexOf('transform') >= 0, '按钮有点按过渡：' + anim.trans);
+  assert(anim.active, '按下时下沉回弹（Q 弹手感）');
+  assert(anim.slide && anim.dots, '揭晓滑入 / 等待点点 动画都在');
+  assert(anim.running.length > 0, 'DOM 上确实有动画在跑：' + anim.running.join(','));
+
+  // 第 1 题：都选 A → 心有灵犀（这一下用真实点击，验证点按路径）
+  await H.click('.tac-opt');
+  await sleep(700);
+  assert(await H.eval('!!document.querySelector(".tac-wait")'), '答完显示「已提交，等对方选…」');
+  assert(await O.eval('!document.querySelector(".tac-wait")'), '对方没答完时不会提前揭晓');
+  await H.shot('tacit-2-waiting');
+  await O.click('.tac-opt');
+  await O.waitFor('PN.app.state.g.cur.phase === "reveal"', '揭晓');
+  assert(await O.eval('PN.app.state.g.cur.reveal.match') === true, '两人同选 → 心有灵犀');
+  assert(await H.eval('PN.app.state.players.every(p => p.score === 1)'), '两个人各 +1 分（合作）');
+  await O.shot('tacit-3-reveal');
+
+  // 第 2 题：故意选不同 → 不计分
+  await O.waitFor('PN.app.state.g.round === 2 && PN.app.state.g.cur.phase === "answer"', '第 2 题', 20000);
+  await H.click('.tac-opt');
+  await O.eval("[].slice.call(document.querySelectorAll('.tac-opt'))[1].click()");
+  await O.waitFor('PN.app.state.g.cur.phase === "reveal"', '揭晓 2', 15000);
+  assert(await O.eval('PN.app.state.g.cur.reveal.match') === false, '选不同 → 不算默契，不计分');
+  await O.shot('tacit-4-mismatch');
+
+  // 一路打到结算（每题都选 A）。注意：检查状态与点击之间可能刚好切到揭晓，
+  // 那时选项按钮已经不在 DOM 里了 —— 所以点击要防御式，不能直接 .click()。
+  const clickOpt = (p, i) => p.eval(`(() => { const b = document.querySelectorAll('.tac-opt')[${i}]; if (!b) return false; b.click(); return true; })()`);
+  for (let g = 0; g < 200; g++) {
+    if (await H.eval('PN.app.state.g.phase') === 'over') break;
+    const a1 = await clickOpt(H, 0);
+    if (a1) { await sleep(140); await clickOpt(O, 0); }
+    await sleep(500);
+  }
+  assert(await H.eval('PN.app.state.g.phase') === 'over', '走完全部题目进入结算');
+  const sum = JSON.parse(await H.eval('JSON.stringify(PN.app.state.g.summary)'));
+  assert(sum.total === 8 && sum.matched >= 5, '结算给出默契度：' + sum.matched + '/' + sum.total + ' = ' + sum.percent + '%');
+  assert(await H.eval('!!document.querySelector(".tac-percent")'), '结算页显示大大的默契度百分比');
+  await H.shot('tacit-5-over');
+
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px，溢出元素 ' + ov.bad.length + ' 个）');
+  // 探针：只有房主侧会渲染「再来一局」，所以两页都看一眼（顺便暴露房主标记有没有抖动）
+  const overProbe = (p) => p.eval(`JSON.stringify({
+    host: PN.app.isHost(),
+    again: !!document.querySelector('[data-over="again"]'),
+    hasOver: /data-over=/.test(document.body.innerHTML),
+    screen: PN.app.screenName
+  })`).then(JSON.parse);
+  const probeH = await overProbe(H), probeO = await overProbe(O);
+  console.log('  [探针] 房主页=' + JSON.stringify(probeH) + ' 对方页=' + JSON.stringify(probeO));
+  const btnHost = probeH.again ? H : (probeO.again ? O : null);
+  assert(!!btnHost, '结算页有「再来一局」（房主侧）');
+  await btnHost.click('[data-over="again"]');
+  await H.waitFor('PN.app.state.g.round === 1 && PN.app.state.g.cur.phase === "answer"', '再来一局', 20000);
+  assert(await H.eval('PN.app.state.g.summary') === null, '再来一局清掉了上一局结算');
+
+  // 桌面视口也检查一遍
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(600);
+  const ovd = JSON.parse(await overflow(H));
+  assert(!ovd.bad.length && ovd.scrollW <= ovd.vw + 1, '桌面视口 1280px 无横向溢出');
+  await H.shot('tacit-6-desktop');
+  assert((await H.consoleErrors()) === '[]', '房主页面全程无 JS 报错');
+  assert((await O.consoleErrors()) === '[]', '对方页面全程无 JS 报错');
+  await A.dispose(); await B.dispose();
 };
 
 const name = process.argv[2];

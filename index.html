@@ -231,6 +231,49 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .land:before{content:"💗";position:absolute;right:16%;top:26vh;font-size:18px;animation:qfloat 2.6s ease-in-out infinite .4s;opacity:.85}
 
 @media (max-width:360px){ .player{width:calc(100% - 0px)} .modegrid{grid-template-columns:1fr} }
+
+/* ===== 默契大考验 ===== */
+.tac-q{margin-bottom:14px}
+.tac-qtext{font-size:22px;font-weight:900;line-height:1.5;margin-top:6px;animation:qpop .34s var(--spring) both}
+.tac-opts{display:flex;flex-direction:column;gap:10px}
+.tac-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:15px 16px;
+  border-radius:var(--r2);background:var(--card);border:2.5px solid var(--stroke);font-weight:800;font-size:16px;
+  box-shadow:0 4px 0 var(--stroke);transition:transform .12s var(--spring),box-shadow .12s ease;
+  animation:qpop .34s var(--spring) both}
+.tac-opt:nth-child(2){animation-delay:.05s}.tac-opt:nth-child(3){animation-delay:.1s}.tac-opt:nth-child(4){animation-delay:.15s}
+.tac-opt:active{transform:translateY(4px);box-shadow:0 0 0 var(--stroke)}
+.tac-opt .k{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;
+  background:var(--bg2);color:var(--acc);font-size:14px;font-weight:900;flex:0 0 auto}
+.tac-opt .t{flex:1;min-width:0}
+.tac-opt.chosen{background:linear-gradient(160deg,#ffb3cf,#ff8fb8);color:#fff;border-color:#e2679a;box-shadow:0 4px 0 #e2679a}
+.tac-opt.chosen .k{background:#fff;color:#e2679a}
+.tac-opt.dim{opacity:.45;box-shadow:none;transform:none}
+.tac-wait{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-size:14px;font-weight:800;
+  color:var(--ink2);animation:qpop .3s var(--spring) both}
+.dots{display:inline-flex;gap:4px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--acc);animation:qdot .9s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes qdot{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-5px);opacity:1}}
+.tac-picks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tac-pick{background:var(--card);border:2.5px solid var(--stroke);border-radius:var(--r);padding:14px 10px;text-align:center;
+  box-shadow:var(--soft);animation:qslideL .38s var(--spring) both}
+.tac-pick:nth-child(2){animation-name:qslideR}
+.tac-pick.same{border-color:var(--acc);background:#fff5fa;box-shadow:0 4px 0 rgba(255,143,184,.45)}
+.tac-pick .em{font-size:30px}
+.tac-pick .nm{font-size:13px;font-weight:800;margin-bottom:6px}
+.tac-pick .pick{font-size:16px;font-weight:900;color:var(--acc);word-break:break-word}
+@keyframes qslideL{from{opacity:0;transform:translateX(-24px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes qslideR{from{opacity:0;transform:translateX(24px) scale(.94)}to{opacity:1;transform:none}}
+.tac-verdict{margin-top:14px;text-align:center;font-size:17px;font-weight:900;padding:12px;border-radius:var(--r2);
+  animation:qpop .4s var(--spring) both}
+.tac-verdict.ok{background:linear-gradient(160deg,#ffe3ef,#ffd0e4);color:#d1578f;border:2.5px solid var(--acc)}
+.tac-verdict.no{background:var(--bg2);color:var(--ink2);border:2.5px dashed var(--line)}
+.tac-hero{padding:26px 16px}
+.tac-percent{font-size:64px;font-weight:900;line-height:1;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.25);
+  animation:qpop .5s var(--spring) both}
+.tac-percent span{font-size:26px;margin-left:2px}
+.tac-word{font-size:13px;color:var(--ink2);margin-top:4px;letter-spacing:2px}
+.tac-quote{margin-top:12px;font-size:16px;font-weight:800}
 </style>
 </head>
 <body>
@@ -238,7 +281,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
   <div class="loading"><div class="logo">🧸</div><div>两个人的游戏厅</div><div class="sub">正在连线…</div></div>
 </div>
 <script>
-window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"tag":"动物"},{"w":"大象","level":1,"tag":"动物"},{"w":"企鹅","level":1,"tag":"动物"},{"w":"熊猫","level":1,"tag":"动物"},{"w":"猫","level":1,"tag":"动物"},{"w":"狗","level":1,"tag":"动物"},{"w":"兔子","level":1,"tag":"动物"},{"w":"老虎","level":1,"tag":"动物"},{"w":"狮子","level":1,"tag":"动物"},{"w":"猴子","level":1,"tag":"动物"},{"w":"蛇","level":1,"tag":"动物"},{"w":"鱼","level":1,"tag":"动物"},{"w":"鸟","level":1,"tag":"动物"},{"w":"蝴蝶","level":1,"tag":"动物"},{"w":"蜗牛","level":1,"tag":"动物"},{"w":"鲨鱼","level":1,"tag":"动物"},{"w":"海豚","level":1,"tag":"动物"},{"w":"鲸鱼","level":1,"tag":"动物"},{"w":"螃蟹","level":1,"tag":"动物"},{"w":"乌龟","level":1,"tag":"动物"},{"w":"青蛙","level":1,"tag":"动物"},{"w":"孔雀","level":1,"tag":"动物"},{"w":"老鹰","level":1,"tag":"动物"},{"w":"鹦鹉","level":1,"tag":"动物"},{"w":"蜜蜂","level":1,"tag":"动物"},{"w":"蚂蚁","level":1,"tag":"动物"},{"w":"蜻蜓","level":1,"tag":"动物"},{"w":"瓢虫","level":1,"tag":"动物"},{"w":"蜘蛛","level":1,"tag":"动物"},{"w":"壁虎","level":1,"tag":"动物"},{"w":"考拉","level":1,"tag":"动物"},{"w":"北极熊","level":1,"tag":"动物"},{"w":"梅花鹿","level":1,"tag":"动物"},{"w":"松鼠","level":1,"tag":"动物"},{"w":"刺猬","level":1,"tag":"动物"},{"w":"河马","level":1,"tag":"动物"},{"w":"犀牛","level":1,"tag":"动物"},{"w":"骆驼","level":1,"tag":"动物"},{"w":"斑马","level":1,"tag":"动物"},{"w":"鳄鱼","level":1,"tag":"动物"},{"w":"苹果","level":1,"tag":"食物"},{"w":"西瓜","level":1,"tag":"食物"},{"w":"草莓","level":1,"tag":"食物"},{"w":"香蕉","level":1,"tag":"食物"},{"w":"葡萄","level":1,"tag":"食物"},{"w":"菠萝","level":1,"tag":"食物"},{"w":"樱桃","level":1,"tag":"食物"},{"w":"冰淇淋","level":1,"tag":"食物"},{"w":"蛋糕","level":1,"tag":"食物"},{"w":"汉堡","level":1,"tag":"食物"},{"w":"披萨","level":1,"tag":"食物"},{"w":"面条","level":1,"tag":"食物"},{"w":"饺子","level":1,"tag":"食物"},{"w":"包子","level":1,"tag":"食物"},{"w":"月饼","level":1,"tag":"食物"},{"w":"粽子","level":1,"tag":"食物"},{"w":"糖葫芦","level":1,"tag":"食物"},{"w":"火锅","level":1,"tag":"食物"},{"w":"寿司","level":1,"tag":"食物"},{"w":"热狗","level":1,"tag":"食物"},{"w":"鸡腿","level":1,"tag":"食物"},{"w":"薯条","level":1,"tag":"食物"},{"w":"爆米花","level":1,"tag":"食物"},{"w":"棉花糖","level":1,"tag":"食物"},{"w":"棒棒糖","level":1,"tag":"食物"},{"w":"鸡蛋","level":1,"tag":"食物"},{"w":"牛奶","level":1,"tag":"食物"},{"w":"面包","level":1,"tag":"食物"},{"w":"饼干","level":1,"tag":"食物"},{"w":"巧克力","level":1,"tag":"食物"},{"w":"雨伞","level":1,"tag":"物品"},{"w":"手机","level":1,"tag":"物品"},{"w":"电脑","level":1,"tag":"物品"},{"w":"眼镜","level":1,"tag":"物品"},{"w":"帽子","level":1,"tag":"物品"},{"w":"钥匙","level":1,"tag":"物品"},{"w":"剪刀","level":1,"tag":"物品"},{"w":"牙刷","level":1,"tag":"物品"},{"w":"闹钟","level":1,"tag":"物品"},{"w":"灯泡","level":1,"tag":"物品"},{"w":"镜子","level":1,"tag":"物品"},{"w":"椅子","level":1,"tag":"物品"},{"w":"桌子","level":1,"tag":"物品"},{"w":"书包","level":1,"tag":"物品"},{"w":"信封","level":1,"tag":"物品"},{"w":"蜡烛","level":1,"tag":"物品"},{"w":"气球","level":1,"tag":"物品"},{"w":"风筝","level":1,"tag":"物品"},{"w":"吉他","level":1,"tag":"物品"},{"w":"钢琴","level":1,"tag":"物品"},{"w":"相机","level":1,"tag":"物品"},{"w":"日历","level":1,"tag":"物品"},{"w":"地图","level":1,"tag":"物品"},{"w":"地球仪","level":1,"tag":"物品"},{"w":"自行车","level":1,"tag":"交通"},{"w":"汽车","level":1,"tag":"交通"},{"w":"飞机","level":1,"tag":"交通"},{"w":"火车","level":1,"tag":"交通"},{"w":"轮船","level":1,"tag":"交通"},{"w":"火箭","level":1,"tag":"交通"},{"w":"热气球","level":1,"tag":"交通"},{"w":"摩托车","level":1,"tag":"交通"},{"w":"公交车","level":1,"tag":"交通"},{"w":"直升机","level":1,"tag":"交通"},{"w":"地铁","level":1,"tag":"交通"},{"w":"电动车","level":1,"tag":"交通"},{"w":"太阳","level":1,"tag":"自然"},{"w":"月亮","level":1,"tag":"自然"},{"w":"星星","level":1,"tag":"自然"},{"w":"彩虹","level":1,"tag":"自然"},{"w":"雪花","level":1,"tag":"自然"},{"w":"山","level":1,"tag":"自然"},{"w":"眼睛","level":1,"tag":"身体"},{"w":"耳朵","level":1,"tag":"身体"},{"w":"手","level":1,"tag":"身体"},{"w":"脚","level":1,"tag":"身体"},{"w":"牙齿","level":1,"tag":"身体"},{"w":"头发","level":1,"tag":"身体"},{"w":"医生","level":1,"tag":"职业"},{"w":"警察","level":1,"tag":"职业"},{"w":"厨师","level":1,"tag":"职业"},{"w":"消防员","level":1,"tag":"职业"},{"w":"教师","level":1,"tag":"职业"},{"w":"宇航员","level":1,"tag":"职业"},{"w":"堵车","level":2,"tag":"场景"},{"w":"下雨","level":2,"tag":"场景"},{"w":"下雪","level":2,"tag":"场景"},{"w":"日出","level":2,"tag":"场景"},{"w":"日落","level":2,"tag":"场景"},{"w":"流星","level":2,"tag":"场景"},{"w":"火灾","level":2,"tag":"场景"},{"w":"雪人","level":2,"tag":"场景"},{"w":"沙滩","level":2,"tag":"场景"},{"w":"瀑布","level":2,"tag":"场景"},{"w":"火山爆发","level":2,"tag":"场景"},{"w":"海底世界","level":2,"tag":"场景"},{"w":"游乐园","level":2,"tag":"场景"},{"w":"动物园","level":2,"tag":"场景"},{"w":"演唱会","level":2,"tag":"场景"},{"w":"电影院","level":2,"tag":"场景"},{"w":"图书馆","level":2,"tag":"场景"},{"w":"超市","level":2,"tag":"场景"},{"w":"菜市场","level":2,"tag":"场景"},{"w":"地铁站","level":2,"tag":"场景"},{"w":"火车站","level":2,"tag":"场景"},{"w":"机场","level":2,"tag":"场景"},{"w":"医院","level":2,"tag":"场景"},{"w":"学校","level":2,"tag":"场景"},{"w":"公园","level":2,"tag":"场景"},{"w":"游泳池","level":2,"tag":"场景"},{"w":"篮球场","level":2,"tag":"场景"},{"w":"滑雪场","level":2,"tag":"场景"},{"w":"海边","level":2,"tag":"场景"},{"w":"露营","level":2,"tag":"场景"},{"w":"野餐","level":2,"tag":"场景"},{"w":"烧烤","level":2,"tag":"场景"},{"w":"咖啡店","level":2,"tag":"场景"},{"w":"健身房","level":2,"tag":"场景"},{"w":"电梯","level":2,"tag":"场景"},{"w":"楼梯","level":2,"tag":"场景"},{"w":"隧道","level":2,"tag":"场景"},{"w":"桥","level":2,"tag":"场景"},{"w":"摩天轮","level":2,"tag":"场景"},{"w":"旋转木马","level":2,"tag":"场景"},{"w":"过山车","level":2,"tag":"场景"},{"w":"刷牙","level":2,"tag":"动作"},{"w":"洗脸","level":2,"tag":"动作"},{"w":"洗澡","level":2,"tag":"动作"},{"w":"梳头","level":2,"tag":"动作"},{"w":"化妆","level":2,"tag":"动作"},{"w":"刮胡子","level":2,"tag":"动作"},{"w":"做饭","level":2,"tag":"动作"},{"w":"洗碗","level":2,"tag":"动作"},{"w":"扫地","level":2,"tag":"动作"},{"w":"拖地","level":2,"tag":"动作"},{"w":"洗衣服","level":2,"tag":"动作"},{"w":"晾衣服","level":2,"tag":"动作"},{"w":"叠被子","level":2,"tag":"动作"},{"w":"系鞋带","level":2,"tag":"动作"},{"w":"打伞","level":2,"tag":"动作"},{"w":"跳绳","level":2,"tag":"运动"},{"w":"踢毽子","level":2,"tag":"运动"},{"w":"打篮球","level":2,"tag":"运动"},{"w":"踢足球","level":2,"tag":"运动"},{"w":"打乒乓球","level":2,"tag":"运动"},{"w":"游泳","level":2,"tag":"运动"},{"w":"跑步","level":2,"tag":"运动"},{"w":"钓鱼","level":2,"tag":"动作"},{"w":"爬山","level":2,"tag":"运动"},{"w":"拍照","level":2,"tag":"动作"},{"w":"自拍","level":2,"tag":"动作"},{"w":"唱歌","level":2,"tag":"动作"},{"w":"跳舞","level":2,"tag":"动作"},{"w":"弹吉他","level":2,"tag":"动作"},{"w":"弹钢琴","level":2,"tag":"动作"},{"w":"打游戏","level":2,"tag":"动作"},{"w":"看手机","level":2,"tag":"动作"},{"w":"看书","level":2,"tag":"动作"},{"w":"写字","level":2,"tag":"动作"},{"w":"画画","level":2,"tag":"动作"},{"w":"打电话","level":2,"tag":"动作"},{"w":"遛狗","level":2,"tag":"动作"},{"w":"喂猫","level":2,"tag":"动作"},{"w":"种花","level":2,"tag":"动作"},{"w":"浇花","level":2,"tag":"动作"},{"w":"排队","level":2,"tag":"场景"},{"w":"考试","level":2,"tag":"场景"},{"w":"考试作弊","level":2,"tag":"动作"},{"w":"睡觉","level":2,"tag":"动作"},{"w":"做梦","level":2,"tag":"动作"},{"w":"起床","level":2,"tag":"动作"},{"w":"上班","level":2,"tag":"场景"},{"w":"下班","level":2,"tag":"场景"},{"w":"迟到","level":2,"tag":"场景"},{"w":"加班","level":2,"tag":"场景"},{"w":"熬夜","level":2,"tag":"动作"},{"w":"煮面","level":2,"tag":"动作"},{"w":"煎蛋","level":2,"tag":"动作"},{"w":"泡茶","level":2,"tag":"动作"},{"w":"喝咖啡","level":2,"tag":"动作"},{"w":"吃火锅","level":2,"tag":"动作"},{"w":"吃烧烤","level":2,"tag":"动作"},{"w":"旅游","level":2,"tag":"动作"},{"w":"购物","level":2,"tag":"场景"},{"w":"散步","level":2,"tag":"动作"},{"w":"打喷嚏","level":2,"tag":"动作"},{"w":"打哈欠","level":2,"tag":"动作"},{"w":"伸懒腰","level":2,"tag":"动作"},{"w":"滑雪","level":2,"tag":"运动"},{"w":"滑冰","level":2,"tag":"运动"},{"w":"冲浪","level":2,"tag":"运动"},{"w":"潜水","level":2,"tag":"运动"},{"w":"跳伞","level":2,"tag":"运动"},{"w":"蹦极","level":2,"tag":"运动"},{"w":"画蛇添足","level":3,"tag":"成语"},{"w":"守株待兔","level":3,"tag":"成语"},{"w":"掩耳盗铃","level":3,"tag":"成语"},{"w":"亡羊补牢","level":3,"tag":"成语"},{"w":"井底之蛙","level":3,"tag":"成语"},{"w":"对牛弹琴","level":3,"tag":"成语"},{"w":"杯弓蛇影","level":3,"tag":"成语"},{"w":"鹤立鸡群","level":3,"tag":"成语"},{"w":"鸡飞狗跳","level":3,"tag":"成语"},{"w":"虎头蛇尾","level":3,"tag":"成语"},{"w":"狼吞虎咽","level":3,"tag":"成语"},{"w":"龙飞凤舞","level":3,"tag":"成语"},{"w":"马到成功","level":3,"tag":"成语"},{"w":"鸟语花香","level":3,"tag":"成语"},{"w":"鱼目混珠","level":3,"tag":"成语"},{"w":"鼠目寸光","level":3,"tag":"成语"},{"w":"狐假虎威","level":3,"tag":"成语"},{"w":"叶公好龙","level":3,"tag":"成语"},{"w":"一箭双雕","level":3,"tag":"成语"},{"w":"三心二意","level":3,"tag":"成语"},{"w":"七上八下","level":3,"tag":"成语"},{"w":"九牛一毛","level":3,"tag":"成语"},{"w":"十全十美","level":3,"tag":"成语"},{"w":"百发百中","level":3,"tag":"成语"},{"w":"千军万马","level":3,"tag":"成语"},{"w":"鸡犬升天","level":3,"tag":"成语"},{"w":"画龙点睛","level":3,"tag":"成语"},{"w":"坐井观天","level":3,"tag":"成语"},{"w":"人山人海","level":3,"tag":"成语"},{"w":"惊天动地","level":3,"tag":"成语"},{"w":"emo了","level":3,"tag":"网络"},{"w":"破防了","level":3,"tag":"网络"},{"w":"躺平","level":3,"tag":"网络"},{"w":"内卷","level":3,"tag":"网络"},{"w":"摆烂","level":3,"tag":"网络"},{"w":"摸鱼","level":3,"tag":"网络"},{"w":"上头","level":3,"tag":"网络"},{"w":"无语","level":3,"tag":"网络"},{"w":"社死","level":3,"tag":"网络"},{"w":"社恐","level":3,"tag":"网络"},{"w":"吃瓜","level":3,"tag":"网络"},{"w":"自闭","level":3,"tag":"网络"},{"w":"凡尔赛","level":3,"tag":"网络"},{"w":"我酸了","level":3,"tag":"网络"},{"w":"划水","level":3,"tag":"网络"},{"w":"卷王","level":3,"tag":"网络"},{"w":"吐槽","level":3,"tag":"网络"},{"w":"点赞","level":3,"tag":"网络"},{"w":"关注","level":3,"tag":"网络"},{"w":"转发","level":3,"tag":"网络"},{"w":"加好友","level":3,"tag":"网络"},{"w":"发朋友圈","level":3,"tag":"网络"},{"w":"刷视频","level":3,"tag":"网络"},{"w":"弹幕","level":3,"tag":"网络"},{"w":"表情包","level":3,"tag":"网络"},{"w":"拍一拍","level":3,"tag":"网络"},{"w":"冒泡","level":3,"tag":"网络"},{"w":"告辞","level":3,"tag":"网络"},{"w":"厉害了","level":3,"tag":"网络"},{"w":"玩手机","level":2,"tag":"动作"},{"w":"戴耳机","level":2,"tag":"动作"},{"w":"晒太阳","level":2,"tag":"动作"},{"w":"吹蜡烛","level":2,"tag":"动作"},{"w":"放烟花","level":2,"tag":"场景"},{"w":"打雪仗","level":2,"tag":"运动"},{"w":"走马观花","level":3,"tag":"成语"}]}};
+window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"tag":"动物"},{"w":"大象","level":1,"tag":"动物"},{"w":"企鹅","level":1,"tag":"动物"},{"w":"熊猫","level":1,"tag":"动物"},{"w":"猫","level":1,"tag":"动物"},{"w":"狗","level":1,"tag":"动物"},{"w":"兔子","level":1,"tag":"动物"},{"w":"老虎","level":1,"tag":"动物"},{"w":"狮子","level":1,"tag":"动物"},{"w":"猴子","level":1,"tag":"动物"},{"w":"蛇","level":1,"tag":"动物"},{"w":"鱼","level":1,"tag":"动物"},{"w":"鸟","level":1,"tag":"动物"},{"w":"蝴蝶","level":1,"tag":"动物"},{"w":"蜗牛","level":1,"tag":"动物"},{"w":"鲨鱼","level":1,"tag":"动物"},{"w":"海豚","level":1,"tag":"动物"},{"w":"鲸鱼","level":1,"tag":"动物"},{"w":"螃蟹","level":1,"tag":"动物"},{"w":"乌龟","level":1,"tag":"动物"},{"w":"青蛙","level":1,"tag":"动物"},{"w":"孔雀","level":1,"tag":"动物"},{"w":"老鹰","level":1,"tag":"动物"},{"w":"鹦鹉","level":1,"tag":"动物"},{"w":"蜜蜂","level":1,"tag":"动物"},{"w":"蚂蚁","level":1,"tag":"动物"},{"w":"蜻蜓","level":1,"tag":"动物"},{"w":"瓢虫","level":1,"tag":"动物"},{"w":"蜘蛛","level":1,"tag":"动物"},{"w":"壁虎","level":1,"tag":"动物"},{"w":"考拉","level":1,"tag":"动物"},{"w":"北极熊","level":1,"tag":"动物"},{"w":"梅花鹿","level":1,"tag":"动物"},{"w":"松鼠","level":1,"tag":"动物"},{"w":"刺猬","level":1,"tag":"动物"},{"w":"河马","level":1,"tag":"动物"},{"w":"犀牛","level":1,"tag":"动物"},{"w":"骆驼","level":1,"tag":"动物"},{"w":"斑马","level":1,"tag":"动物"},{"w":"鳄鱼","level":1,"tag":"动物"},{"w":"苹果","level":1,"tag":"食物"},{"w":"西瓜","level":1,"tag":"食物"},{"w":"草莓","level":1,"tag":"食物"},{"w":"香蕉","level":1,"tag":"食物"},{"w":"葡萄","level":1,"tag":"食物"},{"w":"菠萝","level":1,"tag":"食物"},{"w":"樱桃","level":1,"tag":"食物"},{"w":"冰淇淋","level":1,"tag":"食物"},{"w":"蛋糕","level":1,"tag":"食物"},{"w":"汉堡","level":1,"tag":"食物"},{"w":"披萨","level":1,"tag":"食物"},{"w":"面条","level":1,"tag":"食物"},{"w":"饺子","level":1,"tag":"食物"},{"w":"包子","level":1,"tag":"食物"},{"w":"月饼","level":1,"tag":"食物"},{"w":"粽子","level":1,"tag":"食物"},{"w":"糖葫芦","level":1,"tag":"食物"},{"w":"火锅","level":1,"tag":"食物"},{"w":"寿司","level":1,"tag":"食物"},{"w":"热狗","level":1,"tag":"食物"},{"w":"鸡腿","level":1,"tag":"食物"},{"w":"薯条","level":1,"tag":"食物"},{"w":"爆米花","level":1,"tag":"食物"},{"w":"棉花糖","level":1,"tag":"食物"},{"w":"棒棒糖","level":1,"tag":"食物"},{"w":"鸡蛋","level":1,"tag":"食物"},{"w":"牛奶","level":1,"tag":"食物"},{"w":"面包","level":1,"tag":"食物"},{"w":"饼干","level":1,"tag":"食物"},{"w":"巧克力","level":1,"tag":"食物"},{"w":"雨伞","level":1,"tag":"物品"},{"w":"手机","level":1,"tag":"物品"},{"w":"电脑","level":1,"tag":"物品"},{"w":"眼镜","level":1,"tag":"物品"},{"w":"帽子","level":1,"tag":"物品"},{"w":"钥匙","level":1,"tag":"物品"},{"w":"剪刀","level":1,"tag":"物品"},{"w":"牙刷","level":1,"tag":"物品"},{"w":"闹钟","level":1,"tag":"物品"},{"w":"灯泡","level":1,"tag":"物品"},{"w":"镜子","level":1,"tag":"物品"},{"w":"椅子","level":1,"tag":"物品"},{"w":"桌子","level":1,"tag":"物品"},{"w":"书包","level":1,"tag":"物品"},{"w":"信封","level":1,"tag":"物品"},{"w":"蜡烛","level":1,"tag":"物品"},{"w":"气球","level":1,"tag":"物品"},{"w":"风筝","level":1,"tag":"物品"},{"w":"吉他","level":1,"tag":"物品"},{"w":"钢琴","level":1,"tag":"物品"},{"w":"相机","level":1,"tag":"物品"},{"w":"日历","level":1,"tag":"物品"},{"w":"地图","level":1,"tag":"物品"},{"w":"地球仪","level":1,"tag":"物品"},{"w":"自行车","level":1,"tag":"交通"},{"w":"汽车","level":1,"tag":"交通"},{"w":"飞机","level":1,"tag":"交通"},{"w":"火车","level":1,"tag":"交通"},{"w":"轮船","level":1,"tag":"交通"},{"w":"火箭","level":1,"tag":"交通"},{"w":"热气球","level":1,"tag":"交通"},{"w":"摩托车","level":1,"tag":"交通"},{"w":"公交车","level":1,"tag":"交通"},{"w":"直升机","level":1,"tag":"交通"},{"w":"地铁","level":1,"tag":"交通"},{"w":"电动车","level":1,"tag":"交通"},{"w":"太阳","level":1,"tag":"自然"},{"w":"月亮","level":1,"tag":"自然"},{"w":"星星","level":1,"tag":"自然"},{"w":"彩虹","level":1,"tag":"自然"},{"w":"雪花","level":1,"tag":"自然"},{"w":"山","level":1,"tag":"自然"},{"w":"眼睛","level":1,"tag":"身体"},{"w":"耳朵","level":1,"tag":"身体"},{"w":"手","level":1,"tag":"身体"},{"w":"脚","level":1,"tag":"身体"},{"w":"牙齿","level":1,"tag":"身体"},{"w":"头发","level":1,"tag":"身体"},{"w":"医生","level":1,"tag":"职业"},{"w":"警察","level":1,"tag":"职业"},{"w":"厨师","level":1,"tag":"职业"},{"w":"消防员","level":1,"tag":"职业"},{"w":"教师","level":1,"tag":"职业"},{"w":"宇航员","level":1,"tag":"职业"},{"w":"堵车","level":2,"tag":"场景"},{"w":"下雨","level":2,"tag":"场景"},{"w":"下雪","level":2,"tag":"场景"},{"w":"日出","level":2,"tag":"场景"},{"w":"日落","level":2,"tag":"场景"},{"w":"流星","level":2,"tag":"场景"},{"w":"火灾","level":2,"tag":"场景"},{"w":"雪人","level":2,"tag":"场景"},{"w":"沙滩","level":2,"tag":"场景"},{"w":"瀑布","level":2,"tag":"场景"},{"w":"火山爆发","level":2,"tag":"场景"},{"w":"海底世界","level":2,"tag":"场景"},{"w":"游乐园","level":2,"tag":"场景"},{"w":"动物园","level":2,"tag":"场景"},{"w":"演唱会","level":2,"tag":"场景"},{"w":"电影院","level":2,"tag":"场景"},{"w":"图书馆","level":2,"tag":"场景"},{"w":"超市","level":2,"tag":"场景"},{"w":"菜市场","level":2,"tag":"场景"},{"w":"地铁站","level":2,"tag":"场景"},{"w":"火车站","level":2,"tag":"场景"},{"w":"机场","level":2,"tag":"场景"},{"w":"医院","level":2,"tag":"场景"},{"w":"学校","level":2,"tag":"场景"},{"w":"公园","level":2,"tag":"场景"},{"w":"游泳池","level":2,"tag":"场景"},{"w":"篮球场","level":2,"tag":"场景"},{"w":"滑雪场","level":2,"tag":"场景"},{"w":"海边","level":2,"tag":"场景"},{"w":"露营","level":2,"tag":"场景"},{"w":"野餐","level":2,"tag":"场景"},{"w":"烧烤","level":2,"tag":"场景"},{"w":"咖啡店","level":2,"tag":"场景"},{"w":"健身房","level":2,"tag":"场景"},{"w":"电梯","level":2,"tag":"场景"},{"w":"楼梯","level":2,"tag":"场景"},{"w":"隧道","level":2,"tag":"场景"},{"w":"桥","level":2,"tag":"场景"},{"w":"摩天轮","level":2,"tag":"场景"},{"w":"旋转木马","level":2,"tag":"场景"},{"w":"过山车","level":2,"tag":"场景"},{"w":"刷牙","level":2,"tag":"动作"},{"w":"洗脸","level":2,"tag":"动作"},{"w":"洗澡","level":2,"tag":"动作"},{"w":"梳头","level":2,"tag":"动作"},{"w":"化妆","level":2,"tag":"动作"},{"w":"刮胡子","level":2,"tag":"动作"},{"w":"做饭","level":2,"tag":"动作"},{"w":"洗碗","level":2,"tag":"动作"},{"w":"扫地","level":2,"tag":"动作"},{"w":"拖地","level":2,"tag":"动作"},{"w":"洗衣服","level":2,"tag":"动作"},{"w":"晾衣服","level":2,"tag":"动作"},{"w":"叠被子","level":2,"tag":"动作"},{"w":"系鞋带","level":2,"tag":"动作"},{"w":"打伞","level":2,"tag":"动作"},{"w":"跳绳","level":2,"tag":"运动"},{"w":"踢毽子","level":2,"tag":"运动"},{"w":"打篮球","level":2,"tag":"运动"},{"w":"踢足球","level":2,"tag":"运动"},{"w":"打乒乓球","level":2,"tag":"运动"},{"w":"游泳","level":2,"tag":"运动"},{"w":"跑步","level":2,"tag":"运动"},{"w":"钓鱼","level":2,"tag":"动作"},{"w":"爬山","level":2,"tag":"运动"},{"w":"拍照","level":2,"tag":"动作"},{"w":"自拍","level":2,"tag":"动作"},{"w":"唱歌","level":2,"tag":"动作"},{"w":"跳舞","level":2,"tag":"动作"},{"w":"弹吉他","level":2,"tag":"动作"},{"w":"弹钢琴","level":2,"tag":"动作"},{"w":"打游戏","level":2,"tag":"动作"},{"w":"看手机","level":2,"tag":"动作"},{"w":"看书","level":2,"tag":"动作"},{"w":"写字","level":2,"tag":"动作"},{"w":"画画","level":2,"tag":"动作"},{"w":"打电话","level":2,"tag":"动作"},{"w":"遛狗","level":2,"tag":"动作"},{"w":"喂猫","level":2,"tag":"动作"},{"w":"种花","level":2,"tag":"动作"},{"w":"浇花","level":2,"tag":"动作"},{"w":"排队","level":2,"tag":"场景"},{"w":"考试","level":2,"tag":"场景"},{"w":"考试作弊","level":2,"tag":"动作"},{"w":"睡觉","level":2,"tag":"动作"},{"w":"做梦","level":2,"tag":"动作"},{"w":"起床","level":2,"tag":"动作"},{"w":"上班","level":2,"tag":"场景"},{"w":"下班","level":2,"tag":"场景"},{"w":"迟到","level":2,"tag":"场景"},{"w":"加班","level":2,"tag":"场景"},{"w":"熬夜","level":2,"tag":"动作"},{"w":"煮面","level":2,"tag":"动作"},{"w":"煎蛋","level":2,"tag":"动作"},{"w":"泡茶","level":2,"tag":"动作"},{"w":"喝咖啡","level":2,"tag":"动作"},{"w":"吃火锅","level":2,"tag":"动作"},{"w":"吃烧烤","level":2,"tag":"动作"},{"w":"旅游","level":2,"tag":"动作"},{"w":"购物","level":2,"tag":"场景"},{"w":"散步","level":2,"tag":"动作"},{"w":"打喷嚏","level":2,"tag":"动作"},{"w":"打哈欠","level":2,"tag":"动作"},{"w":"伸懒腰","level":2,"tag":"动作"},{"w":"滑雪","level":2,"tag":"运动"},{"w":"滑冰","level":2,"tag":"运动"},{"w":"冲浪","level":2,"tag":"运动"},{"w":"潜水","level":2,"tag":"运动"},{"w":"跳伞","level":2,"tag":"运动"},{"w":"蹦极","level":2,"tag":"运动"},{"w":"画蛇添足","level":3,"tag":"成语"},{"w":"守株待兔","level":3,"tag":"成语"},{"w":"掩耳盗铃","level":3,"tag":"成语"},{"w":"亡羊补牢","level":3,"tag":"成语"},{"w":"井底之蛙","level":3,"tag":"成语"},{"w":"对牛弹琴","level":3,"tag":"成语"},{"w":"杯弓蛇影","level":3,"tag":"成语"},{"w":"鹤立鸡群","level":3,"tag":"成语"},{"w":"鸡飞狗跳","level":3,"tag":"成语"},{"w":"虎头蛇尾","level":3,"tag":"成语"},{"w":"狼吞虎咽","level":3,"tag":"成语"},{"w":"龙飞凤舞","level":3,"tag":"成语"},{"w":"马到成功","level":3,"tag":"成语"},{"w":"鸟语花香","level":3,"tag":"成语"},{"w":"鱼目混珠","level":3,"tag":"成语"},{"w":"鼠目寸光","level":3,"tag":"成语"},{"w":"狐假虎威","level":3,"tag":"成语"},{"w":"叶公好龙","level":3,"tag":"成语"},{"w":"一箭双雕","level":3,"tag":"成语"},{"w":"三心二意","level":3,"tag":"成语"},{"w":"七上八下","level":3,"tag":"成语"},{"w":"九牛一毛","level":3,"tag":"成语"},{"w":"十全十美","level":3,"tag":"成语"},{"w":"百发百中","level":3,"tag":"成语"},{"w":"千军万马","level":3,"tag":"成语"},{"w":"鸡犬升天","level":3,"tag":"成语"},{"w":"画龙点睛","level":3,"tag":"成语"},{"w":"坐井观天","level":3,"tag":"成语"},{"w":"人山人海","level":3,"tag":"成语"},{"w":"惊天动地","level":3,"tag":"成语"},{"w":"emo了","level":3,"tag":"网络"},{"w":"破防了","level":3,"tag":"网络"},{"w":"躺平","level":3,"tag":"网络"},{"w":"内卷","level":3,"tag":"网络"},{"w":"摆烂","level":3,"tag":"网络"},{"w":"摸鱼","level":3,"tag":"网络"},{"w":"上头","level":3,"tag":"网络"},{"w":"无语","level":3,"tag":"网络"},{"w":"社死","level":3,"tag":"网络"},{"w":"社恐","level":3,"tag":"网络"},{"w":"吃瓜","level":3,"tag":"网络"},{"w":"自闭","level":3,"tag":"网络"},{"w":"凡尔赛","level":3,"tag":"网络"},{"w":"我酸了","level":3,"tag":"网络"},{"w":"划水","level":3,"tag":"网络"},{"w":"卷王","level":3,"tag":"网络"},{"w":"吐槽","level":3,"tag":"网络"},{"w":"点赞","level":3,"tag":"网络"},{"w":"关注","level":3,"tag":"网络"},{"w":"转发","level":3,"tag":"网络"},{"w":"加好友","level":3,"tag":"网络"},{"w":"发朋友圈","level":3,"tag":"网络"},{"w":"刷视频","level":3,"tag":"网络"},{"w":"弹幕","level":3,"tag":"网络"},{"w":"表情包","level":3,"tag":"网络"},{"w":"拍一拍","level":3,"tag":"网络"},{"w":"冒泡","level":3,"tag":"网络"},{"w":"告辞","level":3,"tag":"网络"},{"w":"厉害了","level":3,"tag":"网络"},{"w":"玩手机","level":2,"tag":"动作"},{"w":"戴耳机","level":2,"tag":"动作"},{"w":"晒太阳","level":2,"tag":"动作"},{"w":"吹蜡烛","level":2,"tag":"动作"},{"w":"放烟花","level":2,"tag":"场景"},{"w":"打雪仗","level":2,"tag":"运动"},{"w":"走马观花","level":3,"tag":"成语"}]},"tacit":{"version":1,"note":"默契大考验题库：type=who 的选项是两个玩家的名字（按参与者顺序）；type=pick 用自带的 options","questions":[{"q":"谁更可能先睡着？","type":"who"},{"q":"谁起床更磨蹭？","type":"who"},{"q":"谁更爱拍照？","type":"who"},{"q":"谁吃饭更慢？","type":"who"},{"q":"谁更怕冷？","type":"who"},{"q":"谁更容易迷路？","type":"who"},{"q":"谁更爱笑？","type":"who"},{"q":"谁更会安慰人？","type":"who"},{"q":"谁更爱收拾房间？","type":"who"},{"q":"谁更爱说「随便」？","type":"who"},{"q":"谁更容易被感动？","type":"who"},{"q":"谁更爱熬夜？","type":"who"},{"q":"谁更会挑餐厅？","type":"who"},{"q":"谁更爱撒娇？","type":"who"},{"q":"谁更像「小太阳」？","type":"who"},{"q":"谁更容易紧张？","type":"who"},{"q":"谁更爱看剧？","type":"who"},{"q":"谁更爱吃甜食？","type":"who"},{"q":"谁更爱唱歌？","type":"who"},{"q":"谁更会哄人开心？","type":"who"},{"q":"谁更容易心软？","type":"who"},{"q":"谁更爱逛街？","type":"who"},{"q":"谁更爱待在家？","type":"who"},{"q":"谁更记得住纪念日？","type":"who"},{"q":"周末更想怎么过？","type":"pick","options":["在家躺着","出门走走","见朋友","去旅行"]},{"q":"今晚吃什么？","type":"pick","options":["火锅","烧烤","家常菜","点外卖"]},{"q":"更喜欢的季节？","type":"pick","options":["春天","夏天","秋天","冬天"]},{"q":"心情不好时更想要什么？","type":"pick","options":["抱抱","安静待着","出门散心","一起吃好吃的"]},{"q":"更喜欢的饮料？","type":"pick","options":["奶茶","咖啡","果汁","白开水"]},{"q":"理想的约会是什么样？","type":"pick","options":["看电影","散步","逛展","待在家"]},{"q":"更喜欢的天气？","type":"pick","options":["大晴天","小雨","下雪","阴天"]},{"q":"收到什么会更开心？","type":"pick","options":["小礼物","一句夸奖","一起吃饭","一次旅行"]},{"q":"更喜欢的宠物？","type":"pick","options":["猫","狗","仓鼠","先不养"]},{"q":"放假更想去哪？","type":"pick","options":["海边","山里","大城市","家里"]},{"q":"更喜欢哪样甜品？","type":"pick","options":["蛋糕","冰淇淋","布丁","不太甜"]},{"q":"更喜欢的电影类型？","type":"pick","options":["喜剧","悬疑","动画","爱情"]},{"q":"更喜欢的音乐？","type":"pick","options":["流行","民谣","摇滚","纯音乐"]},{"q":"更喜欢的早餐？","type":"pick","options":["豆浆油条","面包牛奶","小笼包","不吃"]},{"q":"更喜欢的运动？","type":"pick","options":["跑步","游泳","羽毛球","躺着不动"]},{"q":"最想去的地方？","type":"pick","options":["日本","欧洲","云南","川西"]},{"q":"什么最能让你放松？","type":"pick","options":["听音乐","睡一觉","散散步","找人聊天"]},{"q":"更喜欢怎么表达关心？","type":"pick","options":["说出口","做顿饭","默默陪着","发条消息"]},{"q":"更喜欢哪种花？","type":"pick","options":["玫瑰","向日葵","满天星","郁金香"]},{"q":"更喜欢哪个颜色？","type":"pick","options":["粉色","蓝色","绿色","黄色"]},{"q":"更喜欢什么样的礼物？","type":"pick","options":["实用的","好看的","手作的","惊喜的"]},{"q":"生日更想怎么过？","type":"pick","options":["热闹聚会","两个人过","收礼物","当普通一天"]},{"q":"更喜欢哪种相处方式？","type":"pick","options":["每天聊天","见面最要紧","各忙各的","一起做点事"]},{"q":"更喜欢的作息？","type":"pick","options":["早睡早起","晚睡晚起","看情况","完全不固定"]}]}};
 /* ===== src/data.js ===== */
 /* ===== 词库（构建时由 build.mjs 注入，测试可替换） ===== */
 (function (root) {
@@ -248,8 +291,10 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
   // 构建时注入（单文件内联）；无注入时留空
   var injected = (typeof window !== 'undefined' && window.__PN_BANKS__) || (root.__PN_BANKS__);
   if (injected && injected.draw) PN.BANKS.draw = injected.draw;
+  if (injected && injected.tacit) PN.BANKS.tacit = injected.tacit;
   PN.Banks = {
-    words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; }
+    words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; },
+    questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }
   };
   function rnd(n) { return Math.floor(Math.random() * n); }
   function sample(arr, n, exclude) {
@@ -1198,6 +1243,11 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
       if (!game) return;
       var players = this.state.players.filter(function (p) { return p.online; });
       if (players.length < (game.minPlayers || 2)) { this.toast('人数不够：' + game.name + ' 至少 ' + game.minPlayers + ' 人'); return; }
+      // 双人游戏的人数上限要拦住，否则第三个人进来看不到自己的位置、规则也不成立
+      if (game.maxPlayers && players.length > game.maxPlayers) {
+        this.toast('人数超了：' + game.name + ' 最多 ' + game.maxPlayers + ' 人');
+        return;
+      }
       this.state.mode = mode;
       game.init(this);
       this.emit();
@@ -1891,6 +1941,238 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
       }
       // 走的是没猜出来的猜词者：剩下的人可能已经全猜中，别让大家干等
       if (g.cur.phase === 'draw') maybeEarlyReveal(host);
+    }
+  };
+
+  PN.games[ID] = game;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/games/tacit.js ===== */
+/* ===== 默契大考验：同一道题各自秘密作答，看看你们有多懂对方 =====
+ *
+ * 双人合作：答案一致就两人同时加分，最后给出「默契度」。
+ * 关键设计：揭晓前每个人的答案只存在房主的闭包里（绝不进 state），
+ * 否则任何人都能从广播状态里偷看对方选了什么，这个游戏就废了。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var ID = 'tacit';
+  var NAME = '默契大考验';
+  var EMOJI = '💞';
+  var ANSWER_SEC = 30;   // 每题作答时间
+  var REVEAL_MS = 4500;  // 揭晓停留时间
+  var DEF_TOTAL = 8;     // 默认题目数
+
+  // ----- 闭包：绝不进入 state -----
+  var _pv = { answers: {}, used: [], qid: null };
+
+  function bank() { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }
+
+  /** 随机取一道没出过的题（出完一轮就重新洗） */
+  function pickOne() {
+    var all = bank();
+    if (!all.length) return null;
+    var pool = all.filter(function (q) { return _pv.used.indexOf(q.q) < 0; });
+    if (!pool.length) { _pv.used = []; pool = all.slice(); }
+    var q = pool[Math.floor(Math.random() * pool.length)];
+    _pv.used.push(q.q);
+    return q;
+  }
+
+  /** 选项：who → 两位参与者的名字（顺序同 g.players）；pick → 题目自带 */
+  function optionsFor(host, q) {
+    var g = host.g();
+    if (q.type === 'pick') return (q.options || []).slice(0, 4);
+    return (g.players || []).map(function (id) {
+      var p = host.player(id);
+      return p ? p.name : '?';
+    });
+  }
+
+  function participants(host) { return (host.g().players || []).filter(function (id) { return !!host.player(id); }); }
+  function onlineParticipants(host) {
+    return participants(host).filter(function (id) { var p = host.player(id); return p && p.online; });
+  }
+
+  /** 出题 → 进入作答阶段 */
+  function startQuestion(host) {
+    var g = host.g();
+    var q = pickOne();
+    if (!q) { finish(host); return; }
+    _pv.answers = {};
+    _pv.qid = q.q;
+    g.cur = {
+      q: q.q,
+      qtype: q.type,
+      options: optionsFor(host, q),
+      deadline: host.now() + ANSWER_SEC * 1000,
+      phase: 'answer',
+      answered: {},   // 谁知道「谁答了」是公开信息（不含内容），用来显示「已提交，等对方…」
+      reveal: null
+    };
+    host.clearTimer('tacit_answer');
+    host.after('tacit_answer', ANSWER_SEC * 1000 + 300, function () {
+      var g2 = host.g();
+      if (g2.cur && g2.cur.phase === 'answer') doReveal(host);
+    });
+    host.emit();
+  }
+
+  /** 两人都答完（或超时）→ 同时揭晓比对 */
+  function doReveal(host) {
+    var g = host.g();
+    if (!g || !g.cur || g.cur.phase !== 'answer') return;
+    host.clearTimer('tacit_answer');
+
+    var ps = participants(host);
+    var picks = [], miss = [], vals = [];
+    ps.forEach(function (id) {
+      var p = host.player(id);
+      var i = _pv.answers[id];
+      var ok = (i !== undefined && i !== null && g.cur.options[i] !== undefined);
+      if (!ok) { miss.push(id); vals.push(null); }
+      else vals.push(i);
+      picks.push({
+        id: id,
+        name: p ? p.name : '?',
+        emoji: p ? p.emoji : '🙂',
+        i: ok ? i : -1,
+        label: ok ? g.cur.options[i] : '没作答'
+      });
+    });
+    var first = vals[0];
+    var match = miss.length === 0 && ps.length >= 2 && vals.every(function (v) { return v === first; });
+
+    g.cur.phase = 'reveal';
+    g.cur.deadline = host.now() + REVEAL_MS;
+    g.cur.reveal = { picks: picks, match: match, miss: miss };
+
+    if (match) {
+      g.matched = (g.matched || 0) + 1;
+      ps.forEach(function (id) { host.addScore(id, 1); });
+      host.toast('心有灵犀！💞 两个人都选了「' + g.cur.options[first] + '」', 'good');
+      host.event({ t: 'tacit_match' });
+    } else {
+      host.event({ t: 'tacit_miss' });
+    }
+    host.emit();
+
+    host.clearTimer('tacit_next');
+    host.after('tacit_next', REVEAL_MS, function () {
+      var g2 = host.g();
+      if (!g2.cur || g2.cur.phase !== 'reveal') return;
+      if (g2.round >= g2.total) finish(host);
+      else { g2.round++; startQuestion(host); }
+    });
+  }
+
+  /** 结算 */
+  function finish(host) {
+    var g = host.g();
+    host.clearTimer('tacit_answer');
+    host.clearTimer('tacit_next');
+    var total = g.total || DEF_TOTAL;
+    var matched = g.matched || 0;
+    g.phase = 'over';
+    g.cur = null;
+    g.summary = { matched: matched, total: total, percent: Math.round(matched / total * 100) };
+    if (matched >= total) host.toast('满分默契！你们是一个人吧？✨', 'good');
+    host.event({
+      t: 'gameover',
+      players: participants(host).map(function (id) {
+        var p = host.player(id);
+        return { id: id, name: p ? p.name : '?', score: p ? p.score : 0 };
+      })
+    });
+    host.emit();
+  }
+
+  var game = {
+    id: ID,
+    name: NAME,
+    emoji: EMOJI,
+    blurb: '同一道题各自悄悄选，看看你们有多懂对方 💞',
+    minPlayers: 2,
+    maxPlayers: 2,
+
+    init: function (host) {
+      var s = host.state;
+      var settings = s.settings.tacit || (s.settings.tacit = { rounds: DEF_TOTAL });
+      s.phase = 'round';
+
+      var ps = host.onlinePlayers().slice(0, 2);
+      if (ps.length < 2) { host.toast('默契大考验要两个人才能玩哦', 'info'); host.goLobby(); return; }
+
+      _pv = { answers: {}, used: [], qid: null };
+      s.g = {
+        round: 1,
+        total: Math.max(3, Math.min(16, Number(settings.rounds) || DEF_TOTAL)),
+        matched: 0,
+        players: ps.map(function (p) { return p.id; }),
+        cur: null,
+        summary: null,
+        startedAt: host.now()
+      };
+      host.toast('💞 默契大考验开始！同一道题各自选，不许偷看', 'good');
+      startQuestion(host);
+    },
+
+    action: function (host, action, from) {
+      var g = host.g();
+      if (!g) return;
+
+      if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
+      if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
+
+      if (action.t === 'answer') {
+        if (!g.cur || g.cur.phase !== 'answer') return;
+        if (participants(host).indexOf(from) < 0) return;          // 旁观者不能作答
+        if (_pv.answers[from] !== undefined) return;               // 一题只能答一次，不能改
+        var i = Number(action.i);
+        if (isNaN(i) || g.cur.options[i] === undefined) return;
+        _pv.answers[from] = i;
+        g.cur.answered[from] = true;
+        host.emit();                                               // 让对方看到「ta 已提交」
+        var on = onlineParticipants(host);
+        if (on.length >= 2 && on.every(function (id) { return _pv.answers[id] !== undefined; })) doReveal(host);
+        return;
+      }
+      // 新人进来时状态是 retained 的，自己就同步了；作答内容本来就不该给旁观者
+    },
+
+    /** 换主：答案存在闭包里，换主就没了 —— 清空重答（揭晓前谁都没看到过，公平） */
+    resume: function (host) {
+      var g = host.g();
+      if (!g || !g.cur) return;
+      var left = Math.max(0, g.cur.deadline - host.now());
+      if (g.cur.phase === 'answer') {
+        _pv.answers = {};
+        g.cur.answered = {};
+        host.after('tacit_answer', left + 300, function () {
+          var g2 = host.g();
+          if (g2.cur && g2.cur.phase === 'answer') doReveal(host);
+        });
+      } else if (g.cur.phase === 'reveal') {
+        host.after('tacit_next', Math.max(1200, left), function () {
+          var g2 = host.g();
+          if (!g2.cur || g2.cur.phase !== 'reveal') return;
+          if (g2.round >= g2.total) finish(host);
+          else { g2.round++; startQuestion(host); }
+        });
+      }
+      host.emit();
+    },
+
+    /** 双人游戏少一个人就玩不下去：温和收尾（掉线有宽限期，这里是真离开） */
+    onLeave: function (host, id) {
+      var g = host.g();
+      if (!g || !g.cur) return;
+      if ((g.players || []).indexOf(id) < 0) return;
+      if (onlineParticipants(host).length < 2) {
+        host.toast('对方离开了，这一局先到这儿～', 'info');
+        finish(host);
+      }
     }
   };
 
@@ -2606,6 +2888,107 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
+/* ===== src/screens-tacit.js ===== */
+/* ===== 默契大考验 屏幕 =====
+ * 三个状态：作答（各自悄悄选）→ 揭晓（并排比对）→ 结算（默契度）
+ * 情感互动设计：作答后明确显示「已提交，等对方选…」；揭晓时把两人的选择并排放在一起，
+ * 不一致时不说「错了」，而是提示「趁机聊聊为什么」——把差异变成话题。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var esc = PN.esc;
+
+  function rating(p) {
+    if (p >= 100) return '你们就是同一个人吧？✨';
+    if (p >= 80) return '默契到有点吓人 💞';
+    if (p >= 60) return '相当合拍，继续加油 🌷';
+    if (p >= 40) return '一半一半，正好多聊聊天 🌱';
+    return '原来是两个星球的人呀 ☁️';
+  }
+
+  PN.screens = PN.screens || {};
+  PN.screens.tacit = {
+    name: 'tacit',
+    render: function (state, secret) {
+      var ui = this;
+      var C = PN.gameCommon;
+      var g = state.g || {};
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+
+      var phaseText = g.phase === 'over' ? '本局结束'
+        : (g.cur && g.cur.phase === 'reveal' ? '揭晓' : '作答中');
+      var extra = g.cur && g.cur.deadline
+        ? C.deadlineChip(g.cur.deadline)
+        : '<span class="pill">' + ((g.summary && g.summary.matched) || g.matched || 0) + ' 题一致</span>';
+      wrap.appendChild(ui.h(C.gameHeader(ui, state, '💞 默契大考验', phaseText, extra)));
+
+      var body = ui.el('div');
+
+      /* ---------- 结算 ---------- */
+      if (g.phase === 'over' || !g.cur) {
+        var s = g.summary || { matched: 0, total: 0, percent: 0 };
+        body.appendChild(ui.h(
+          '<div class="card center tac-hero">' +
+          '<div class="tac-percent">' + s.percent + '<span>%</span></div>' +
+          '<div class="tac-word">你们の默契度</div>' +
+          '<div class="muted mt8">' + s.total + ' 题里，有 <b>' + s.matched + '</b> 题想到了一起</div>' +
+          '<div class="tac-quote">' + rating(s.percent) + '</div>' +
+          '</div>'));
+        body.appendChild(ui.h(C.scoreboard(state)));
+        var btns = ui.h(C.overButtons(ui, 'tacit'));
+        body.appendChild(btns);
+        PN.wireOver(btns, ui);
+      /* ---------- 作答 ---------- */
+      } else if (g.cur.phase === 'answer') {
+        var mine = !!(g.cur.answered && g.cur.answered[ui.pid()]);
+        body.appendChild(ui.h(
+          '<div class="card center tac-q">' +
+          '<div class="muted">第 ' + g.round + ' / ' + g.total + ' 题</div>' +
+          '<div class="tac-qtext">' + esc(g.cur.q) + '</div>' +
+          '</div>'));
+        var opts = ui.el('div', 'tac-opts');
+        var letters = ['A', 'B', 'C', 'D'];
+        (g.cur.options || []).forEach(function (label, i) {
+          var b = ui.el('button', 'tac-opt' + (mine ? ' dim' : ''));
+          b.innerHTML = '<span class="k">' + (letters[i] || '') + '</span><span class="t">' + esc(label) + '</span>';
+          if (!mine) {
+            b.addEventListener('click', function () {
+              b.classList.add('chosen');
+              ui.send({ t: 'answer', i: i });
+            });
+          }
+          opts.appendChild(b);
+        });
+        body.appendChild(opts);
+        body.appendChild(ui.h(mine
+          ? '<div class="tac-wait"><span class="dots"><i></i><i></i><i></i></span>已提交，等对方选…</div>'
+          : '<div class="muted center mt8">选一个最像你们的答案 · 对方看不到你的选择</div>'));
+      /* ---------- 揭晓 ---------- */
+      } else {
+        var r = g.cur.reveal || { picks: [], match: false };
+        body.appendChild(ui.h('<div class="card center tac-q"><div class="tac-qtext">' + esc(g.cur.q) + '</div></div>'));
+        var row = '<div class="tac-picks">';
+        (r.picks || []).forEach(function (p) {
+          row += '<div class="tac-pick' + (r.match ? ' same' : '') + '">' +
+            '<div class="em">' + (p.emoji || '🙂') + '</div>' +
+            '<div class="nm">' + esc(p.name) + '</div>' +
+            '<div class="pick">' + esc(p.label) + '</div>' +
+            '</div>';
+        });
+        row += '</div>';
+        body.appendChild(ui.h(row));
+        body.appendChild(ui.h('<div class="tac-verdict ' + (r.match ? 'ok' : 'no') + '">' +
+          (r.match ? '心有灵犀 💞' : '咦，想的不一样～ 趁机聊聊为什么') + '</div>'));
+      }
+
+      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
+      wrap.appendChild(body);
+      return wrap;
+    }
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
 /* ===== src/ui.js ===== */
 /* ===== UI 核心：落地页 + 大厅 + 通用渲染骨架 ===== */
 (function (root) {
@@ -3105,7 +3488,9 @@ window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'drawgame') {
+    if (mode === 'tacit') {
+      rows.push(seg('题目数量', 'rounds', [[6, '6'], [8, '8'], [10, '10'], [12, '12']]));
+    } else if (mode === 'drawgame') {
       rows.push(seg('总回合', 'rounds', [[3, '3'], [6, '6'], [9, '9']]));
       rows.push(seg('画画时长', 'drawSec', [[60, '60s'], [90, '90s'], [120, '120s']]));
     }

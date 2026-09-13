@@ -224,3 +224,46 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .land:before{content:"💗";position:absolute;right:16%;top:26vh;font-size:18px;animation:qfloat 2.6s ease-in-out infinite .4s;opacity:.85}
 
 @media (max-width:360px){ .player{width:calc(100% - 0px)} .modegrid{grid-template-columns:1fr} }
+
+/* ===== 默契大考验 ===== */
+.tac-q{margin-bottom:14px}
+.tac-qtext{font-size:22px;font-weight:900;line-height:1.5;margin-top:6px;animation:qpop .34s var(--spring) both}
+.tac-opts{display:flex;flex-direction:column;gap:10px}
+.tac-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:15px 16px;
+  border-radius:var(--r2);background:var(--card);border:2.5px solid var(--stroke);font-weight:800;font-size:16px;
+  box-shadow:0 4px 0 var(--stroke);transition:transform .12s var(--spring),box-shadow .12s ease;
+  animation:qpop .34s var(--spring) both}
+.tac-opt:nth-child(2){animation-delay:.05s}.tac-opt:nth-child(3){animation-delay:.1s}.tac-opt:nth-child(4){animation-delay:.15s}
+.tac-opt:active{transform:translateY(4px);box-shadow:0 0 0 var(--stroke)}
+.tac-opt .k{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;
+  background:var(--bg2);color:var(--acc);font-size:14px;font-weight:900;flex:0 0 auto}
+.tac-opt .t{flex:1;min-width:0}
+.tac-opt.chosen{background:linear-gradient(160deg,#ffb3cf,#ff8fb8);color:#fff;border-color:#e2679a;box-shadow:0 4px 0 #e2679a}
+.tac-opt.chosen .k{background:#fff;color:#e2679a}
+.tac-opt.dim{opacity:.45;box-shadow:none;transform:none}
+.tac-wait{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-size:14px;font-weight:800;
+  color:var(--ink2);animation:qpop .3s var(--spring) both}
+.dots{display:inline-flex;gap:4px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--acc);animation:qdot .9s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes qdot{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-5px);opacity:1}}
+.tac-picks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tac-pick{background:var(--card);border:2.5px solid var(--stroke);border-radius:var(--r);padding:14px 10px;text-align:center;
+  box-shadow:var(--soft);animation:qslideL .38s var(--spring) both}
+.tac-pick:nth-child(2){animation-name:qslideR}
+.tac-pick.same{border-color:var(--acc);background:#fff5fa;box-shadow:0 4px 0 rgba(255,143,184,.45)}
+.tac-pick .em{font-size:30px}
+.tac-pick .nm{font-size:13px;font-weight:800;margin-bottom:6px}
+.tac-pick .pick{font-size:16px;font-weight:900;color:var(--acc);word-break:break-word}
+@keyframes qslideL{from{opacity:0;transform:translateX(-24px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes qslideR{from{opacity:0;transform:translateX(24px) scale(.94)}to{opacity:1;transform:none}}
+.tac-verdict{margin-top:14px;text-align:center;font-size:17px;font-weight:900;padding:12px;border-radius:var(--r2);
+  animation:qpop .4s var(--spring) both}
+.tac-verdict.ok{background:linear-gradient(160deg,#ffe3ef,#ffd0e4);color:#d1578f;border:2.5px solid var(--acc)}
+.tac-verdict.no{background:var(--bg2);color:var(--ink2);border:2.5px dashed var(--line)}
+.tac-hero{padding:26px 16px}
+.tac-percent{font-size:64px;font-weight:900;line-height:1;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.25);
+  animation:qpop .5s var(--spring) both}
+.tac-percent span{font-size:26px;margin-left:2px}
+.tac-word{font-size:13px;color:var(--ink2);margin-top:4px;letter-spacing:2px}
+.tac-quote{margin-top:12px;font-size:16px;font-weight:800}

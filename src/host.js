@@ -90,6 +90,11 @@
       if (!game) return;
       var players = this.state.players.filter(function (p) { return p.online; });
       if (players.length < (game.minPlayers || 2)) { this.toast('人数不够：' + game.name + ' 至少 ' + game.minPlayers + ' 人'); return; }
+      // 双人游戏的人数上限要拦住，否则第三个人进来看不到自己的位置、规则也不成立
+      if (game.maxPlayers && players.length > game.maxPlayers) {
+        this.toast('人数超了：' + game.name + ' 最多 ' + game.maxPlayers + ' 人');
+        return;
+      }
       this.state.mode = mode;
       game.init(this);
       this.emit();

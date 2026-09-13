@@ -6,8 +6,10 @@
   // 构建时注入（单文件内联）；无注入时留空
   var injected = (typeof window !== 'undefined' && window.__PN_BANKS__) || (root.__PN_BANKS__);
   if (injected && injected.draw) PN.BANKS.draw = injected.draw;
+  if (injected && injected.tacit) PN.BANKS.tacit = injected.tacit;
   PN.Banks = {
-    words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; }
+    words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; },
+    questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }
   };
   function rnd(n) { return Math.floor(Math.random() * n); }
   function sample(arr, n, exclude) {

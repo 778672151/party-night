@@ -17,6 +17,7 @@ const scripts = [
   ...readdirSync(join(root, 'src/games')).filter(f => f.endsWith('.js')).sort().map(f => 'src/games/' + f),
   'src/screens-common.js',
   'src/screens-drawgame.js',
+  'src/screens-tacit.js',
   'src/ui.js',
   'src/app.js',
 ];
@@ -26,7 +27,7 @@ let src = scripts.map(p => {
 }).join('\n');
 
 const banks = {};
-for (const f of ['draw']) {
+for (const f of ['draw', 'tacit']) {
   banks[f] = JSON.parse(readFileSync(join(root, 'data', f + '.json'), 'utf8'));
 }
 const banksJson = JSON.stringify(banks).replace(/</g, '\\u003c');
