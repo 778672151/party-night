@@ -435,6 +435,14 @@
       if (g.cur.painter && !getRD(g.round).answer) {
         host.requestSecret(g.cur.painter, { recover: true, round: g.round });
       }
+      // 笔迹记录（rd.segments）同样是闭包，换主就空了 —— 别人刷新回来会看到白板。
+      // 两条路补回来：① 新房主自己的屏幕重发一遍（走墨迹通道的「自发自收」回调）；
+      // ② 向其它在线玩家要一次上报，手里还有笔迹的人会重发。
+      host.event({ t: 'recover_ink', round: g.round });
+      var meId = host.state && host.state.hostId;
+      host.onlinePlayers().forEach(function (p) {
+        if (p.id !== meId) host.requestSecret(p.id, { recover: true, round: g.round });
+      });
 
       var now = host.now();
       var remaining = max(0, g.cur.deadline - now);

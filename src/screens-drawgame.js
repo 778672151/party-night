@@ -579,6 +579,17 @@
       if (answer || (s.words && s.words.length)) {
         ui.send({ t: 'repaint', answer: answer, words: s.words || null });
       }
+      // 手里还有本轮的笔迹就重发一遍：换主后新房主的回放记录是空的，靠这个补回来。
+      // 接收端按 i0 落位，重复上报是幂等的。
+      if (local.strokes && local.strokes.length) {
+        for (var i = 0; i < local.strokes.length; i++) {
+          var st = local.strokes[i];
+          if (!st.pts || !st.pts.length || st.r !== local.round) continue;
+          var n = (st.have === undefined) ? st.pts.length : Math.min(st.have, st.pts.length);
+          if (!n) continue;
+          ui.sendInk({ t: 'stroke', id: st.id, r: st.r, color: st.color, w: st.w, i0: 0, s: st.pts.slice(0, n) });
+        }
+      }
     },
 
     /* ---------- 私密消息：自己的词 / 回放 ---------- */

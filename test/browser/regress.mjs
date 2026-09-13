@@ -105,6 +105,18 @@ S.rejoin = async (cdp) => {
   assert(inkAfter >= inkBefore * 0.7, '刷新后笔迹由回放补齐（' + inkAfter + ' vs ' + inkBefore + '）');
   assert(await G2.eval('PN.app.state.players.length') === 2, '名单没有多出重复的人');
   await G2.shot('04-rejoin');
+
+  // 开房的那个人刷新也要能回来（他的链接原本不带 #房号 —— 线上就是这一路挂的）
+  const creator = (await A.eval('!!PN.app.room.me.id')) ? A : B;
+  const creatorId = await creator.eval('PN.app.room.me.id');
+  assert(await creator.eval('location.hash.length > 1'), '进房后地址栏带上了房号：' + await creator.eval('location.hash'));
+  await creator.reload();
+  await sleep(600);
+  await enterIfNeeded(creator);
+  await creator.waitFor('PN.app.state && PN.app.state.mode === "drawgame"', '开房者刷新后回到对局', 40000);
+  assert(await creator.eval('PN.app.room.me.id') === creatorId, '开房者刷新后还是同一个人');
+  assert(await creator.eval('!document.body.innerText.includes("界面出错了")'), '开房者刷新后没有白屏报错');
+  assert(await creator.eval('PN.app.state.players.length') === 2, '开房者刷新后名单还是 2 个人');
   await A.dispose(); await B.dispose();
 };
 

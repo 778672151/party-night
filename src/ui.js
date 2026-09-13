@@ -55,7 +55,7 @@
     var back = this.el('button', 'btn ghost sm', host ? '🏠 回大厅' : '🚪 退出房间');
     back.addEventListener('click', function () {
       if (self.isHost()) { self.send({ t: 'lobby' }); return; }
-      if (confirm('退出房间？这一局就少你一个人了')) { self.room.leave(false); location.reload(); }
+      if (confirm('退出房间？这一局就少你一个人了')) { self.room.leave(false); self.exitToLand(); }
     });
     row.appendChild(back);
     return row;
@@ -176,6 +176,11 @@
     var cbtn = $('#pn-copycode');
     if (cbtn) cbtn.addEventListener('click', function () { self.copyLink(); });
   };
+  /** 主动离开：先抹掉地址栏里的房号，再刷新回落地页（不然刷新会立刻自动进回刚退出的房间） */
+  UI.prototype.exitToLand = function () {
+    try { history.replaceState(null, '', location.pathname + (location.search || '')); } catch (e) { try { location.hash = ''; } catch (e2) {} }
+    location.reload();
+  };
   UI.prototype.link = function () {
     return location.origin + location.pathname + (location.search || '') + '#' + (this.room ? this.room.code : '');
   };
@@ -254,6 +259,9 @@
     var wantJoin = join || !!code;
     var brokerIndex = Number(this.local('broker')) || 0;
     var build = function (c) {
+      // 房号写回地址栏：这样「开房的人」刷新页面也能回到同一局（以前只有点链接进来的人有 #房号，
+      // 开房的人一刷新就掉回落地页，还得手动再输房号），顺便让随时复制的链接都带着房号。
+      try { history.replaceState(null, '', '#' + c); } catch (e) { try { location.hash = c; } catch (e2) {} }
       self.room = new PN.Room({
         code: c,
         identity: { id: id, name: name, emoji: emoji },
@@ -340,6 +348,11 @@
   };
 
   UI.prototype.onEvent = function (ev) {
+    // 换主后新房主手里的回放记录是空的：让它自己的屏幕把笔迹重报一遍（见 drawgame.resume）
+    if (ev.t === 'recover_ink') {
+      if (this.screen && this.screen.onRecover) this.screen.onRecover.call(this, { ink: true, round: ev.round });
+      return;
+    }
     if (ev.t === 'descAll') { this.toast('描述揭晓，开始投票！'); return; }
     if (ev.t === 'voteResult') { this.toast('投票结果出炉'); return; }
     if (ev.t === 'gameover') {
@@ -445,8 +458,8 @@
     $('#pn-share').addEventListener('click', function () { self.share(); });
     $('#pn-edit').addEventListener('click', function () { self.editProfile(); });
     var reset = $('#pn-reset'); if (reset) reset.addEventListener('click', function () { if (confirm('清零所有人积分？')) self.send({ t: 'resetScores' }); });
-    var dis = $('#pn-disband'); if (dis) dis.addEventListener('click', function () { if (confirm('解散房间？所有人都要重进')) { self.room.leave(true); location.reload(); } });
-    var lv = $('#pn-leave'); if (lv) lv.addEventListener('click', function () { self.room.leave(false); location.reload(); });
+    var dis = $('#pn-disband'); if (dis) dis.addEventListener('click', function () { if (confirm('解散房间？所有人都要重进')) { self.room.leave(true); self.exitToLand(); } });
+    var lv = $('#pn-leave'); if (lv) lv.addEventListener('click', function () { self.room.leave(false); self.exitToLand(); });
     var cards = wrap.querySelectorAll('.modecard');
     cards.forEach(function (card) {
       var mode = card.dataset.mode;
