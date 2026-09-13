@@ -86,7 +86,10 @@ for (const [w, h, label] of SIZES) {
   await sleep(400);
   await check(A, '画猜-pick');
   const painter = await A.eval('PN.app.state.g.cur.painter');
-  const P = ids[painter];
+  // 按"每个页面自己的玩家 id"找到画家那一页（以前这里写的是未定义的 ids，历史遗留 bug）
+  let P = null;
+  for (const p of pages) { if ((await p.eval('PN.app.me().id')) === painter) { P = p; break; } }
+  if (!P) { console.log('      · 没找到画家对应页面，改用房主页继续检查'); P = A; }
   await P.waitFor('!!document.querySelector("[data-word]")', '选词卡');
   await clickUntil(P, '[data-word="0"]', 'PN.app.state.g.cur.phase === "draw"', '作画中');
   await sleep(600);

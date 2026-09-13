@@ -177,6 +177,8 @@ PN.gameCommon.gameCard()  // 两类游戏共用同一个卡片（内部元素统
     node test/gomoku-test.mjs             # 五子棋：落子规则/四方向连五+长连/平局/悔棋需对方同意/换主（35 项）
     node test/mini-test.mjs               # 小游戏厅：清单与文件一致/没有空壳/没有死链（11 项）
     node test/catalog-test.mjs            # 入口系统：目录/分区/统一卡片/向后兼容/新增游戏零改入口（22 项）
+    node test/version-test.mjs            # 发布一致性：VERSION ↔ version.json ↔ 产物内嵌版本 ↔ md5（17 项）
+    node test/browser/update-tip.mjs      # 更新提示实测：临时造一个更高版本 → 页面提示刷新（跑完自动还原）
     node test/style-check.mjs             # CSS 静态检查：注释成对/括号成对/没有空选择器（防「漏 */ 吞掉整段样式」）
     node test/regress-fixes.mjs           # 核心缺陷护栏：答案泄露 / 设置失效 / 房主迁移 / 掉线丢分 / 挂机兜底 / 整段回放自愈（24 项）
     node test/integration-drawgame.mjs    # 真实 broker 跑完整一局（选词→作画→猜中→揭晓→回放→换轮）
@@ -231,6 +233,20 @@ gomoku **35 / 0**、regress-fixes **24 / 0**、jsdom **32 / 0**、真 broker 一
     data/memory.json        翻牌牌面池：3 套主题 × 14 个可爱表情
     data/codraw.json        心有灵犀题库：30 个题目 + 提示
     test/                   零依赖用例 + 真浏览器套件
+
+## 发布、更新与回滚
+
+版本号唯一来源是仓库根的 `VERSION`；构建会把它写进产物，并生成 `version.json`（版本 / 构建时间 / 游戏数量 / 产物 md5，仓库根与 `dist/` 各一份）。
+页面打开与切回前台时会用 `version.json` 对账，线上更新了就提示「🎁 有新版本 x.y.z · 刷新看看」。
+
+```bash
+node tools/release.mjs patch     # 升版本 + 构建 + 跑发布一致性校验（patch|minor|major|x.y.z|build）
+git add -A && git commit -m '发布 v1.0.1' && git tag v1.0.1 && git push origin main --tags
+```
+
+回滚：`git revert <发布提交>` → `node build.mjs && cp dist/party-night.html index.html` → 提交推送；
+回滚后线上版本号变回旧值，玩家页面下次对账就会提示刷新——版本对账本身就是回滚生效的观测点。
+完整兼容验证记录与回滚步骤见 `COMPAT-AND-RELEASE.md`。
 
 ## 已知限制
 

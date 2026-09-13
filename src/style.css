@@ -172,8 +172,12 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 /* 猜词者要能用手指在画布区域上下滑动页面；只有画家才禁用滚动 */
 .dg-stage.locked,.dg-stage.locked canvas{touch-action:pan-y}
 .dg-hint{display:flex;align-items:center;justify-content:center;gap:10px;min-height:46px;margin:2px 0 8px;
-  font-size:23px;font-weight:900;letter-spacing:.22em;color:var(--ink);animation:qpop .32s var(--spring) both}
-.dg-hint .w{color:#f0a02a}
+  font-size:23px;font-weight:900;letter-spacing:.22em;color:var(--ink);animation:qpop .32s var(--spring) both;
+  /* 手机窄屏修复：大字距 + 不可收缩的 flex 子项会把这一行撑破容器（390 视口曾溢出到 396px、文档宽多 6px） */
+  flex-wrap:wrap;max-width:100%;min-width:0}
+.dg-hint .w{color:#f0a02a;min-width:0;word-break:break-word}
+/* 窄屏收紧字号与字距：通常一行放得下，放不下也会换行而不是撑破 */
+@media (max-width:430px){ .dg-hint{font-size:19px;letter-spacing:.12em;gap:8px} }
 .dg-hint .u{color:#e6d5ee}
 .dg-hint .tag{font-size:13px;font-weight:700;letter-spacing:0;color:var(--ink2);background:var(--card);
   border:2px solid var(--line);border-radius:999px;padding:4px 12px}
@@ -398,3 +402,10 @@ input[type=range]{width:120px;accent-color:var(--acc)}
   background:var(--bg2);border:2px solid var(--line);color:var(--ink2)}
 .gc-num{font-size:10px;color:var(--ink2)}
 .modecard .gc-num{margin-left:auto}
+
+/* ===== 更新提示（阶段四：迭代机制）===== */
+.update-tip{position:fixed;left:50%;transform:translateX(-50%);top:8px;z-index:120;
+  display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;
+  background:var(--card);border:2.5px solid var(--stroke);box-shadow:var(--pop);
+  font-size:12.5px;font-weight:700;color:var(--ink);animation:qdrop .4s var(--spring) both;max-width:94vw}
+.update-tip b{color:var(--acc)}
