@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>密码破译局 · 解密游戏</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070b12; --panel:#0d1420; --panel2:#0a0f18; --line:#1e2a3a;
+  --accent:#00ff9c; --accent2:#38bdf8; --warn:#ffd166; --err:#ff5d5d;
+  --text:#d7e2ee; --dim:#7b8ba3;
+}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text); overflow-x:hidden;
+  font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+#matrix{ position:fixed; inset:0; z-index:0; opacity:.15; pointer-events:none; }
+.scanlines{ position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px); }
+
+header{
+  position:sticky; top:0; z-index:10; background:rgba(7,11,18,.85); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line); padding:12px 20px; display:flex; align-items:center; gap:14px;
+}
+.brand{ font-weight:700; letter-spacing:1px; color:#fff; font-size:16px; }
+.brand span{ color:var(--accent); }
+.hud-right{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+#levelIndicator{ display:flex; gap:6px; flex-wrap:wrap; }
+.dot{ width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background:transparent;
+  color:var(--dim); font-size:11px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:.2s; }
+.dot:hover{ border-color:var(--accent); color:var(--accent); }
+.dot.done{ background:rgba(0,255,156,.14); border-color:var(--accent); color:var(--accent); }
+.dot.cur{ box-shadow:0 0 10px rgba(0,255,156,.55); }
+.icon-btn{ background:none; border:1px solid var(--line); color:var(--dim); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:14px; transition:.2s; }
+.icon-btn:hover{ border-color:var(--accent); color:var(--accent); }
+.progress{ position:absolute; left:0; bottom:-1px; height:3px; width:100%; }
+#progressBar{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2));
+  box-shadow:0 0 8px var(--accent); transition:width .5s; }
+
+main{ position:relative; z-index:5; max-width:860px; margin:0 auto; padding:24px 16px 80px; }
+.screen.hidden{ display:none !important; }
+
+#introScreen{ text-align:center; padding-top:56px; }
+h1{ color:#fff; font-size:34px; letter-spacing:2px; text-shadow:0 0 18px rgba(0,255,156,.5); margin-bottom:8px; }
+.sub{ color:var(--accent); letter-spacing:6px; font-size:13px; margin-bottom:28px; }
+.intro-box{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 26px;
+  text-align:left; line-height:2; white-space:pre-line; margin-bottom:26px;
+  box-shadow:0 0 24px rgba(0,255,156,.06); cursor:pointer; }
+.dim{ color:var(--dim); font-size:12px; }
+
+.btn{ background:transparent; border:1px solid var(--accent); color:var(--accent); padding:10px 22px;
+  border-radius:8px; font-size:15px; cursor:pointer; letter-spacing:1px; transition:.2s; font-family:inherit; }
+.btn:hover{ background:rgba(0,255,156,.12); box-shadow:0 0 14px rgba(0,255,156,.35); }
+.btn.primary{ background:rgba(0,255,156,.14); }
+.btn.small{ padding:6px 14px; font-size:13px; }
+.btn.skip{ border-color:var(--dim); color:var(--dim); }
+.btn.skip:hover{ background:rgba(123,139,163,.12); box-shadow:0 0 10px rgba(123,139,163,.25); }
+
+.level-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+#levelTitle{ color:var(--accent); font-size:20px; font-weight:700; letter-spacing:1px; }
+#levelCount{ color:var(--dim); font-size:13px; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+.card-title{ color:var(--accent2); font-size:13px; letter-spacing:1px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+#storyText{ white-space:pre-line; line-height:1.95; cursor:pointer; }
+#cipherText{ font-family:'Consolas','Courier New',monospace; font-size:22px; color:#fff; letter-spacing:2px;
+  text-shadow:0 0 12px rgba(0,255,156,.55); word-break:break-all; line-height:1.7; }
+#cipherText.cipher-braille{ font-size:46px; letter-spacing:8px; font-family:'Segoe UI Symbol','Noto Sans Symbols 2',sans-serif; }
+#cipherText.cipher-svg{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.copy-btn{ background:none; border:1px solid var(--line); color:var(--dim); font-size:12px; border-radius:6px; padding:3px 10px; cursor:pointer; }
+.copy-btn:hover{ color:var(--accent); border-color:var(--accent); }
+details.card summary{ cursor:pointer; color:var(--accent2); font-size:13px; letter-spacing:1px; list-style:none; user-select:none; }
+details.card summary::-webkit-details-marker{ display:none; }
+details.card summary::before{ content:'▸ '; }
+details.card[open] summary::before{ content:'▾ '; }
+#lessonText{ line-height:1.9; margin-top:10px; font-size:14px; }
+
+.tool-row{ margin:10px 0; }
+.tool-row label{ display:block; font-size:12px; color:var(--dim); margin-bottom:6px; }
+textarea,input[type=text],select{ width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+  border-radius:8px; padding:9px 12px; font-family:'Consolas','Courier New',monospace; font-size:14px; outline:none; transition:.2s; }
+textarea:focus,input[type=text]:focus,select:focus{ border-color:var(--accent); box-shadow:0 0 10px rgba(0,255,156,.2); }
+select option{ background:var(--panel2); color:var(--text); }
+input[type=range]{ width:100%; accent-color:var(--accent); }
+.tool-out{ min-height:38px; background:var(--panel2); border:1px dashed var(--line); border-radius:8px;
+  padding:10px 12px; color:var(--accent); font-family:'Consolas','Courier New',monospace; font-size:18px; word-break:break-all; }
+.tool-tip{ color:var(--dim); font-size:12px; margin-top:8px; }
+
+/* 键盘 */
+.keys{ display:flex; flex-direction:column; gap:6px; margin:10px 0; }
+.keyrow{ display:flex; gap:5px; }
+.keyrow.offset{ padding-left:10px; }
+.key{ min-width:32px; flex:1; padding:7px 0; text-align:center; border:1px solid var(--line); border-radius:6px;
+  background:var(--panel2); font-family:Consolas,monospace; color:var(--text); font-size:13px; }
+/* 手机九宫格 */
+.t9-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0; }
+.t9-key{ border:1px solid var(--line); border-radius:10px; padding:10px; text-align:center; background:var(--panel2); }
+.t9-key b{ display:block; font-size:20px; color:var(--accent); }
+.t9-key span{ font-size:13px; color:var(--dim); }
+/* 盲文表 */
+.braille-chart{ display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:6px; margin:10px 0; }
+.braille-cell{ background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 4px; text-align:center; }
+.braille-cell .g{ font-size:30px; line-height:1.1; display:block; }
+.braille-cell span{ font-size:12px; color:var(--dim); }
+/* 猪圈图例 */
+.pigpen-chart{ display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:6px; margin:10px 0; }
+.pigpen-cell{ background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px; text-align:center; }
+.pigpen-cell svg{ display:block; margin:0 auto; }
+.pigpen-cell span{ font-size:12px; color:var(--dim); }
+/* 波利比奥斯方格 */
+.poly-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin:10px 0; }
+.poly-cell{ border:1px solid var(--line); border-radius:6px; padding:7px 0; text-align:center; background:var(--panel2); }
+.poly-cell b{ display:block; color:var(--accent); font-family:Consolas,monospace; font-size:16px; }
+.poly-cell span{ font-size:11px; color:var(--dim); font-family:Consolas,monospace; }
+/* 字母块 */
+.tiles{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.tile{ min-width:40px; padding:9px; text-align:center; border:1px solid var(--accent); border-radius:8px;
+  background:rgba(0,255,156,.08); font-family:Consolas,monospace; font-size:18px; color:#fff; }
+
+.answer-row{ display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
+#answerInput{ flex:1; min-width:220px; font-size:17px; }
+#hintBtn{ border-color:var(--warn); color:var(--warn); }
+#hintBtn:hover{ background:rgba(255,209,102,.12); box-shadow:0 0 12px rgba(255,209,102,.3); }
+#feedback{ margin-top:12px; min-height:24px; font-size:14px; letter-spacing:.5px; }
+#feedback.ok{ color:var(--accent); text-shadow:0 0 8px rgba(0,255,156,.5); }
+#feedback.err{ color:var(--err); }
+#hintBox{ margin-top:8px; color:var(--warn); font-size:14px; line-height:1.8; }
+.shake{ animation:shake .45s; }
+@keyframes shake{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+
+#winScreen{ text-align:center; padding-top:40px; }
+#winStory{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 26px; line-height:2.1; margin:22px auto; max-width:640px; }
+#winStats{ display:flex; justify-content:center; gap:14px; flex-wrap:wrap; margin:24px 0; }
+.stat{ background:var(--panel); border:1px solid var(--line); border-radius:10px; min-width:110px; padding:14px 10px; }
+.stat b{ display:block; font-size:26px; color:var(--accent); }
+.stat span{ font-size:12px; color:var(--dim); }
+#winRating{ color:var(--warn); font-size:16px; margin-bottom:26px; letter-spacing:1px; }
+
+.confetti{ position:fixed; top:-24px; z-index:99; border-radius:2px; animation:fall linear forwards; pointer-events:none; }
+@keyframes fall{ to{ transform:translateY(112vh) rotate(720deg); opacity:.9; } }
+
+@media (max-width:640px){
+  h1{ font-size:26px; }
+  #cipherText{ font-size:17px; }
+  #cipherText.cipher-braille{ font-size:34px; }
+  .brand{ font-size:14px; }
+  .dot{ width:20px; height:20px; font-size:10px; }
+  .answer-row{ flex-direction:column; }
+  #answerInput{ min-width:0; }
+}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="scanlines"></div>
+
+<header>
+  <div class="brand">🔓 密码破译局<span> · Puzzle Bureau</span></div>
+  <div class="hud-right">
+    <div id="levelIndicator"></div>
+    <button id="soundBtn" class="icon-btn" title="声音开关">🔊</button>
+    <button id="restartBtn" class="icon-btn" title="重置进度">↺</button>
+  </div>
+  <div class="progress"><div id="progressBar"></div></div>
+</header>
+
+<main>
+  <!-- 开场 -->
+  <section id="introScreen" class="screen">
+    <h1>密码破译局</h1>
+    <div class="sub">P U Z Z L E &nbsp; B U R E A U</div>
+    <div class="intro-box" id="introStory"></div>
+    <div class="dim" style="margin-bottom:18px">（点击文字可跳过动画 · 每次开始任务，谜题都会随机生成）</div>
+    <button id="startBtn" class="btn primary">开始任务</button>
+  </section>
+
+  <!-- 关卡 -->
+  <section id="gameScreen" class="screen hidden">
+    <div class="level-head">
+      <span id="levelTitle"></span>
+      <span id="levelCount"></span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📜 任务简报 <span class="dim">（点击可跳过）</span></div>
+      <div id="storyText"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔐 截获情报 <button id="copyBtn" class="copy-btn">复制</button></div>
+      <div id="cipherText"></div>
+    </div>
+
+    <details class="card">
+      <summary>📖 解谜讲义</summary>
+      <div id="lessonText"></div>
+    </details>
+
+    <details class="card" id="toolCard">
+      <summary>🛠 破译工具</summary>
+      <div id="toolArea"></div>
+    </details>
+
+    <div class="answer-row">
+      <input id="answerInput" type="text" placeholder="输入破译结果…（英文，不区分大小写）" autocomplete="off" spellcheck="false">
+      <button id="submitBtn" class="btn primary">破译提交</button>
+      <button id="hintBtn" class="btn">💡 提示</button>
+      <button id="skipBtn" class="btn skip">⏭ 跳过</button>
+    </div>
+    <div id="feedback"></div>
+    <div id="hintBox"></div>
+  </section>
+
+  <!-- 通关 -->
+  <section id="winScreen" class="screen hidden">
+    <h1>🎉 任务完成</h1>
+    <div class="sub">M I S S I O N &nbsp; A C C O M P L I S H E D</div>
+    <div id="winStory"></div>
+    <div id="winStats"></div>
+    <div id="winRating"></div>
+    <button id="againBtn" class="btn primary">🔁 重新开始</button>
+  </section>
+</main>
+
+<script>
+'use strict';
+/* ================= 基础数据 ================= */
+const rnd = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+const pick = arr => arr[rnd(0, arr.length - 1)];
+function shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j = rnd(0,i); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+/* 藏头隐写：每个字母对应若干可用于造词的词 */
+const ACRO_WORDS = {
+  A:['Agent','Arrow','Alpha'], B:['Bravo','Black','Beacon'], C:['Cipher','Cloud','Castle'],
+  D:['Delta','Dragon','Drone'], E:['Echo','Eagle','Ember'], F:['Falcon','Frost','Flame'],
+  G:['Ghost','Gamma','Guard'], H:['Hotel','Hawk','Halo'], I:['Iris','Icarus','Ivory'],
+  J:['Jade','Joker','Jolt'], K:['Kilo','Kite','Kernel'], L:['Lima','Laser','Lumen'],
+  M:['Metro','Magma','Moth'], N:['Nova','Night','Neon'], O:['Oscar','Onyx','Orbit'],
+  P:['Papa','Pulse','Pixel'], Q:['Quartz','Quiver','Quasar'], R:['Romeo','Raven','Radar'],
+  S:['Sierra','Storm','Signal'], T:['Tango','Tower','Titan'], U:['Umbra','Ultra','Unity'],
+  V:['Victor','Viper','Vector'], W:['Whiskey','Wolf','Warden'], X:['Xray','Xenon','Xerox'],
+  Y:['Yankee','Yonder','Yarrow'], Z:['Zulu','Zenith','Zero']
+};
+
+/* 各关卡候选词（互不重复）；第 8 关为 [词, 中文释义] */
+const POOLS = [
+  ['SECRET','MESSAGE','HIDDEN','SIGNAL','TARGET','CIPHER','SHADOW','FALCON','EMBER','ORACLE','NEBULA','COMET'],
+  ['STREAM','GARDEN','WINDOW','POCKET','BRIDGE','CANYON','DESERT','FOREST','SHADOW','MIRROR','SILVER','CANDLE'],
+  ['PHANTOM','CYPHER','BEACON','ORACLE','VECTOR','NEBULA','QUANTA','SUMMIT','TITAN','PLASMA','COMET','DRAGON'],
+  ['VICTORY','TREASURE','MISSION','HORIZON','PYRAMID','DRAGON','WIZARD','PHOENIX','JUNGLE','MAGNET','SAHARA','PANDORA'],
+  ['CODE','NODE','BYTE','HASH','TOKEN','SHELL','PROXY','KERNEL','MOUSE','CLICK','GUARD','VIRUS','PIXEL','ROBOT'],
+  ['HELLO','WORLD','AGENT','ALERT','DELTA','BRAVO','FALCON','GAMMA','NINJA','ROCKET','SATURN','THUNDER','ECHO','ZEBRA'],
+  ['BRAILLE','DOTS','READ','TOUCH','NIGHT','SENSE','CLEAR','VISION','LIGHT','WORDS','CODE','FINGER'],
+  ['MASON','BRICK','STONE','WALL','FORT','TOWER','CASTLE','GATE','VAULT','TEMPLE','LODGE','SECRET'],
+  [['DANGER','危险'],['ISLAND','岛屿'],['CASTLE','城堡'],['PIRATE','海盗'],['TREASURE','宝藏'],['JUNGLE','丛林'],
+   ['ROCKET','火箭'],['SHADOW','影子'],['THUNDER','雷声'],['MIRROR','镜子'],['GARDEN','花园'],['WIZARD','巫师']],
+  ['MISSION','TARGET','BEACON','ORACLE','VICTOR','HORIZON','PHANTOM','CASTLE','FOREST','TEMPLE','PIRATE','EMBER','SECTOR','MAGNET']
+];
+
+/* T9 手机键盘、QWERTY 键盘、盲文、波利比奥斯方格 */
+const T9 = { A:2,B:2,C:2,D:3,E:3,F:3,G:4,H:4,I:4,J:5,K:5,L:5,M:6,N:6,O:6,P:7,Q:7,R:7,S:7,T:8,U:8,V:8,W:9,X:9,Y:9,Z:9 };
+const T9GROUPS = { 2:'ABC',3:'DEF',4:'GHI',5:'JKL',6:'MNO',7:'PQRS',8:'TUV',9:'WXYZ' };
+const QWERTY_ROWS = ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+const BRAILLE = '⠁⠃⠉⠙⠑⠋⠛⠓⠊⠚⠅⠇⠍⠝⠕⠏⠟⠗⠎⠞⠥⠧⠺⠭⠽⠵'; /* A–Z */
+const POLY_GRID = 'ABCDEFGHIKLMNOPQRSTUVWXYZ'; /* 5×5，I/J 合并，无 J */
+
+/* ================= 工具函数 ================= */
+function qwShift(text, dir){
+  const pos = {};
+  QWERTY_ROWS.forEach((row, ri) => [...row].forEach((ch, i) => pos[ch] = { ri, i, len: row.length }));
+  return text.toUpperCase().replace(/[A-Z]/g, ch => {
+    const p = pos[ch]; if(!p) return ch;
+    const i = dir === 'left' ? (p.i - 1 + p.len) % p.len : (p.i + 1) % p.len;
+    return QWERTY_ROWS[p.ri][i];
+  });
+}
+
+/* 猪圈密码：字母 → SVG 符号 */
+function pigpenSvg(letter, size){
+  size = size || 34;
+  const S = size, pad = 3;
+  const idx = letter.toUpperCase().charCodeAt(0) - 65;
+  let lines = [], dot = false;
+  if(idx <= 8){ /* 九宫格 A-I，无点 */
+    const r = Math.floor(idx/3), c = idx%3;
+    if(r!==2) lines.push(`M${pad},${pad} L${S-pad},${pad}`);
+    if(r!==0) lines.push(`M${pad},${S-pad} L${S-pad},${S-pad}`);
+    if(c!==2) lines.push(`M${pad},${pad} L${pad},${S-pad}`);
+    if(c!==0) lines.push(`M${S-pad},${pad} L${S-pad},${S-pad}`);
+  } else if(idx <= 17){ /* 九宫格 J-R，带点 */
+    const r = Math.floor((idx-9)/3), c = (idx-9)%3;
+    if(r!==2) lines.push(`M${pad},${pad} L${S-pad},${pad}`);
+    if(r!==0) lines.push(`M${pad},${S-pad} L${S-pad},${S-pad}`);
+    if(c!==2) lines.push(`M${pad},${pad} L${pad},${S-pad}`);
+    if(c!==0) lines.push(`M${S-pad},${pad} L${S-pad},${S-pad}`);
+    dot = true;
+  } else { /* X 形格子 S-Z */
+    const ch = letter.toUpperCase();
+    if(ch === 'S') lines.push(`M${pad},${S-pad} L${S/2},${pad} L${S-pad},${S-pad}`);
+    else if(ch === 'V') lines.push(`M${pad},${pad} L${S/2},${S-pad} L${S-pad},${pad}`);
+    else if(ch === 'T') lines.push(`M${S-pad},${pad} L${pad},${S/2} L${S-pad},${S-pad}`);
+    else if(ch === 'U') lines.push(`M${pad},${pad} L${S-pad},${S/2} L${pad},${S-pad}`);
+    else if(ch === 'W'){ lines.push(`M${pad},${S-pad} L${S/2},${pad} L${S-pad},${S-pad}`); dot = true; }
+    else if(ch === 'Z'){ lines.push(`M${pad},${pad} L${S/2},${S-pad} L${S-pad},${pad}`); dot = true; }
+    else if(ch === 'X'){ lines.push(`M${S-pad},${pad} L${pad},${S/2} L${S-pad},${S-pad}`); dot = true; }
+    else if(ch === 'Y'){ lines.push(`M${pad},${pad} L${S-pad},${S/2} L${pad},${S-pad}`); dot = true; }
+  }
+  const paths = lines.map(d => `<path d="${d}" fill="none" stroke="#e9fff6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+  const dotEl = dot ? `<circle cx="${S/2}" cy="${S/2}" r="2.2" fill="#00ff9c"/>` : '';
+  return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">${paths}${dotEl}</svg>`;
+}
+
+/* ================= 谜题生成器（每次进入关卡随机生成） ================= */
+function genAcrostic(){
+  const answer = pick(POOLS[0]);
+  const cipher = answer.split('').map(c => pick(ACRO_WORDS[c])).join(' ');
+  return { answer, cipher, hints: [
+    '藏头：真正的情报不在词义里，而在每个单词的开头——把每个词的首字母连起来读。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `首字母连起来是：${answer}`
+  ]};
+}
+function genReverse(){
+  const answer = pick(POOLS[1]);
+  const cipher = answer.split('').reverse().join('');
+  return { answer, cipher, hints: [
+    '这段文字是倒着写的——把它反过来读，或用工具反转。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${cipher} → ${answer}`
+  ]};
+}
+function genNth(){
+  const answer = pick(POOLS[2]);
+  const step = rnd(2, 4);
+  let cipher = '';
+  for(const ch of answer){ cipher += ch; for(let k=0;k<step-1;k++) cipher += String.fromCharCode(65 + rnd(0,25)); }
+  return { answer, cipher, step, hints: [
+    `密文里混入了干扰字符——从第 1 个字符开始，每隔 ${step} 个字符取一个，剩下的就是答案。`,
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `步长 ${step}：${answer}`
+  ]};
+}
+function genA1Z26(){
+  const answer = pick(POOLS[3]);
+  const cipher = answer.split('').map(c => c.charCodeAt(0) - 64).join(' ');
+  return { answer, cipher, hints: [
+    'A1Z26：数字对应字母在字母表中的位置（1=A，2=B……26=Z），把数字粘贴进工具转换。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${cipher} → ${answer}`
+  ]};
+}
+function genQwerty(){
+  const answer = pick(POOLS[4]);
+  const dir = pick(['left','right']);
+  const cipher = qwShift(answer, dir);
+  const dirText = dir === 'left' ? '左' : '右';
+  return { answer, cipher, dir, hints: [
+    `键盘错位：打字时每个字母都往键盘的${dirText}边偏了一格（用工具反向移回）。`,
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${cipher} → ${answer}`
+  ]};
+}
+function genT9(){
+  const answer = pick(POOLS[5]);
+  const cipher = answer.split('').map(c => T9[c]).join(' ');
+  return { answer, cipher, hints: [
+    '手机九宫格：每个数字对应按键上的几个字母（2=ABC，3=DEF……），对照键盘把数字还原成单词。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${cipher} → ${answer}`
+  ]};
+}
+function genBraille(){
+  const answer = pick(POOLS[6]);
+  const cipher = answer.split('').map(c => BRAILLE[c.charCodeAt(0)-65]).join('');
+  return { answer, cipher, cipherKind:'braille', hints: [
+    '盲文：每个凸点图案对应一个字母，对照下方的盲文字母表逐个还原。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${answer} 的盲文是 ${cipher}`
+  ]};
+}
+function genPigpen(){
+  const answer = pick(POOLS[7]);
+  const cipherHtml = answer.split('').map(c => pigpenSvg(c, 42)).join('');
+  return { answer, cipher: answer, cipherKind:'pigpen', cipherHtml, hints: [
+    '猪圈密码（石匠密码）：字母被放进九宫格和 X 形格子里，符号是字母周围"栅栏"的形状，对照图例还原。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `符号依次对应：${answer}`
+  ]};
+}
+function genAnagram(){
+  const pair = pick(POOLS[8]);
+  const answer = pair[0], meaning = pair[1];
+  let scrambled = shuffle(answer.split(''));
+  if(scrambled.join('') === answer && answer.length > 1) scrambled = scrambled.reverse();
+  const raw = scrambled.join('');
+  return { answer, meaning, cipher: raw, display: scrambled.join(' '), hints: [
+    `乱序字谜：字母被打乱了。线索：${meaning}——把字母重新排列成这个意思的单词。`,
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${raw} 重排后是 ${answer}`
+  ]};
+}
+function genPolybius(){
+  const answer = pick(POOLS[9]);
+  const cipher = answer.split('').map(c => {
+    const i = POLY_GRID.indexOf(c);
+    return String(Math.floor(i/5)+1) + String(i%5+1);
+  }).join(' ');
+  return { answer, cipher, hints: [
+    '波利比奥斯方格：5×5 方格（I 和 J 共用一个格子），每两个数字是"行 列"坐标，对照方格还原。',
+    `答案以 ${answer.slice(0,2)} 开头。`,
+    `${cipher} → ${answer}`
+  ]};
+}
+
+/* ================= 关卡 ================= */
+const LEVELS = [
+  { title:'藏头隐写', tool:'acrostic', generate: genAcrostic,
+    story:'一段被截获的通讯记录，看起来只是随机的关键词列表。但经验告诉你：真正的情报，往往藏在每个词的开头。',
+    lesson:'藏头（Acrostic）：一种隐写术，把真正信息藏在文本的开头——通常是每个单词的首字母（或每行的第一个字）。破解方式：取首字母连读。' },
+  { title:'反向阅读', tool:'reverse', generate: genReverse,
+    story:'这次的情报读起来完全不通。也许换个方向——从右往左看，它就顺了。',
+    lesson:'反向文字：把整段文字倒过来写。破解方式：从右往左读，或用工具反转。' },
+  { title:'隔位取字', tool:'nth', generate: genNth,
+    story:'密文里混进了大量干扰字符，真正的字母之间隔着固定的距离，像埋在一堆石子里的珍珠。',
+    lesson:'隔位取字：把真正的字母按固定间隔（步长）插入一串干扰字符中。破解方式：从第 1 个字符开始，每隔固定步长取一个字符。' },
+  { title:'A1Z26 数字码', tool:'a1z26', generate: genA1Z26,
+    story:'情报被换成了数字。1 到 26，不多不少，正好对应 26 个字母的顺序。',
+    lesson:'A1Z26：最直接的字母—数字映射，A=1、B=2……Z=26。破解方式：把每个数字换成对应的字母。' },
+  { title:'键盘错位', tool:'qwerty', generate: genQwerty,
+    story:'打字的人似乎手抖了，每个字母都往键盘的同一个方向偏了一格。',
+    lesson:'键盘错位：把按键在真实键盘上平移一格得到的密文。QWERTY 键盘三行分别是 QWERTYUIOP / ASDFGHJKL / ZXCVBNM。破解方式：反方向移回一格。' },
+  { title:'手机九宫格', tool:'t9', generate: genT9,
+    story:'用老式手机九宫格键盘输入的字，被记录成了一个个按键的数字。',
+    lesson:'T9 九宫格：老式手机把 3–4 个字母压缩到同一个数字键上（2=ABC，3=DEF……9=WXYZ）。破解方式：对照键盘，从数字还原单词。' },
+  { title:'盲文', tool:'braille', generate: genBraille,
+    story:'一段凹凸不平的点阵——这是盲人用手指"阅读"的文字。',
+    lesson:'盲文（Braille）：由 6 个凸点组成的触觉文字，每个字母对应一种点的组合。破解方式：对照盲文字母表逐个还原。' },
+  { title:'猪圈密码', tool:'pigpen', generate: genPigpen,
+    story:'古老的石匠符号。字母被关进了九宫格和 X 形的栅栏里，留下的只是栅栏的形状。',
+    lesson:'猪圈密码（Pigpen / 石匠密码）：把字母放进两个九宫格和两个 X 形格子，用字母所在格子的"栅栏"形状表示该字母。破解方式：对照图例还原。' },
+  { title:'字母乱序', tool:'anagram', generate: genAnagram,
+    story:'字母全都还在，只是被彻底打乱了顺序。拼回来，它就是一个你认识的词。',
+    lesson:'乱序字谜（Anagram）：把单词的字母打乱。破解方式：把字母重新排列成有意义的单词，词义线索能帮助判断。' },
+  { title:'波利比奥斯方格', tool:'polybius', generate: genPolybius,
+    story:'坐标！两个数字一组，第一个是行、第二个是列，对应一个 5×5 的方格。',
+    lesson:'波利比奥斯方格（Polybius square）：5×5 方格，I 与 J 共用一格，共 25 格。每个字母用"行 列"两个数字表示。破解方式：对照方格查坐标。' }
+];
+
+const INTRO_TEXT = '【绝密 · 天穹计划】\n\n深夜 02:13，你的终端收到一封无署名的加密邮件。\n情报显示：敌对组织"暗网之影"窃取了代号《天穹计划》的机密，并将其伪装成 10 段截然不同的密文。\n\n它们可能是藏头文字、倒写的句子、数字坐标、盲文、石匠符号……每一种都是不同的破译思路。\n\n黎明之前，识破全部谜题，夺回情报。\n\n—— 情报局 · 局长';
+
+/* ================= 状态 ================= */
+const KEY = 'dsh-cipher-game-v1';
+const $ = s => document.querySelector(s);
+const norm = s => s.toUpperCase().replace(/[^A-Z]/g, '');
+const firstUncompleted = () => LEVELS.findIndex((_, i) => !state.completed.includes(i));
+
+const state = {
+  level: 0, hints: 0, attempts: 0, busy: false, current: null,
+  completed: [], stars: {}, muted: false, startTime: null, answers: [],
+  totalAttempts: 0, totalHints: 0
+};
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({completed:state.completed, muted:state.muted, stars:state.stars})); }catch(e){} }
+function loadSave(){ try{ const d = JSON.parse(localStorage.getItem(KEY) || '{}'); state.completed = d.completed || []; state.muted = !!d.muted; state.stars = d.stars || {}; }catch(e){} }
+
+/* ================= 音效 ================= */
+let audioCtx = null;
+function ac(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(f, d, type, g){
+  if(state.muted) return;
+  try{
+    const c = ac(), o = c.createOscillator(), v = c.createGain();
+    o.type = type || 'sine'; o.frequency.value = f;
+    v.gain.setValueAtTime(g || 0.15, c.currentTime);
+    v.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + d);
+    o.connect(v); v.connect(c.destination); o.start(); o.stop(c.currentTime + d);
+  }catch(e){}
+}
+const sClick = () => tone(520, 0.06, 'triangle', 0.06);
+const sGood  = () => { tone(523,0.12); setTimeout(()=>tone(659,0.12),110); setTimeout(()=>tone(784,0.22),220); };
+const sBad   = () => tone(150, 0.28, 'sawtooth', 0.1);
+const sWin   = () => [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.28,'sine',0.14), i*170));
+
+/* ================= 背景矩阵雨 ================= */
+function startMatrix(){
+  const cvs = $('#matrix'), ctx = cvs.getContext('2d');
+  const FONT = 14, chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノABCDEF'.split('');
+  let cols = 0, drops = [];
+  function resize(){
+    cvs.width = innerWidth; cvs.height = innerHeight;
+    cols = Math.floor(cvs.width / FONT);
+    drops = Array.from({length: cols}, () => Math.random() * cvs.height / FONT | 0);
+  }
+  resize(); addEventListener('resize', resize);
+  setInterval(() => {
+    ctx.fillStyle = 'rgba(6,10,18,0.14)'; ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle = '#00ff9c'; ctx.font = FONT + 'px monospace';
+    for(let i=0;i<cols;i++){
+      ctx.fillText(chars[Math.random()*chars.length|0], i*FONT, drops[i]*FONT);
+      if(drops[i]*FONT > cvs.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }, 66);
+}
+
+/* ================= 彩带 ================= */
+function confetti(){
+  const colors = ['#00ff9c','#ffd166','#06d6a0','#ef476f','#118ab2','#ff9e00'];
+  for(let i=0;i<80;i++){
+    const p = document.createElement('div');
+    p.className = 'confetti';
+    p.style.left = (Math.random()*100) + 'vw';
+    p.style.background = colors[i % colors.length];
+    p.style.width = (6 + Math.random()*6) + 'px';
+    p.style.height = (8 + Math.random()*8) + 'px';
+    p.style.animationDuration = (2 + Math.random()*2) + 's';
+    p.style.animationDelay = (Math.random()*0.5) + 's';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 4300);
+  }
+}
+
+/* ================= 打字机 ================= */
+function typeStory(el, text){
+  return new Promise(res => {
+    el.textContent = '';
+    let i = 0, finished = false;
+    const finish = () => { if(finished) return; finished = true; clearInterval(iv); el.textContent = text; res(); };
+    const iv = setInterval(() => { if(i >= text.length) return finish(); el.textContent = text.slice(0, ++i); }, 13);
+    el.addEventListener('click', finish, {once:true});
+  });
+}
+
+/* ================= 关卡工具（初始为空，玩家自行粘贴） ================= */
+function buildTool(type){
+  const wrap = $('#toolArea');
+  let html = '', wire = null;
+  switch(type){
+    case 'acrostic':
+      html = `<div class="tool-row"><label>截获的通讯（提取每个单词首字母）</label>
+          <textarea id="acr-in" rows="3" placeholder="把截获的文字粘贴到这里"></textarea></div>
+        <div class="tool-out" id="acr-out"></div>
+        <p class="tool-tip">💡 粘贴后自动提取每个单词的首字母</p>`;
+      wire = () => {
+        const input = $('#acr-in'), out = $('#acr-out');
+        const upd = () => out.textContent = input.value.trim().split(/\s+/).map(w => (w[0]||'').toUpperCase()).join('');
+        input.addEventListener('input', upd); upd();
+      };
+      break;
+    case 'reverse':
+      html = `<div class="tool-row"><label>文本</label><input type="text" id="rev-in" placeholder="把密文粘贴到这里"></div>
+        <div class="tool-out" id="rev-out"></div>
+        <p class="tool-tip">💡 输入后自动反转（从右往左读）</p>`;
+      wire = () => {
+        const input = $('#rev-in'), out = $('#rev-out');
+        const upd = () => out.textContent = input.value.split('').reverse().join('');
+        input.addEventListener('input', upd); upd();
+      };
+      break;
+    case 'nth':
+      html = `<div class="tool-row"><label>密文</label><textarea id="nth-in" rows="2" placeholder="把密文粘贴到这里"></textarea></div>
+        <div class="tool-row"><label>步长（每隔几个字符取一个）</label><input type="text" id="nth-step" placeholder="例如 3"></div>
+        <div class="tool-out" id="nth-out"></div>
+        <p class="tool-tip">💡 输入步长后，从第 1 个字符开始每隔 N 个取一个</p>`;
+      wire = () => {
+        const input = $('#nth-in'), stepEl = $('#nth-step'), out = $('#nth-out');
+        const upd = () => {
+          const step = parseInt(stepEl.value, 10);
+          const s = input.value.replace(/\s+/g,'');
+          if(!step || step < 2){ out.textContent = ''; return; }
+          let res = '';
+          for(let i=0;i<s.length;i+=step) res += s[i];
+          out.textContent = res;
+        };
+        input.addEventListener('input', upd); stepEl.addEventListener('input', upd); upd();
+      };
+      break;
+    case 'a1z26':
+      html = `<p class="tool-tip">字母表位置：A=1 · B=2 · C=3 …… Z=26</p>
+        <div class="tool-row"><label>数字（空格分隔）</label><input type="text" id="a1-in" placeholder="例如 19 5 3 18 5 20"></div>
+        <div class="tool-out" id="a1-out"></div>
+        <p class="tool-tip">💡 输入后自动把数字转换成字母</p>`;
+      wire = () => {
+        const input = $('#a1-in'), out = $('#a1-out');
+        const upd = () => out.textContent = input.value.trim().split(/\s+/).map(n => {
+          const v = parseInt(n,10); return (v>=1 && v<=26) ? String.fromCharCode(v+64) : '?';
+        }).join('');
+        input.addEventListener('input', upd); upd();
+      };
+      break;
+    case 'qwerty':
+      html = `<div class="keys">${QWERTY_ROWS.map((row,i) => `<div class="keyrow${i?' offset':''}">${[...row].map(k => `<span class="key">${k}</span>`).join('')}</div>`).join('')}</div>
+        <div class="tool-row"><label>密文</label><input type="text" id="q-in" placeholder="把密文粘贴到这里"></div>
+        <div class="tool-row"><label>移动方向</label><select id="q-dir">
+          <option value="left">向左移一位</option><option value="right">向右移一位</option></select></div>
+        <div class="tool-out" id="q-out"></div>
+        <p class="tool-tip">💡 把密文粘贴进来，切换方向直到出现可读单词</p>`;
+      wire = () => {
+        const input = $('#q-in'), dir = $('#q-dir'), out = $('#q-out');
+        const upd = () => out.textContent = qwShift(input.value, dir.value);
+        input.addEventListener('input', upd); dir.addEventListener('change', upd); upd();
+      };
+      break;
+    case 't9':
+      html = `<div class="t9-grid">${Object.keys(T9GROUPS).map(d => `<div class="t9-key"><b>${d}</b><span>${T9GROUPS[d]}</span></div>`).join('')}</div>
+        <div class="tool-row"><label>数字（每个数字对应一个按键）</label><input type="text" id="t9-in" placeholder="例如 4 3 5 5 6"></div>
+        <div class="tool-out" id="t9-out"></div>
+        <p class="tool-tip">💡 把数字粘贴进来，显示每个按键上的候选字母</p>`;
+      wire = () => {
+        const input = $('#t9-in'), out = $('#t9-out');
+        const upd = () => out.textContent = input.value.trim().split(/\s+/).map(d => T9GROUPS[d] || '?').join(' ');
+        input.addEventListener('input', upd); upd();
+      };
+      break;
+    case 'braille':
+      html = `<div class="braille-chart">${[...BRAILLE].map((g,i) => `<div class="braille-cell"><span class="g">${g}</span><span>${String.fromCharCode(65+i)}</span></div>`).join('')}</div>
+        <div class="tool-row"><label>盲文（粘贴后自动解码）</label><input type="text" id="br-in" placeholder="把盲文字符粘贴到这里"></div>
+        <div class="tool-out" id="br-out"></div>
+        <p class="tool-tip">💡 对照上方字母表，或直接粘贴进来自动解码</p>`;
+      wire = () => {
+        const input = $('#br-in'), out = $('#br-out');
+        const rev = {}; [...BRAILLE].forEach((g,i) => rev[g] = String.fromCharCode(65+i));
+        const upd = () => out.textContent = [...input.value].map(c => rev[c] || '').join('');
+        input.addEventListener('input', upd); upd();
+      };
+      break;
+    case 'pigpen':
+      html = `<div class="pigpen-chart">${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => `<div class="pigpen-cell">${pigpenSvg(c,30)}<span>${c}</span></div>`).join('')}</div>
+        <p class="tool-tip">💡 对照图例，把上方"截获情报"里的符号逐个还原成字母</p>`;
+      break;
+    case 'anagram':
+      html = `<div class="tiles" id="ana-tiles"></div>
+        <p class="tool-tip">💡 上面的字母块可以随意重排成一个单词（词义线索见提示）</p>`;
+      wire = () => {
+        const g = state.current;
+        const letters = (g && g.cipher) ? g.cipher.replace(/\s+/g,'').split('') : [];
+        $('#ana-tiles').innerHTML = letters.map(l => `<span class="tile">${l}</span>`).join('');
+      };
+      break;
+    case 'polybius':
+      html = `<div class="poly-grid">${[...POLY_GRID].map((c,i) => `<div class="poly-cell"><b>${c}</b><span>${Math.floor(i/5)+1}${i%5+1}</span></div>`).join('')}</div>
+        <div class="tool-row"><label>坐标（空格分隔的两位数，如 11 24）</label><input type="text" id="poly-in" placeholder="把坐标粘贴到这里"></div>
+        <div class="tool-out" id="poly-out"></div>
+        <p class="tool-tip">💡 两位数的第 1 位是行、第 2 位是列；粘贴后自动还原字母</p>`;
+      wire = () => {
+        const input = $('#poly-in'), out = $('#poly-out');
+        const upd = () => out.textContent = input.value.trim().split(/\s+/).map(p => {
+          const m = /^([1-5])([1-5])$/.exec(p);
+          return m ? POLY_GRID[(+m[1]-1)*5 + (+m[2]-1)] : '?';
+        }).join('');
+        input.addEventListener('input', upd); upd();
+      };
+      break;
+  }
+  wrap.innerHTML = html;
+  if(wire) wire();
+}
+
+/* ================= 渲染 ================= */
+function updateProgress(){
+  $('#progressBar').style.width = (state.completed.length / LEVELS.length * 100) + '%';
+  document.querySelectorAll('.dot').forEach(d => {
+    const i = +d.dataset.i;
+    d.classList.toggle('done', state.completed.includes(i));
+    d.classList.toggle('cur', i === state.level);
+  });
+}
+
+function buildDots(){
+  $('#levelIndicator').innerHTML = LEVELS.map((_, i) =>
+    `<button class="dot" data-i="${i}" title="第 ${i+1} 关 · ${LEVELS[i].title}">${i+1}</button>`).join('');
+  document.querySelectorAll('.dot').forEach(d => d.addEventListener('click', () => {
+    const i = +d.dataset.i;
+    if(!(state.completed.includes(i) || i === firstUncompleted() || i === state.level)) return;
+    sClick();
+    $('#introScreen').classList.add('hidden');
+    if(!state.startTime) state.startTime = Date.now();
+    loadLevel(i);
+  }));
+}
+
+async function loadLevel(i){
+  state.level = i; state.hints = 0; state.attempts = 0; state.busy = false;
+  const L = LEVELS[i];
+  const g = L.generate();          /* 每次进入关卡都生成新谜题 */
+  state.current = g;
+  $('#levelTitle').textContent = `第 ${i+1} 关 · ${L.title}`;
+  $('#levelCount').textContent = `${i+1} / ${LEVELS.length}`;
+  const ct = $('#cipherText');
+  ct.removeAttribute('class'); ct.textContent = ''; ct.innerHTML = '';
+  if(g.cipherKind === 'pigpen'){ ct.innerHTML = g.cipherHtml; ct.classList.add('cipher-svg'); }
+  else if(g.cipherKind === 'braille'){ ct.textContent = g.cipher; ct.classList.add('cipher-braille'); }
+  else { ct.textContent = (g.display || g.cipher); }
+  $('#copyBtn').style.display = (g.cipherKind === 'pigpen') ? 'none' : '';
+  $('#lessonText').textContent = L.lesson;
+  $('#answerInput').value = '';
+  const fb = $('#feedback'); fb.textContent = ''; fb.className = '';
+  $('#hintBox').textContent = '';
+  buildTool(L.tool);
+  $('#toolCard').open = true;
+  updateProgress();
+  sClick();
+  await typeStory($('#storyText'), g.story || L.story);
+}
+
+function submitAnswer(){
+  if(state.busy || !state.current) return;
+  const g = state.current;
+  const val = norm($('#answerInput').value);
+  if(!val){ $('#feedback').className = 'err'; $('#feedback').textContent = '请先输入破译结果'; return; }
+  if(val === norm(g.answer)){
+    state.busy = true;
+    sGood(); confetti();
+    const stars = state.hints === 0 ? 3 : state.hints === 1 ? 2 : 1;
+    state.stars[state.level] = Math.max(state.stars[state.level] || 0, stars);
+    if(!state.completed.includes(state.level)) state.completed.push(state.level);
+    state.answers[state.level] = g.answer;
+    save();
+    const fb = $('#feedback'); fb.className = 'ok';
+    fb.textContent = `✅ 破译成功！夺回情报碎片，获得 ${stars} 星评价`;
+    updateProgress();
+    setTimeout(() => {
+      if(state.level < LEVELS.length - 1) loadLevel(state.level + 1);
+      else showWin();
+    }, 1500);
+  } else {
+    state.attempts++; state.totalAttempts++;
+    sBad();
+    const inp = $('#answerInput');
+    inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+    const fb = $('#feedback'); fb.className = 'err';
+    fb.textContent = `❌ 破译失败（第 ${state.attempts} 次），再检查一下情报和工具……`;
+  }
+}
+
+function giveHint(){
+  sClick();
+  const g = state.current;
+  if(!g) return;
+  state.totalHints++;
+  if(state.hints < 3){
+    $('#hintBox').textContent = `💡 提示 ${state.hints+1}：${g.hints[state.hints++]}`;
+  } else {
+    $('#answerInput').value = g.answer;
+    $('#hintBox').textContent = '🔓 已自动填入答案（本关最多 1 星）';
+  }
+}
+
+function skipLevel(){
+  if(state.busy || !state.current) return;
+  if(!confirm('确定要跳过本关吗？本关将无法获得星级评价。')) return;
+  state.busy = true;
+  sClick();
+  if(!state.completed.includes(state.level)) state.completed.push(state.level);
+  save();
+  const fb = $('#feedback'); fb.className = 'ok';
+  fb.textContent = `⏭ 已跳过本关（正确答案：${state.current.answer}）`;
+  updateProgress();
+  setTimeout(() => {
+    if(state.level < LEVELS.length - 1) loadLevel(state.level + 1);
+    else showWin();
+  }, 1000);
+}
+
+function showWin(){
+  const totalStars = Object.values(state.stars).reduce((a,b) => a + b, 0);
+  const start = state.startTime || Date.now();
+  const min = Math.max(0, Math.floor((Date.now() - start) / 1000));
+  const mm = String(Math.floor(min/60)).padStart(2,'0'), ss = String(min%60).padStart(2,'0');
+  $('#winStats').innerHTML =
+    `<div class="stat"><b>${LEVELS.length}</b><span>关卡</span></div>
+     <div class="stat"><b>${totalStars}</b><span>/ ${LEVELS.length*3} 星</span></div>
+     <div class="stat"><b>${state.totalAttempts}</b><span>错误尝试</span></div>
+     <div class="stat"><b>${state.totalHints}</b><span>提示次数</span></div>
+     <div class="stat"><b>${mm}:${ss}</b><span>总用时</span></div>`;
+  let rate;
+  if(totalStars >= LEVELS.length*3) rate = '【传奇特工】零失误、近乎零提示，教科书级的破译！';
+  else if(totalStars >= 21)         rate = '【精英特工】近乎完美，情报局为你骄傲！';
+  else if(totalStars >= 15)         rate = '【优秀特工】手法稳健，已可独当一面。';
+  else                              rate = '【见习特工】继续训练，谜题的世界还等着你。';
+  $('#winRating').textContent = rate;
+  const chain = state.answers.filter(Boolean).join(' → ');
+  $('#winStory').innerHTML =
+    '你识破了全部伪装，从 10 种截然不同的谜题中取回了《天穹计划》的全部情报。<br><br>' +
+    (chain || '情报已全部找回。') + '<br><br>' +
+    '<span class="dim">"真相，从不只有一种藏法。"</span>';
+  $('#gameScreen').classList.add('hidden');
+  $('#winScreen').classList.remove('hidden');
+  updateProgress();
+  sWin(); confetti(); setTimeout(confetti, 600);
+}
+
+function startGame(){
+  sClick();
+  if(!state.startTime) state.startTime = Date.now();
+  $('#introScreen').classList.add('hidden');
+  $('#gameScreen').classList.remove('hidden');
+  loadLevel(firstUncompleted());
+}
+
+function copyCipher(){
+  if(!state.current) return;
+  const t = state.current.cipher;
+  const done = () => { const b = $('#copyBtn'); b.textContent = '已复制 ✓'; setTimeout(() => b.textContent = '复制', 1200); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){}
+  ta.remove();
+}
+
+/* ================= 初始化 ================= */
+function init(){
+  loadSave();
+  $('#soundBtn').textContent = state.muted ? '🔇' : '🔊';
+  buildDots();
+  updateProgress();
+  startMatrix();
+
+  $('#soundBtn').addEventListener('click', () => {
+    state.muted = !state.muted;
+    $('#soundBtn').textContent = state.muted ? '🔇' : '🔊';
+    if(!state.muted) sClick();
+    save();
+  });
+  $('#restartBtn').addEventListener('click', () => {
+    if(confirm('确定要重置所有进度并重新开始吗？新的谜题即将生成！')){
+      localStorage.removeItem(KEY);
+      location.reload();
+    }
+  });
+  $('#startBtn').addEventListener('click', startGame);
+  $('#submitBtn').addEventListener('click', submitAnswer);
+  $('#hintBtn').addEventListener('click', giveHint);
+  $('#skipBtn').addEventListener('click', skipLevel);
+  $('#copyBtn').addEventListener('click', copyCipher);
+  $('#againBtn').addEventListener('click', () => {
+    if(confirm('确定要重置进度，重新开始任务吗？新的谜题即将生成！')){
+      localStorage.removeItem(KEY);
+      location.reload();
+    }
+  });
+  $('#answerInput').addEventListener('keydown', e => { if(e.key === 'Enter') submitAnswer(); });
+
+  if(state.completed.length >= LEVELS.length){ showWin(); return; }
+  $('#startBtn').textContent = state.completed.length ? '继续任务' : '开始任务';
+  typeStory($('#introStory'), INTRO_TEXT);
+  $('#introScreen').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4fefd53add854ea4b22475a4d86bdd4c","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>

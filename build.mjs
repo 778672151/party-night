@@ -31,7 +31,7 @@ let src = scripts.map(p => {
 }).join('\n');
 
 const banks = {};
-for (const f of ['draw', 'tacit', 'memory', 'codraw']) {
+for (const f of ['draw', 'tacit', 'memory', 'codraw', 'mini']) {
   banks[f] = JSON.parse(readFileSync(join(root, 'data', f + '.json'), 'utf8'));
 }
 const banksJson = JSON.stringify(banks).replace(/</g, '\\u003c');

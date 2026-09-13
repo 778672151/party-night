@@ -1,0 +1,14 @@
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#07080d;overflow:hidden;
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#c9d2e2}
+#stageWrap{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#frame{position:relative;width:min(100vw,calc(100vh * 16 / 9));aspect-ratio:16/9;
+  border-radius:10px;overflow:hidden;
+  box-shadow:0 0 0 2px #1b2440, 0 0 40px rgba(60,110,255,.18), 0 18px 60px rgba(0,0,0,.7)}
+canvas#game{display:block;width:100%;height:100%;image-rendering:auto;background:#000}
+#scan{position:absolute;inset:0;pointer-events:none;opacity:.16;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.10) 0 1px,rgba(0,0,0,0) 1px 3px)}
+#hint{font-size:12.5px;letter-spacing:.3px;opacity:.72;text-align:center;line-height:1.6;
+  max-width:min(100vw,calc(100vh * 16 / 9));padding:0 8px}
+#hint b{color:#ffd15c;font-weight:700}
+@media (max-height:520px){#hint{display:none}}

@@ -355,3 +355,23 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .gm-hero{padding:24px 16px}
 .gm-result{font-size:28px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
   animation:qpop .5s var(--spring) both}
+
+/* ===== 小游戏厅 ===== */
+.mini-sec{margin-top:18px}
+.mini-head{display:flex;align-items:baseline;gap:8px;margin:0 2px 10px;font-size:15px}
+.mini-head .muted{font-size:11px}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mini-card{background:var(--card);border:2.5px solid var(--stroke);border-radius:var(--r2);padding:12px 10px;
+  box-shadow:var(--soft);cursor:pointer;text-align:center;transition:transform .12s var(--spring),box-shadow .12s}
+.mini-card:active{transform:scale(.96)}
+.mini-ico{font-size:30px;line-height:1.15}
+.mini-nm{font-weight:800;font-size:14px;margin-top:4px}
+.mini-desc{font-size:11px;color:var(--ink2);margin-top:4px;line-height:1.35}
+.mini-cat{display:inline-block;margin-top:8px;font-size:10px;padding:2px 8px;border-radius:999px;
+  background:var(--bg2);border:2px solid var(--line);color:var(--ink2)}
+.mini-ov{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;flex-direction:column}
+.mini-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);
+  border-bottom:2.5px solid var(--stroke)}
+.mini-title{font-weight:900;font-size:15px}
+.mini-tip{flex:1;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mini-frame{flex:1;width:100%;border:0;background:#fff}

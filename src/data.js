@@ -9,9 +9,11 @@
   if (injected && injected.tacit) PN.BANKS.tacit = injected.tacit;
   if (injected && injected.memory) PN.BANKS.memory = injected.memory;
   if (injected && injected.codraw) PN.BANKS.codraw = injected.codraw;
+  if (injected && injected.mini) PN.BANKS.mini = injected.mini;
   PN.Banks = {
     words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; },
-    questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }
+    questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; },
+    mini: function () { return (PN.BANKS.mini && PN.BANKS.mini.games) || []; }
   };
   function rnd(n) { return Math.floor(Math.random() * n); }
   function sample(arr, n, exclude) {

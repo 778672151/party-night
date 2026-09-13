@@ -403,6 +403,52 @@
   };
   // 注：屏幕的 render 由 UI.render 用 .call(ui, ...) 调用，所以这里 this 就是 UI 实例
 
+  /**
+   * 小游戏目录在哪：线上是 /<repo>/mini/、本地从仓库根打开也是 /mini/，
+   * 但如果只开了 dist/party-night.html，就在上一层的 ../mini/。
+   * 用一次 HEAD 探测定下来并缓存，两种打开方式都能玩。
+   */
+  UI.prototype.miniBase = function (cb) {
+    var self = this;
+    if (this._miniBase) { cb(this._miniBase); return; }
+    if (this._miniBase === '') { cb(''); return; }   // 探过了、都没有
+    var first = (PN.Banks && PN.Banks.mini ? PN.Banks.mini() : [])[0];
+    if (!first) { cb(''); return; }
+    var cands = ['mini/', '../mini/'], i = 0;
+    var next = function () {
+      if (i >= cands.length) { self._miniBase = ''; cb(''); return; }
+      var c = cands[i++];
+      fetch(c + first.dir + '/index.html', { method: 'HEAD' }).then(function (r) {
+        if (r.ok) { self._miniBase = c; cb(c); } else next();
+      }).catch(next);
+    };
+    next();
+  };
+
+  /** 浮层里跑小游戏：不跳走、不丢房间（关掉就回到大厅） */
+  UI.prototype.openMini = function (m) {
+    var self = this;
+    this.closeMini();
+    var ov = document.createElement('div');
+    ov.className = 'mini-ov';
+    ov.innerHTML = '<div class="mini-bar"><span class="mini-title">' + m.emoji + ' ' + m.title + '</span>' +
+      '<span class="muted mini-tip">' + (m.desc || '') + '</span>' +
+      '<button class="btn sm" id="mini-close">← 返回大厅</button></div>' +
+      '<iframe class="mini-frame" allow="fullscreen; autoplay; gamepad" referrerpolicy="no-referrer"></iframe>';
+    document.body.appendChild(ov);
+    this._miniOv = ov;
+    var frame = ov.querySelector('.mini-frame');
+    this.miniBase(function (base) {
+      if (!base) { self.toast('小游戏文件没找到（要从仓库根目录打开，见 README 的运行说明）', 'info'); return; }
+      frame.src = base + m.dir + '/index.html';
+    });
+    ov.querySelector('#mini-close').addEventListener('click', function () { self.closeMini(); });
+  };
+  UI.prototype.closeMini = function () {
+    if (this._miniOv && this._miniOv.parentNode) this._miniOv.parentNode.removeChild(this._miniOv);
+    this._miniOv = null;
+  };
+
   UI.prototype.renderLobby = function (state) {
     var self = this;
     this.clear();
@@ -436,6 +482,22 @@
         '</div>'
       );
     }
+    // ===== 🎮 小游戏厅：从 deepdemos.top 下载的成品小游戏（单机 / 同屏双人）=====
+    // 这些不需要联机：各玩各的，或者两个人凑着一个屏幕玩。点开在浮层里跑，退出就回到大厅。
+    var minis = PN.Banks && PN.Banks.mini ? PN.Banks.mini() : [];
+    var miniCards = minis.map(function (m) {
+      return '<div class="mini-card" data-mini="' + m.id + '">' +
+        '<div class="mini-ico">' + m.emoji + '</div>' +
+        '<div class="mini-nm">' + m.title + '</div>' +
+        '<div class="mini-desc">' + (m.desc || '') + '</div>' +
+        '<div class="mini-cat">' + (m.cat || '') + '</div>' +
+        '</div>';
+    }).join('');
+    var miniHtml = minis.length
+      ? '<div class="mini-sec"><div class="mini-head"><b>🎮 小游戏厅</b>' +
+        '<span class="muted">单机 / 同屏双人 · 点开就能玩，不用等对方</span></div>' +
+        '<div class="mini-grid">' + miniCards + '</div></div>'
+      : '';
     wrap.appendChild(this.h(
       '<div>' + // 必须包一层：h() 只保留第一个顶层元素
       '<div class="roomcode card row">' +
@@ -448,6 +510,7 @@
       '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的人（' + (s.players || []).length + '）</div>' +
       '<div class="players">' + (playersHtml || '<div class="muted">还差一个人，把对方叫进来吧～</div>') + '</div></div>' +
       '<div class="modegrid">' + modes.join('') + '</div>' +
+      miniHtml +
       '<div class="row mt16" style="justify-content:center;gap:8px">' +
       '<button class="btn ghost sm" id="pn-edit">✏️ 改昵称</button>' +
       (self.isHost() ? '<button class="btn warn sm" id="pn-reset">清零积分</button><button class="btn warn sm" id="pn-disband">解散房间</button>' : '<button class="btn warn sm" id="pn-leave">离开</button>') +
@@ -460,6 +523,12 @@
     var reset = $('#pn-reset'); if (reset) reset.addEventListener('click', function () { if (confirm('清零所有人积分？')) self.send({ t: 'resetScores' }); });
     var dis = $('#pn-disband'); if (dis) dis.addEventListener('click', function () { if (confirm('解散房间？所有人都要重进')) { self.room.leave(true); self.exitToLand(); } });
     var lv = $('#pn-leave'); if (lv) lv.addEventListener('click', function () { self.room.leave(false); self.exitToLand(); });
+    wrap.querySelectorAll('.mini-card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        var m = (PN.Banks.mini() || []).filter(function (x) { return x.id === card.dataset.mini; })[0];
+        if (m) self.openMini(m);
+      });
+    });
     var cards = wrap.querySelectorAll('.modecard');
     cards.forEach(function (card) {
       var mode = card.dataset.mode;

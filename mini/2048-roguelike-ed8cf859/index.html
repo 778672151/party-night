@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>晶核回响 · Crystal Echo</title>
+<style>
+  :root {
+    --bg: #07070f;
+    --panel: rgba(18, 18, 36, 0.72);
+    --panel-border: rgba(124, 92, 255, 0.22);
+    --ink: #ebe8f5;
+    --ink-dim: #9a96b0;
+    --accent: #7c5cff;
+    --accent-2: #2de2e6;
+    --danger: #ff4d6d;
+    --gold: #ffd166;
+    --cell: #16162a;
+    --gap: 10px;
+    --board-pad: 12px;
+    --tile-size: calc((min(78vw, 420px) - 2 * var(--board-pad) - 3 * var(--gap)) / 4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  #starfield, #fx { position: fixed; inset: 0; pointer-events: none; }
+  #starfield { z-index: 0; }
+  #fx { z-index: 40; }
+  .vignette {
+    position: fixed; inset: 0; z-index: 35; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
+  }
+  .shake-host {
+    width: 100%; height: 100%; display: grid; place-items: center;
+    position: relative; z-index: 10;
+  }
+  .app {
+    width: min(960px, 100vw); height: min(100vh, 920px);
+    display: grid; grid-template-columns: 200px 1fr; grid-template-rows: auto 1fr auto;
+    gap: 12px; padding: 14px; position: relative;
+  }
+  .hud {
+    grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 16px; padding: 10px 14px; backdrop-filter: blur(14px);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  .brand h1 {
+    font-size: 18px; letter-spacing: 0.12em; font-weight: 700;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--gold));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .brand span {
+    font-size: 11px; color: var(--ink-dim); letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .stat {
+    min-width: 72px; text-align: center; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 6px 10px;
+  }
+  .stat .label {
+    font-size: 10px; color: var(--ink-dim); letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .stat .value {
+    font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px;
+  }
+  .hp { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
+  .heart {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--danger);
+    box-shadow: 0 0 10px rgba(255, 77, 109, 0.7);
+    transition: transform 0.25s ease, opacity 0.25s ease, background 0.25s ease;
+  }
+  .heart.empty {
+    background: rgba(255,255,255,0.12); box-shadow: none; transform: scale(0.85);
+  }
+  .rail { grid-row: 2 / 3; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px;
+    padding: 12px; backdrop-filter: blur(14px);
+  }
+  .panel h3 {
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-dim); margin-bottom: 8px;
+  }
+  .objective { font-size: 13px; line-height: 1.45; color: var(--ink); }
+  .objective strong { color: var(--gold); }
+  .pressure-wrap { margin-top: 10px; }
+  .pressure-label {
+    display: flex; justify-content: space-between; font-size: 11px;
+    color: var(--ink-dim); margin-bottom: 4px;
+  }
+  .pressure-bar {
+    height: 8px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden;
+  }
+  .pressure-fill {
+    height: 100%; width: 0%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--danger));
+    box-shadow: 0 0 12px rgba(124, 92, 255, 0.55); transition: width 0.35s ease;
+  }
+  .relics {
+    flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px;
+  }
+  .relics::-webkit-scrollbar { width: 6px; }
+  .relics::-webkit-scrollbar-thumb { background: rgba(124, 92, 255, 0.4); border-radius: 99px; }
+  .relic {
+    display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: center;
+    padding: 8px; border-radius: 12px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    animation: relicIn 0.45s cubic-bezier(0.2, 0.9, 0.2, 1.15);
+  }
+  @keyframes relicIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+  .relic .icon {
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+    font-size: 18px; background: linear-gradient(145deg, rgba(124,92,255,0.28), rgba(45,226,230,0.12));
+    border: 1px solid rgba(124,92,255,0.35);
+  }
+  .relic .name { font-size: 12px; font-weight: 700; }
+  .relic .desc { font-size: 11px; color: var(--ink-dim); line-height: 1.35; margin-top: 2px; }
+  .empty-relic {
+    font-size: 12px; color: var(--ink-dim); text-align: center; padding: 18px 8px;
+    border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;
+  }
+  .stage {
+    grid-column: 2; grid-row: 2 / 3; display: flex; align-items: center; justify-content: center;
+    min-height: 0; position: relative;
+  }
+  .board-perspective { perspective: 1400px; perspective-origin: 50% 40%; }
+  .board-tilt {
+    transform-style: preserve-3d;
+    transform: rotateX(14deg) rotateY(0deg) translateZ(0);
+    transition: transform 0.25s ease-out; will-change: transform;
+  }
+  .board {
+    position: relative;
+    width: calc(4 * var(--tile-size) + 3 * var(--gap) + 2 * var(--board-pad));
+    height: calc(4 * var(--tile-size) + 3 * var(--gap) + 2 * var(--board-pad));
+    padding: var(--board-pad); border-radius: 22px;
+    background: linear-gradient(145deg, rgba(30, 30, 60, 0.95), rgba(12, 12, 24, 0.98));
+    border: 1px solid rgba(124, 92, 255, 0.28);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03) inset,
+      0 0 60px rgba(124, 92, 255, 0.12);
+    transform-style: preserve-3d; touch-action: none;
+  }
+  .cells, .tiles {
+    position: absolute; inset: var(--board-pad); transform-style: preserve-3d;
+  }
+  .cell {
+    position: absolute; width: var(--tile-size); height: var(--tile-size);
+    border-radius: 14px; background: var(--cell);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 0 rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .tile {
+    position: absolute; width: var(--tile-size); height: var(--tile-size);
+    border-radius: 14px; display: grid; place-items: center;
+    font-weight: 800; font-size: calc(var(--tile-size) * 0.38);
+    letter-spacing: -0.02em; color: #0b0b14;
+    background: linear-gradient(160deg, #fff, #ddd);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12) inset,
+      0 1px 0 rgba(255,255,255,0.55) inset;
+    will-change: transform; z-index: 2; transform: translateZ(18px);
+  }
+  .tile .num {
+    position: relative; z-index: 2; text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .tile::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.45), transparent 42%, rgba(0,0,0,0.08));
+  }
+  .tile.corrupt {
+    color: #ffd7e0;
+    background: radial-gradient(circle at 30% 30%, #5a1a32, #1a0a14 70%);
+    border: 1px solid rgba(255, 77, 109, 0.55);
+    box-shadow: 0 0 24px rgba(255, 77, 109, 0.35), 0 10px 22px rgba(0,0,0,0.45);
+  }
+  .tile.corrupt .num { text-shadow: 0 0 12px rgba(255, 77, 109, 0.8); }
+  .tile.corrupt::before {
+    content: ""; position: absolute; inset: 8%; border-radius: 12px;
+    border: 1px dashed rgba(255, 150, 170, 0.35);
+    animation: corruptPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes corruptPulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.04); }
+  }
+  .footer {
+    grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 16px; padding: 10px 14px; backdrop-filter: blur(14px);
+  }
+  .log {
+    font-size: 12px; color: var(--ink-dim); min-height: 18px; flex: 1;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .btn {
+    appearance: none; border: 1px solid rgba(124, 92, 255, 0.45);
+    background: linear-gradient(145deg, rgba(124,92,255,0.28), rgba(45,226,230,0.12));
+    color: var(--ink); border-radius: 12px; padding: 8px 14px; font-size: 13px;
+    font-weight: 700; cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124, 92, 255, 0.25); }
+  .btn:active { transform: translateY(1px) scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn.ghost { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12); }
+  .overlay {
+    position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center;
+    background: rgba(4, 4, 10, 0.72); backdrop-filter: blur(10px); padding: 18px;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    width: min(560px, 94vw);
+    background: linear-gradient(160deg, rgba(28, 28, 52, 0.96), rgba(12, 12, 24, 0.98));
+    border: 1px solid rgba(124, 92, 255, 0.35); border-radius: 22px; padding: 22px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 60px rgba(124, 92, 255, 0.12);
+    animation: modalIn 0.4s cubic-bezier(0.2, 0.9, 0.2, 1.15);
+    max-height: 90vh; overflow: auto;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+  .modal h2 { font-size: 22px; margin-bottom: 6px; letter-spacing: 0.06em; }
+  .modal p { color: var(--ink-dim); font-size: 13px; line-height: 1.55; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+  .relic-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .choice {
+    text-align: left; border-radius: 16px; padding: 12px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    color: inherit;
+  }
+  .choice:hover {
+    transform: translateY(-3px); border-color: rgba(124, 92, 255, 0.65);
+    box-shadow: 0 12px 28px rgba(124, 92, 255, 0.2);
+  }
+  .choice .icon {
+    width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+    font-size: 22px; margin-bottom: 8px;
+    background: linear-gradient(145deg, rgba(124,92,255,0.3), rgba(45,226,230,0.12));
+    border: 1px solid rgba(124,92,255,0.35);
+  }
+  .choice .name { font-weight: 800; font-size: 14px; }
+  .choice .desc { margin-top: 6px; font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
+  .help-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 14px;
+    font-size: 12px; color: var(--ink-dim); line-height: 1.5;
+  }
+  .help-grid b { color: var(--ink); }
+  .result-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
+  .result-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 12px; text-align: center;
+  }
+  .result-card .label {
+    font-size: 11px; color: var(--ink-dim); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .result-card .value { margin-top: 4px; font-size: 22px; font-weight: 800; }
+  .toast {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-20px);
+    z-index: 80; background: rgba(18, 18, 36, 0.92); border: 1px solid rgba(124, 92, 255, 0.45);
+    color: var(--ink); padding: 10px 16px; border-radius: 999px; font-size: 13px;
+    font-weight: 600; opacity: 0; pointer-events: none; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .float-dmg {
+    position: absolute; z-index: 8; font-weight: 800; font-size: 18px; color: var(--danger);
+    text-shadow: 0 0 12px rgba(255, 77, 109, 0.8); pointer-events: none; transform: translateZ(40px);
+  }
+  @media (max-width: 780px) {
+    .app {
+      grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto;
+      height: 100vh; overflow: auto;
+    }
+    .rail { grid-row: auto; grid-column: 1; flex-direction: row; overflow: auto; }
+    .rail .panel:first-child { min-width: 200px; flex: 1; }
+    .rail .panel:last-child { min-width: 220px; flex: 1.2; }
+    .stage { grid-column: 1; }
+    .relic-choices { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<canvas id="fx"></canvas>
+<div class="vignette"></div>
+
+<div class="shake-host" id="shakeHost">
+  <div class="app" id="app">
+    <header class="hud">
+      <div class="brand">
+        <h1>晶核回响</h1>
+        <span>Crystal Echo</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="label">Floor</div><div class="value" id="floorVal">1</div></div>
+        <div class="stat"><div class="label">Score</div><div class="value" id="scoreVal">0</div></div>
+        <div class="stat"><div class="label">Moves</div><div class="value" id="movesVal">0</div></div>
+        <div class="stat"><div class="label">Stability</div><div class="hp" id="hpBar"></div></div>
+      </div>
+    </header>
+
+    <aside class="rail">
+      <div class="panel">
+        <h3>本层目标</h3>
+        <div class="objective" id="objective">合并出 <strong>16</strong> 晶核</div>
+        <div class="pressure-wrap">
+          <div class="pressure-label">
+            <span>虚空压力</span>
+            <span id="pressureText">0 / 8</span>
+          </div>
+          <div class="pressure-bar"><div class="pressure-fill" id="pressureFill"></div></div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+        <h3>遗物 Build</h3>
+        <div class="relics" id="relicList">
+          <div class="empty-relic">尚未获得遗物<br/>通关一层后可三选一</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="board-perspective" id="boardPerspective">
+        <div class="board-tilt" id="boardTilt">
+          <div class="board" id="board">
+            <div class="cells" id="cells"></div>
+            <div class="tiles" id="tiles"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="log" id="logText">滑动或方向键移动晶核。相邻合并会冲击虚空。</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn ghost" id="undoBtn" disabled>撤销</button>
+        <button class="btn ghost" id="helpBtn">规则</button>
+        <button class="btn ghost" id="restartBtn">重开</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="startOverlay">
+  <div class="modal">
+    <h2>晶核回响</h2>
+    <p>你是虚空回廊的架构师。在 4×4 矩阵中滑动能量晶核，完成合并以稳定每一层结构。虚空会不断生成腐蚀节点——它们堵塞矩阵、吞噬稳定性。用合并冲击波摧毁它们，并收集遗物改写规则。</p>
+    <div class="help-grid">
+      <div><b>移动</b><br/>方向键 / WASD / 触摸滑动</div>
+      <div><b>合并</b><br/>相同数值碰撞后翻倍并获得分数</div>
+      <div><b>目标</b><br/>每层合成指定目标晶核即可通关</div>
+      <div><b>腐蚀</b><br/>相邻合并可对腐蚀造成伤害</div>
+      <div><b>遗物</b><br/>通关后三选一，切实改写规则</div>
+      <div><b>失败</b><br/>稳定性归零，或矩阵彻底锁死</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="startBtn">进入回廊</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="helpOverlay">
+  <div class="modal">
+    <h2>规则详解</h2>
+    <p>标准 2048 位移与合并。每一层要求合成更高阶晶核。随层数提升，虚空腐蚀更频繁、更耐打。</p>
+    <div class="help-grid">
+      <div><b>虚空压力</b><br/>每次移动 +1。压力槽满时生成腐蚀节点并重置。腐蚀在场时压力增长更快。</div>
+      <div><b>腐蚀节点</b><br/>不可合并、不可移动。被相邻的合并冲击命中时 -1 HP。摧毁后得分。</div>
+      <div><b>稳定性</b><br/>初始 4 点。无合法移动、或腐蚀过多导致过载时扣除。</div>
+      <div><b>通关</b><br/>达成目标后可三选一遗物，并进入更深层。</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="closeHelpBtn">明白</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="relicOverlay">
+  <div class="modal">
+    <h2>选择遗物</h2>
+    <p>本层结构已稳定。选择一件遗物，它会改写你的生成、合并或腐蚀结算逻辑。</p>
+    <div class="relic-choices" id="relicChoices"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overOverlay">
+  <div class="modal">
+    <h2 id="overTitle">结构崩塌</h2>
+    <p id="overDesc">虚空吞噬了本层矩阵。</p>
+    <div class="result-stats">
+      <div class="result-card"><div class="label">到达层数</div><div class="value" id="resultFloor">1</div></div>
+      <div class="result-card"><div class="label">总分</div><div class="value" id="resultScore">0</div></div>
+      <div class="result-card"><div class="label">总步数</div><div class="value" id="resultMoves">0</div></div>
+      <div class="result-card"><div class="label">摧毁腐蚀</div><div class="value" id="resultKills">0</div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="againBtn">再次挑战</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // GSAP fallback if CDN fails: minimal left/top/scale/opacity tween
+  if (!window.gsap) {
+    window.gsap = {
+      to: function (el, vars) {
+        if (!el) return { then: function () {} };
+        var dur = (vars.duration || 0.15) * 1000;
+        var delay = (vars.delay || 0) * 1000;
+        var props = ['left', 'top', 'opacity', 'x', 'y'];
+        var start = {};
+        props.forEach(function (k) {
+          if (vars[k] !== undefined) start[k] = el.style[k] || getComputedStyle(el)[k];
+        });
+        if (vars.scale !== undefined) el.style.transform = 'scale(' + vars.scale + ')';
+        setTimeout(function () {
+          props.forEach(function (k) {
+            if (vars[k] !== undefined) el.style[k] = vars[k];
+          });
+          if (vars.scale !== undefined) el.style.transform = 'scale(1)';
+          if (typeof vars.onComplete === 'function') vars.onComplete();
+        }, delay + dur);
+        return { then: function () {} };
+      },
+      fromTo: function (el, from, to) {
+        if (!el) return;
+        Object.keys(from).forEach(function (k) {
+          if (k === 'scale' || k === 'rotation') return;
+          el.style[k] = from[k];
+        });
+        return window.gsap.to(el, to);
+      },
+      set: function (el, vars) {
+        if (!el) return;
+        Object.keys(vars).forEach(function (k) { el.style[k] = vars[k]; });
+        if (vars.x !== undefined || vars.y !== undefined) el.style.transform = 'translate(' + (vars.x || 0) + 'px,' + (vars.y || 0) + 'px)';
+      },
+      killTweensOf: function () {}
+    };
+  }
+
+  var SIZE = 4;
+  var START_HP = 4;
+  var BASE_PRESSURE = 8;
+  var DIRECTIONS = { left: [0, -1], right: [0, 1], up: [-1, 0], down: [1, 0] };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var cellsEl = $("cells");
+  var tilesEl = $("tiles");
+  var boardEl = $("board");
+  var boardTilt = $("boardTilt");
+  var floorVal = $("floorVal");
+  var scoreVal = $("scoreVal");
+  var movesVal = $("movesVal");
+  var hpBar = $("hpBar");
+  var objectiveEl = $("objective");
+  var pressureText = $("pressureText");
+  var pressureFill = $("pressureFill");
+  var relicList = $("relicList");
+  var logText = $("logText");
+  var toastEl = $("toast");
+  var shakeHost = $("shakeHost");
+  var fxCanvas = $("fx");
+  var starCanvas = $("starfield");
+  var undoBtn = $("undoBtn");
+
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  }
+  function beep(freq, dur, type, gain, slide) {
+    if (!audioCtx) return;
+    try {
+      var t0 = audioCtx.currentTime;
+      var osc = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain || 0.05, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  function sfxMove() { beep(220, 0.06, "triangle", 0.03, 180); }
+  function sfxMerge(value) {
+    var base = Math.min(880, 180 + Math.log2(Math.max(2, value)) * 55);
+    beep(base, 0.12, "sine", 0.06, base * 1.5);
+    setTimeout(function () { beep(base * 1.25, 0.08, "triangle", 0.035); }, 40);
+  }
+  function sfxDamage() { beep(140, 0.18, "sawtooth", 0.05, 70); }
+  function sfxClear() { beep(520, 0.2, "sine", 0.06, 900); }
+  function sfxHurt() { beep(90, 0.25, "square", 0.05, 45); }
+  function sfxPick() { beep(660, 0.12, "sine", 0.05, 990); }
+
+  var fxCtx = fxCanvas.getContext("2d");
+  var particles = [];
+  function resizeFx() {
+    fxCanvas.width = window.innerWidth * devicePixelRatio;
+    fxCanvas.height = window.innerHeight * devicePixelRatio;
+    fxCanvas.style.width = window.innerWidth + "px";
+    fxCanvas.style.height = window.innerHeight + "px";
+    fxCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  window.addEventListener("resize", resizeFx);
+  resizeFx();
+
+  function burst(x, y, color, count, power) {
+    power = power || 4;
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = (0.8 + Math.random()) * power;
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 1,
+        life: 1,
+        decay: 0.02 + Math.random() * 0.03,
+        size: 2 + Math.random() * 4,
+        color: color
+      });
+    }
+  }
+
+  function tickParticles() {
+    fxCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life -= p.decay;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      fxCtx.globalAlpha = Math.max(0, p.life);
+      fxCtx.fillStyle = p.color;
+      fxCtx.beginPath();
+      fxCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      fxCtx.fill();
+    }
+    fxCtx.globalAlpha = 1;
+    requestAnimationFrame(tickParticles);
+  }
+  tickParticles();
+
+  var starCtx = starCanvas.getContext("2d");
+  var stars = [];
+  function initStars() {
+    starCanvas.width = window.innerWidth * devicePixelRatio;
+    starCanvas.height = window.innerHeight * devicePixelRatio;
+    starCanvas.style.width = window.innerWidth + "px";
+    starCanvas.style.height = window.innerHeight + "px";
+    starCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    stars = [];
+    for (var i = 0; i < 120; i++) {
+      stars.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        z: Math.random() * 0.8 + 0.2,
+        r: Math.random() * 1.5 + 0.3
+      });
+    }
+  }
+  function tickStars() {
+    var w = window.innerWidth, h = window.innerHeight;
+    starCtx.clearRect(0, 0, w, h);
+    starCtx.fillStyle = "#07070f";
+    starCtx.fillRect(0, 0, w, h);
+    var g1 = starCtx.createRadialGradient(w * 0.2, h * 0.2, 10, w * 0.2, h * 0.2, 320);
+    g1.addColorStop(0, "rgba(124,92,255,0.12)");
+    g1.addColorStop(1, "transparent");
+    starCtx.fillStyle = g1;
+    starCtx.fillRect(0, 0, w, h);
+    var g2 = starCtx.createRadialGradient(w * 0.8, h * 0.75, 10, w * 0.8, h * 0.75, 360);
+    g2.addColorStop(0, "rgba(45,226,230,0.08)");
+    g2.addColorStop(1, "transparent");
+    starCtx.fillStyle = g2;
+    starCtx.fillRect(0, 0, w, h);
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      s.x += s.z * 0.15;
+      if (s.x > w + 2) s.x = -2;
+      starCtx.globalAlpha = 0.3 + s.z * 0.7;
+      starCtx.fillStyle = "#d8d4ff";
+      starCtx.beginPath();
+      starCtx.arc(s.x, s.y, s.r * s.z, 0, Math.PI * 2);
+      starCtx.fill();
+    }
+    starCtx.globalAlpha = 1;
+    requestAnimationFrame(tickStars);
+  }
+  initStars();
+  tickStars();
+  window.addEventListener("resize", initStars);
+
+  var RELIC_POOL = [
+    { id: "overload", name: "过载核心", icon: "⚡",
+      desc: "合并产生 64 及以上晶核时，对场上所有腐蚀造成 1 点伤害。",
+      hooks: { onMergeHighDamageAll: 64 } },
+    { id: "void_feast", name: "虚空吞噬", icon: "◈",
+      desc: "摧毁腐蚀节点时，恢复 1 点稳定性（不超过上限）。",
+      hooks: { onCorruptKillHeal: 1 } },
+    { id: "mirror", name: "镜面折射", icon: "◎",
+      desc: "新生成的晶核有 35% 概率等于上一次合并结果的一半（最低 2）。",
+      hooks: { mirrorSpawnChance: 0.35 } },
+    { id: "inertia", name: "惯性引擎", icon: "↻",
+      desc: "成功移动获得 1 层惯性；合并时每层惯性 +15% 得分，最多 5 层。空转重置。",
+      hooks: { inertiaScore: true } },
+    { id: "blood_coin", name: "血肉铸币", icon: "♦",
+      desc: "40% 概率生成 4 而不是 2，但虚空压力增长加快 20%。",
+      spawnFourChance: 0.4, pressureRate: 1.2 },
+    { id: "rift_pull", name: "裂隙牵引", icon: "⊕",
+      desc: "合并后，25% 概率自动触发一次免费相邻同类合并。",
+      hooks: { chainMergeChance: 0.25 } },
+    { id: "time_crystal", name: "时停晶体", icon: "◷",
+      desc: "每层可免费撤销上一步一次（按钮或按 U）。",
+      hooks: { undoPerFloor: 1 } },
+    { id: "entropy_cool", name: "熵减协议", icon: "❄",
+      desc: "每累计 8 次合并，自动移除场上数值最小的一枚普通晶核。",
+      hooks: { everyMergeRemoveMin: 8 } },
+    { id: "pressure_shield", name: "压力护盾", icon: "▣",
+      desc: "虚空压力槽容量 +3，压力满时优先在边角生成腐蚀。",
+      pressureBonus: 3, cornerBias: true },
+    { id: "singularity", name: "奇点共鸣", icon: "✦",
+      desc: "合成 128 及以上时，对所有腐蚀造成 2 点伤害并获得 50 额外分。",
+      hooks: { singularity: 128 } },
+    { id: "echo_split", name: "回响分裂", icon: "◇",
+      desc: "每次合并获得 1 点回响；每 5 点回响，随机将一枚 2 升级为 4。",
+      hooks: { echoSplit: 5 } },
+    { id: "deep_contract", name: "深渊契约", icon: "☰",
+      desc: "稳定性上限 +1 且开局 +1 稳定；但压力基础值 -1（腐蚀更频繁）。",
+      maxHpBonus: 1, startHpBonus: 1, pressureBaseBonus: -1 },
+    { id: "glass_cannon", name: "玻璃加农", icon: "✸",
+      desc: "合并得分 +50%，但稳定性上限 -1。",
+      scoreMult: 1.5, maxHpBonus: -1 },
+    { id: "auto_tidy", name: "自动整列", icon: "≡",
+      desc: "移动后若存在可合并行/列，20% 概率自动完成一次合并。",
+      hooks: { autoLineMerge: 0.2 } },
+    { id: "resonance", name: "谐振腔", icon: "◉",
+      desc: "连续合并（中间无空步）时，从第 3 次起每次合并对腐蚀伤害 +1。",
+      hooks: { comboCorruptDmg: true } }
+  ];
+
+  var G = {
+    grid: [],
+    nextId: 1,
+    floor: 1,
+    score: 0,
+    moves: 0,
+    totalMoves: 0,
+    kills: 0,
+    hp: START_HP,
+    maxHp: START_HP,
+    pressure: 0,
+    pressureMax: BASE_PRESSURE,
+    mergeCount: 0,
+    echo: 0,
+    inertia: 0,
+    comboMerge: 0,
+    lastMergeValue: 0,
+    undoLeft: 0,
+    undoSnapshot: null,
+    relics: [],
+    spawnFourChance: 0,
+    scoreMult: 1,
+    pressureRate: 1,
+    cornerBias: false,
+    animating: false,
+    started: false,
+    over: false,
+    floorClearing: false,
+    goalValue: 16
+  };
+
+  function tileStyle(value) {
+    var map = {
+      2: ["#e8e6f0", "#c9c4dc", "#1a1630"],
+      4: ["#d9d2ff", "#b8aef0", "#1a1630"],
+      8: ["#b8a4ff", "#8f78e8", "#0f0c1a"],
+      16: ["#9b7cff", "#6f52e0", "#ffffff"],
+      32: ["#7c5cff", "#5a38d6", "#ffffff"],
+      64: ["#5b8cff", "#3a62e0", "#ffffff"],
+      128: ["#2de2e6", "#12a8b8", "#042028"],
+      256: ["#3dffc6", "#12d4a0", "#042018"],
+      512: ["#ffd166", "#f0a93a", "#2a1800"],
+      1024: ["#ff9f43", "#e06a12", "#2a1000"],
+      2048: ["#ff5d8f", "#e0286a", "#2a0010"],
+      4096: ["#ff4d6d", "#c01038", "#fff0f4"]
+    };
+    if (map[value]) {
+      return {
+        background: "linear-gradient(160deg, " + map[value][0] + ", " + map[value][1] + ")",
+        color: map[value][2],
+        boxShadow: "0 10px 24px rgba(0,0,0,0.4), 0 0 28px " + map[value][0] + "55, inset 0 1px 0 rgba(255,255,255,0.35)"
+      };
+    }
+    return {
+      background: "linear-gradient(160deg, #fff6d8, #ffd166 40%, #ff6b6b)",
+      color: "#2a1000",
+      boxShadow: "0 0 40px rgba(255,180,80,0.55)"
+    };
+  }
+
+  function emptyGrid() {
+    var g = [];
+    for (var r = 0; r < SIZE; r++) {
+      g[r] = [];
+      for (var c = 0; c < SIZE; c++) g[r][c] = null;
+    }
+    return g;
+  }
+
+  function buildCells() {
+    cellsEl.innerHTML = "";
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var cell = document.createElement("div");
+        cell.className = "cell";
+        cell.setAttribute("data-r", r);
+        cell.setAttribute("data-c", c);
+        cell.style.left = "calc(" + c + " * (var(--tile-size) + var(--gap)))";
+        cell.style.top = "calc(" + r + " * (var(--tile-size) + var(--gap)))";
+        cellsEl.appendChild(cell);
+      }
+    }
+  }
+
+  function cellXY(r, c) {
+    return {
+      x: "calc(" + c + " * (var(--tile-size) + var(--gap)))",
+      y: "calc(" + r + " * (var(--tile-size) + var(--gap)))"
+    };
+  }
+
+  function cellPixel(r, c) {
+    var cell = cellsEl.querySelector('[data-r="' + r + '"][data-c="' + c + '"]');
+    if (!cell) return { x: 0, y: 0 };
+    var boardRect = tilesEl.getBoundingClientRect();
+    var cellRect = cell.getBoundingClientRect();
+    return {
+      x: cellRect.left - boardRect.left + cellRect.width / 2,
+      y: cellRect.top - boardRect.top + cellRect.height / 2
+    };
+  }
+
+  function createTileEl(tile) {
+    var el = document.createElement("div");
+    el.className = "tile" + (tile.corrupt ? " corrupt" : "");
+    el.setAttribute("data-id", tile.id);
+    var num = document.createElement("span");
+    num.className = "num";
+    num.textContent = tile.corrupt ? ("☠" + tile.hp) : String(tile.value);
+    el.appendChild(num);
+    if (!tile.corrupt) {
+      var st = tileStyle(tile.value);
+      el.style.background = st.background;
+      el.style.color = st.color;
+      el.style.boxShadow = st.boxShadow;
+    }
+    var pos = cellXY(tile.r, tile.c);
+    el.style.left = pos.x;
+    el.style.top = pos.y;
+    tilesEl.appendChild(el);
+    tile.el = el;
+    return el;
+  }
+
+  function updateTileEl(tile) {
+    if (!tile.el) return;
+    tile.el.className = "tile" + (tile.corrupt ? " corrupt" : "");
+    var num = tile.el.querySelector(".num");
+    if (num) num.textContent = tile.corrupt ? ("☠" + tile.hp) : String(tile.value);
+    if (!tile.corrupt) {
+      var st = tileStyle(tile.value);
+      tile.el.style.background = st.background;
+      tile.el.style.color = st.color;
+      tile.el.style.boxShadow = st.boxShadow;
+    }
+  }
+
+  function removeTileEl(tile) {
+    if (tile && tile.el && tile.el.parentNode) {
+      tile.el.parentNode.removeChild(tile.el);
+    }
+    if (tile) tile.el = null;
+  }
+
+  function setTilePos(tile, r, c, animate, duration) {
+    tile.r = r;
+    tile.c = c;
+    if (!tile.el) return;
+    var pos = cellXY(r, c);
+    if (animate && window.gsap) {
+      gsap.to(tile.el, {
+        left: pos.x,
+        top: pos.y,
+        duration: duration || 0.14,
+        ease: "power3.out",
+        overwrite: "auto"
+      });
+    } else {
+      tile.el.style.left = pos.x;
+      tile.el.style.top = pos.y;
+    }
+  }
+
+  function randomEmpty(avoidCorner) {
+    var empties = [];
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        if (!G.grid[r][c]) empties.push({ r: r, c: c });
+      }
+    }
+    if (!empties.length) return null;
+    if (avoidCorner) {
+      var corners = empties.filter(function (p) {
+        return (p.r === 0 || p.r === SIZE - 1) && (p.c === 0 || p.c === SIZE - 1);
+      });
+      var edges = empties.filter(function (p) {
+        return p.r === 0 || p.r === SIZE - 1 || p.c === 0 || p.c === SIZE - 1;
+      });
+      var pool = corners.length ? corners : (edges.length ? edges : empties);
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    return empties[Math.floor(Math.random() * empties.length)];
+  }
+
+  function spawnNormal(animate) {
+    var pos = randomEmpty(false);
+    if (!pos) return null;
+    var value = 2;
+    if (Math.random() < G.spawnFourChance) value = 4;
+    else if (Math.random() < 0.1) value = 4;
+    var mirror = getHook("mirrorSpawnChance");
+    if (mirror && G.lastMergeValue && Math.random() < mirror) {
+      value = Math.max(2, Math.floor(G.lastMergeValue / 2));
+      if ((value & (value - 1)) !== 0) value = 4;
+    }
+    var tile = {
+      id: G.nextId++,
+      value: value,
+      corrupt: false,
+      hp: 0,
+      maxHp: 0,
+      r: pos.r,
+      c: pos.c,
+      el: null
+    };
+    G.grid[pos.r][pos.c] = tile;
+    createTileEl(tile);
+    if (tile.el && animate && window.gsap) {
+      gsap.fromTo(tile.el,
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.28, ease: "back.out(1.8)", delay: 0.04 }
+      );
+    }
+    return tile;
+  }
+
+  function spawnCorrupt() {
+    var pos = randomEmpty(G.cornerBias);
+    if (!pos) return null;
+    var hp = 1;
+    if (G.floor >= 4) hp = 2;
+    if (G.floor >= 7) hp = 3;
+    if (G.floor >= 10) hp = 4;
+    var tile = {
+      id: G.nextId++,
+      value: 0,
+      corrupt: true,
+      hp: hp,
+      maxHp: hp,
+      r: pos.r,
+      c: pos.c,
+      el: null
+    };
+    G.grid[pos.r][pos.c] = tile;
+    createTileEl(tile);
+    if (tile.el && window.gsap) {
+      gsap.fromTo(tile.el,
+        { scale: 0, rotation: 180, opacity: 0 },
+        { scale: 1, rotation: 0, opacity: 1, duration: 0.4, ease: "back.out(1.6)" }
+      );
+    }
+    sfxDamage();
+    toast("虚空腐蚀出现！");
+    return tile;
+  }
+
+  function getHook(name) {
+    for (var i = 0; i < G.relics.length; i++) {
+      var r = G.relics[i];
+      if (r.hooks && r.hooks[name] !== undefined) return r.hooks[name];
+    }
+    return null;
+  }
+
+  function recomputeRelicMods() {
+    G.spawnFourChance = 0;
+    G.scoreMult = 1;
+    G.pressureRate = 1;
+    G.cornerBias = false;
+    G.maxHp = START_HP;
+    var startBonus = 0;
+    var pressureBonus = 0;
+    for (var i = 0; i < G.relics.length; i++) {
+      var r = G.relics[i];
+      if (r.spawnFourChance) G.spawnFourChance = Math.max(G.spawnFourChance, r.spawnFourChance);
+      if (r.pressureRate) G.pressureRate *= r.pressureRate;
+      if (r.cornerBias) G.cornerBias = true;
+      if (r.maxHpBonus) G.maxHp += r.maxHpBonus;
+      if (r.startHpBonus) startBonus += r.startHpBonus;
+      if (r.pressureBonus) pressureBonus += r.pressureBonus;
+      if (r.pressureBaseBonus) pressureBonus += r.pressureBaseBonus;
+      if (r.scoreMult) G.scoreMult *= r.scoreMult;
+    }
+    G.pressureMax = Math.max(5, BASE_PRESSURE + pressureBonus + Math.floor(G.floor / 3));
+    if (startBonus && !G.started) G.hp = Math.min(G.maxHp, G.hp + startBonus);
+    G.hp = Math.min(G.hp, G.maxHp);
+  }
+
+  function renderRelics() {
+    if (!G.relics.length) {
+      relicList.innerHTML = '<div class="empty-relic">尚未获得遗物<br/>通关一层后可三选一</div>';
+      return;
+    }
+    relicList.innerHTML = "";
+    for (var i = 0; i < G.relics.length; i++) {
+      var r = G.relics[i];
+      var el = document.createElement("div");
+      el.className = "relic";
+      el.innerHTML = '<div class="icon">' + r.icon + '</div><div><div class="name">' + r.name +
+        '</div><div class="desc">' + r.desc + '</div></div>';
+      relicList.appendChild(el);
+    }
+  }
+
+  function renderHUD() {
+    floorVal.textContent = String(G.floor);
+    scoreVal.textContent = String(G.score);
+    movesVal.textContent = String(G.moves);
+    objectiveEl.innerHTML = "合并出 <strong>" + G.goalValue + "</strong> 晶核";
+    pressureText.textContent = Math.floor(G.pressure) + " / " + G.pressureMax;
+    var pct = Math.min(100, (G.pressure / G.pressureMax) * 100);
+    pressureFill.style.width = pct + "%";
+    hpBar.innerHTML = "";
+    for (var i = 0; i < G.maxHp; i++) {
+      var h = document.createElement("div");
+      h.className = "heart" + (i < G.hp ? "" : " empty");
+      hpBar.appendChild(h);
+    }
+    undoBtn.disabled = !(G.undoLeft > 0 && G.undoSnapshot && !G.animating && !G.over);
+    undoBtn.textContent = G.undoLeft > 0 ? ("撤销 " + G.undoLeft) : "撤销";
+  }
+
+  function setLog(msg) { logText.textContent = msg; }
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    if (window.gsap) {
+      gsap.killTweensOf(toastEl);
+      gsap.fromTo(toastEl,
+        { opacity: 0, y: -20 },
+        { opacity: 1, y: 0, duration: 0.25, ease: "power2.out" }
+      );
+      gsap.to(toastEl, { opacity: 0, y: -12, duration: 0.3, delay: 1.4, ease: "power2.in" });
+    } else {
+      toastEl.style.opacity = "1";
+      setTimeout(function () { toastEl.style.opacity = "0"; }, 1500);
+    }
+  }
+
+  function shake(intensity) {
+    if (!window.gsap) return;
+    gsap.fromTo(shakeHost,
+      { x: 0, y: 0 },
+      {
+        x: function () { return (Math.random() - 0.5) * intensity; },
+        y: function () { return (Math.random() - 0.5) * intensity; },
+        duration: 0.08,
+        repeat: 3,
+        yoyo: true,
+        ease: "none",
+        onComplete: function () { gsap.set(shakeHost, { x: 0, y: 0 }); }
+      }
+    );
+  }
+
+  function floatText(r, c, text, color) {
+    var pos = cellPixel(r, c);
+    var el = document.createElement("div");
+    el.className = "float-dmg";
+    el.textContent = text;
+    el.style.color = color || "#ff4d6d";
+    el.style.left = pos.x + "px";
+    el.style.top = pos.y + "px";
+    el.style.transform = "translate(-50%, -50%)";
+    tilesEl.appendChild(el);
+    if (window.gsap) {
+      gsap.to(el, {
+        y: -36, opacity: 0, duration: 0.7, ease: "power2.out",
+        onComplete: function () { if (el.parentNode) el.parentNode.removeChild(el); }
+      });
+    } else {
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 700);
+    }
+  }
+
+  function mergeBurst(r, c, color, power) {
+    var pos = cellPixel(r, c);
+    var tilesRect = tilesEl.getBoundingClientRect();
+    var sx = tilesRect.left + pos.x;
+    var sy = tilesRect.top + pos.y;
+    burst(sx, sy, color || "#7c5cff", 18, power || 5);
+  }
+
+  function takeDamage(reason) {
+    if (G.over) return;
+    G.hp -= 1;
+    sfxHurt();
+    shake(10);
+    toast((reason || "稳定性受损") + "  -1");
+    renderHUD();
+    if (G.hp <= 0) {
+      gameOver("结构崩塌", "虚空吞噬了本层矩阵。你的架构未能维持稳定。");
+    }
+  }
+
+  function heal(n) {
+    if (G.hp < G.maxHp) {
+      G.hp = Math.min(G.maxHp, G.hp + n);
+      toast("稳定性 +" + n);
+      renderHUD();
+    }
+  }
+
+  function vectors(dir) {
+    var d = DIRECTIONS[dir];
+    var vecs = [];
+    var r, c;
+    if (dir === "left") {
+      for (r = 0; r < SIZE; r++) for (c = 0; c < SIZE; c++) vecs.push([r, c]);
+    } else if (dir === "right") {
+      for (r = 0; r < SIZE; r++) for (c = SIZE - 1; c >= 0; c--) vecs.push([r, c]);
+    } else if (dir === "up") {
+      for (c = 0; c < SIZE; c++) for (r = 0; r < SIZE; r++) vecs.push([r, c]);
+    } else {
+      for (c = 0; c < SIZE; c++) for (r = SIZE - 1; r >= 0; r--) vecs.push([r, c]);
+    }
+    return { d: d, vecs: vecs };
+  }
+
+  function canMove(dir) {
+    var info = vectors(dir);
+    for (var i = 0; i < info.vecs.length; i++) {
+      var r = info.vecs[i][0], c = info.vecs[i][1];
+      var tile = G.grid[r][c];
+      if (!tile || tile.corrupt) continue;
+      var nr = r + info.d[0], nc = c + info.d[1];
+      while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) {
+        var next = G.grid[nr][nc];
+        if (!next) return true;
+        if (next.corrupt) break;
+        if (next.value === tile.value) return true;
+        break;
+      }
+    }
+    return false;
+  }
+
+  function hasAnyMove() {
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        if (!G.grid[r][c]) return true;
+      }
+    }
+    return canMove("left") || canMove("right") || canMove("up") || canMove("down");
+  }
+
+  function snapshot() {
+    var data = {
+      floor: G.floor,
+      score: G.score,
+      moves: G.moves,
+      totalMoves: G.totalMoves,
+      kills: G.kills,
+      hp: G.hp,
+      maxHp: G.maxHp,
+      pressure: G.pressure,
+      pressureMax: G.pressureMax,
+      mergeCount: G.mergeCount,
+      echo: G.echo,
+      inertia: G.inertia,
+      comboMerge: G.comboMerge,
+      lastMergeValue: G.lastMergeValue,
+      undoLeft: G.undoLeft,
+      goalValue: G.goalValue,
+      relics: G.relics.slice(),
+      nextId: G.nextId,
+      cells: []
+    };
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var t = G.grid[r][c];
+        if (!t) { data.cells.push(null); }
+        else {
+          data.cells.push({
+            value: t.value, corrupt: t.corrupt, hp: t.hp, maxHp: t.maxHp
+          });
+        }
+      }
+    }
+    return data;
+  }
+
+  function restore(snap) {
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        if (G.grid[r][c]) removeTileEl(G.grid[r][c]);
+        G.grid[r][c] = null;
+      }
+    }
+    G.floor = snap.floor;
+    G.score = snap.score;
+    G.moves = snap.moves;
+    G.totalMoves = snap.totalMoves;
+    G.kills = snap.kills;
+    G.hp = snap.hp;
+    G.maxHp = snap.maxHp;
+    G.pressure = snap.pressure;
+    G.pressureMax = snap.pressureMax;
+    G.mergeCount = snap.mergeCount;
+    G.echo = snap.echo;
+    G.inertia = snap.inertia;
+    G.comboMerge = snap.comboMerge;
+    G.lastMergeValue = snap.lastMergeValue;
+    G.undoLeft = snap.undoLeft;
+    G.goalValue = snap.goalValue;
+    G.relics = snap.relics.slice();
+    G.nextId = snap.nextId;
+    recomputeRelicMods();
+    for (var i = 0; i < SIZE * SIZE; i++) {
+      var cell = snap.cells[i];
+      if (!cell) continue;
+      var rr = Math.floor(i / SIZE), cc = i % SIZE;
+      var tile = {
+        id: G.nextId++,
+        value: cell.value,
+        corrupt: cell.corrupt,
+        hp: cell.hp,
+        maxHp: cell.maxHp,
+        r: rr, c: cc, el: null
+      };
+      G.grid[rr][cc] = tile;
+      createTileEl(tile);
+    }
+    renderRelics();
+    renderHUD();
+  }
+
+  function damageCorruptAround(r, c, dmg) {
+    var dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    var killed = 0;
+    for (var i = 0; i < dirs.length; i++) {
+      var nr = r + dirs[i][0], nc = c + dirs[i][1];
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+      var t = G.grid[nr][nc];
+      if (!t || !t.corrupt) continue;
+      t.hp -= dmg;
+      killed += applyCorruptHit(t, nr, nc);
+    }
+    return killed;
+  }
+
+  function applyCorruptHit(t, r, c) {
+    mergeBurst(r, c, "#ff4d6d", 6);
+    floatText(r, c, "-1", "#ff6b8a");
+    if (t.hp <= 0) {
+      G.grid[r][c] = null;
+      removeTileEl(t);
+      G.kills++;
+      G.score += 20 * G.floor;
+      var healAmt = getHook("onCorruptKillHeal");
+      sfxClear();
+      toast("腐蚀节点摧毁！");
+      if (healAmt) heal(healAmt);
+      renderHUD();
+      return 1;
+    } else {
+      updateTileEl(t);
+      if (t.el && window.gsap) {
+        gsap.fromTo(t.el, { scale: 1.12 }, { scale: 1, duration: 0.25, ease: "elastic.out(1, 0.45)" });
+      }
+      return 0;
+    }
+  }
+
+  function damageAllCorrupt(dmg) {
+    var killed = 0;
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var t = G.grid[r][c];
+        if (t && t.corrupt) {
+          t.hp -= dmg;
+          killed += applyCorruptHit(t, r, c);
+        }
+      }
+    }
+    if (killed) toast("过载席卷全场！");
+    return killed;
+  }
+
+  function addScore(base) {
+    var mult = G.scoreMult;
+    var inertiaHook = getHook("inertiaScore");
+    if (inertiaHook) mult *= (1 + 0.15 * Math.min(5, G.inertia));
+    var gained = Math.floor(base * mult);
+    G.score += gained;
+    return gained;
+  }
+
+  function tryChainMerge() {
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var a = G.grid[r][c];
+        if (!a || a.corrupt) continue;
+        var rights = [[0, 1], [1, 0]];
+        for (var k = 0; k < rights.length; k++) {
+          var nr = r + rights[k][0], nc = c + rights[k][1];
+          if (nr >= SIZE || nc >= SIZE) continue;
+          var b = G.grid[nr][nc];
+          if (!b || b.corrupt || b.value !== a.value) continue;
+          var newVal = a.value * 2;
+          G.grid[nr][nc] = null;
+          removeTileEl(b);
+          a.value = newVal;
+          updateTileEl(a);
+          G.lastMergeValue = newVal;
+          G.score += newVal;
+          G.mergeCount++;
+          if (window.gsap && a.el) {
+            gsap.fromTo(a.el, { scale: 1.2 }, { scale: 1, duration: 0.35, ease: "elastic.out(1, 0.4)" });
+          }
+          mergeBurst(r, c, "#2de2e6", 6);
+          damageCorruptAround(r, c, 1);
+          sfxMerge(newVal);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function tryRemoveMin() {
+    var best = null;
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var t = G.grid[r][c];
+        if (!t || t.corrupt) continue;
+        if (!best || t.value < best.value) best = t;
+      }
+    }
+    if (best) {
+      var rr = best.r, cc = best.c;
+      G.grid[rr][cc] = null;
+      removeTileEl(best);
+      mergeBurst(rr, cc, "#9a96b0", 4);
+      toast("熵减：移除了一枚晶核");
+      return true;
+    }
+    return false;
+  }
+
+  function upgradeRandomTwo() {
+    var twos = [];
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var t = G.grid[r][c];
+        if (t && !t.corrupt && t.value === 2) twos.push(t);
+      }
+    }
+    if (!twos.length) return;
+    var pick = twos[Math.floor(Math.random() * twos.length)];
+    pick.value = 4;
+    updateTileEl(pick);
+    if (pick.el && window.gsap) {
+      gsap.fromTo(pick.el, { scale: 1.18 }, { scale: 1, duration: 0.3, ease: "back.out(2)" });
+    }
+    mergeBurst(pick.r, pick.c, "#ffd166", 5);
+    toast("回响分裂：2 → 4");
+  }
+
+  function checkGoalAndRelics(mergedValue) {
+    if (mergedValue >= G.goalValue && !G.over) {
+      floorClear();
+      return true;
+    }
+    return false;
+  }
+
+  function valueColor(v) {
+    if (v >= 512) return "#ffd166";
+    if (v >= 128) return "#2de2e6";
+    if (v >= 32) return "#7c5cff";
+    return "#c9c4dc";
+  }
+
+  function tryAutoLineMerge() {
+    var r, c, a, b;
+    for (r = 0; r < SIZE; r++) {
+      for (c = 0; c < SIZE - 1; c++) {
+        a = G.grid[r][c]; b = G.grid[r][c + 1];
+        if (a && b && !a.corrupt && !b.corrupt && a.value === b.value) {
+          performSimpleMerge(a, b);
+          return;
+        }
+      }
+    }
+    for (c = 0; c < SIZE; c++) {
+      for (r = 0; r < SIZE - 1; r++) {
+        a = G.grid[r][c]; b = G.grid[r + 1][c];
+        if (a && b && !a.corrupt && !b.corrupt && a.value === b.value) {
+          performSimpleMerge(a, b);
+          return;
+        }
+      }
+    }
+  }
+
+  function performSimpleMerge(a, b) {
+    var r = a.r, c = a.c;
+    G.grid[b.r][b.c] = null;
+    removeTileEl(b);
+    a.value = a.value * 2;
+    updateTileEl(a);
+    G.lastMergeValue = a.value;
+    addScore(a.value);
+    G.mergeCount++;
+    if (a.el && window.gsap) {
+      gsap.fromTo(a.el, { scale: 1.2 }, { scale: 1, duration: 0.35, ease: "elastic.out(1, 0.4)" });
+    }
+    mergeBurst(r, c, valueColor(a.value), 5);
+    sfxMerge(a.value);
+    damageCorruptAround(r, c, 1);
+    toast("自动整列触发！");
+    checkGoalAndRelics(a.value);
+  }
+
+  function countCorrupt() {
+    var n = 0;
+    for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
+      if (G.grid[r][c] && G.grid[r][c].corrupt) n++;
+    }
+    return n;
+  }
+
+  function countNormal() {
+    var n = 0;
+    for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
+      if (G.grid[r][c] && !G.grid[r][c].corrupt) n++;
+    }
+    return n;
+  }
+
+  function move(dir) {
+    if (!G.started || G.over || G.animating || G.floorClearing) return;
+    if ($("relicOverlay").classList.contains("show")) return;
+    if ($("overOverlay").classList.contains("show")) return;
+
+    if (!canMove(dir)) {
+      shake(4);
+      sfxMove();
+      if (!hasAnyMove()) {
+        takeDamage("矩阵锁死");
+        if (!G.over) {
+          tryRemoveMin();
+          if (!hasAnyMove()) {
+            gameOver("结构崩塌", "矩阵彻底锁死，架构无法继续。");
+          }
+        }
+      }
+      renderHUD();
+      return;
+    }
+
+    G.undoSnapshot = snapshot();
+    G.animating = true;
+    var info = vectors(dir);
+    var merged = [];
+    var moved = false;
+    var mergeEvents = [];
+    var i, r, c, tile, nr, nc, next;
+
+    var traveled = [];
+    for (i = 0; i < info.vecs.length; i++) {
+      r = info.vecs[i][0]; c = info.vecs[i][1];
+      tile = G.grid[r][c];
+      if (!tile || tile.corrupt) continue;
+      nr = r; nc = c;
+      while (true) {
+        var tr = nr + info.d[0], tc = nc + info.d[1];
+        if (tr < 0 || tr >= SIZE || tc < 0 || tc >= SIZE) break;
+        next = G.grid[tr][tc];
+        if (next) break;
+        nr = tr; nc = tc;
+      }
+      traveled.push({ tile: tile, fromR: r, fromC: c, toR: nr, toC: nc });
+      if (nr !== r || nc !== c) {
+        G.grid[r][c] = null;
+        G.grid[nr][nc] = tile;
+        moved = true;
+      }
+    }
+
+    for (i = 0; i < info.vecs.length; i++) {
+      r = info.vecs[i][0]; c = info.vecs[i][1];
+      tile = G.grid[r][c];
+      if (!tile || tile.corrupt) continue;
+      nr = r + info.d[0]; nc = c + info.d[1];
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+      next = G.grid[nr][nc];
+      if (next && !next.corrupt && next.value === tile.value &&
+          merged.indexOf(next) === -1 && merged.indexOf(tile) === -1) {
+        merged.push(next);
+        merged.push(tile);
+        // Destination is the tile closer to the movement wall (processed first).
+        mergeEvents.push({
+          keep: tile,
+          remove: next,
+          r: r, c: c,
+          value: tile.value * 2
+        });
+        moved = true;
+      }
+    }
+
+    if (!moved) {
+      G.animating = false;
+      renderHUD();
+      return;
+    }
+
+    var duration = 0.13;
+    var tweensLeft = 0;
+    var onTweenDone = function () {
+      tweensLeft--;
+      if (tweensLeft <= 0) finishMove();
+    };
+
+    for (i = 0; i < traveled.length; i++) {
+      var tr0 = traveled[i];
+      var isMergingAway = false;
+      for (var m = 0; m < mergeEvents.length; m++) {
+        if (mergeEvents[m].remove === tr0.tile) { isMergingAway = true; break; }
+      }
+      if (tr0.tile.el && !isMergingAway) {
+        tweensLeft++;
+        var pos = cellXY(tr0.toR, tr0.toC);
+        gsap.to(tr0.tile.el, {
+          left: pos.x, top: pos.y, duration: duration, ease: "power3.out",
+          onComplete: onTweenDone
+        });
+      }
+      tr0.tile.r = tr0.toR;
+      tr0.tile.c = tr0.toC;
+    }
+
+    for (i = 0; i < mergeEvents.length; i++) {
+      var ev = mergeEvents[i];
+      if (ev.remove.el) {
+        tweensLeft++;
+        var p2 = cellXY(ev.r, ev.c);
+        gsap.to(ev.remove.el, {
+          left: p2.x, top: p2.y, duration: duration, ease: "power3.out",
+          onComplete: onTweenDone
+        });
+      }
+      setTilePos(ev.keep, ev.r, ev.c, false);
+    }
+
+    if (tweensLeft === 0) finishMove();
+
+    function finishMove() {
+      var comboCorruptDmg = getHook("comboCorruptDmg");
+      var baseCorruptDmg = 1;
+      if (comboCorruptDmg && G.comboMerge + 1 >= 3) baseCorruptDmg += 1;
+
+      var maxMerged = 0;
+      var anyMerge = false;
+
+      for (var mi = 0; mi < mergeEvents.length; mi++) {
+        var e = mergeEvents[mi];
+        if (G.grid[e.remove.r] && G.grid[e.remove.r][e.remove.c] === e.remove) {
+          G.grid[e.remove.r][e.remove.c] = null;
+        }
+        removeTileEl(e.remove);
+
+        e.keep.value = e.value;
+        e.keep.r = e.r;
+        e.keep.c = e.c;
+        G.grid[e.r][e.c] = e.keep;
+        updateTileEl(e.keep);
+
+        anyMerge = true;
+        maxMerged = Math.max(maxMerged, e.value);
+        G.lastMergeValue = e.value;
+        G.mergeCount++;
+        var gained = addScore(e.value);
+
+        if (e.keep.el && window.gsap) {
+          gsap.fromTo(e.keep.el,
+            { scale: 1.22, zIndex: 10 },
+            { scale: 1, zIndex: 2, duration: 0.38, ease: "elastic.out(1, 0.42)" }
+          );
+        }
+        mergeBurst(e.r, e.c, valueColor(e.value), e.value >= 64 ? 8 : 5);
+        sfxMerge(e.value);
+        damageCorruptAround(e.r, e.c, baseCorruptDmg);
+
+        var highTh = getHook("onMergeHighDamageAll");
+        if (highTh && e.value >= highTh) damageAllCorrupt(1);
+        var sing = getHook("singularity");
+        if (sing && e.value >= sing) {
+          damageAllCorrupt(2);
+          G.score += 50;
+          toast("奇点共鸣！+50");
+        }
+
+        var echoNeed = getHook("echoSplit");
+        if (echoNeed) {
+          G.echo++;
+          if (G.echo >= echoNeed) {
+            G.echo = 0;
+            upgradeRandomTwo();
+          }
+        }
+
+        var everyN = getHook("everyMergeRemoveMin");
+        if (everyN && G.mergeCount % everyN === 0) tryRemoveMin();
+
+        if (gained > 0) floatText(e.r, e.c, "+" + gained, "#ffd166");
+      }
+
+      if (anyMerge) {
+        G.comboMerge++;
+        if (maxMerged >= 128) shake(12);
+        else if (maxMerged >= 32) shake(6);
+        else shake(3);
+      } else {
+        G.comboMerge = 0;
+        G.inertia = 0;
+      }
+
+      if (moved) {
+        var inertiaHook = getHook("inertiaScore");
+        if (inertiaHook) G.inertia = Math.min(5, G.inertia + 1);
+      }
+
+      var chain = getHook("chainMergeChance");
+      if (anyMerge && chain && Math.random() < chain) tryChainMerge();
+
+      var autoP = getHook("autoLineMerge");
+      if (anyMerge && autoP && Math.random() < autoP) tryAutoLineMerge();
+
+      var corruptCount = countCorrupt();
+      var pressureGain = G.pressureRate * (corruptCount > 0 ? 1.5 : 1);
+      G.pressure += pressureGain;
+      if (G.pressure >= G.pressureMax) {
+        G.pressure = 0;
+        spawnCorrupt();
+      }
+
+      spawnNormal(true);
+
+      G.moves++;
+      G.totalMoves++;
+      G.animating = false;
+
+      if (checkGoalAndRelics(maxMerged)) {
+        renderHUD();
+        return;
+      }
+
+      if (!hasAnyMove()) {
+        takeDamage("矩阵锁死");
+        if (!G.over) {
+          tryRemoveMin();
+          if (!hasAnyMove()) gameOver("结构崩塌", "矩阵彻底锁死，架构无法继续。");
+        }
+      }
+
+      renderHUD();
+    }
+  }
+
+  function goalForFloor(floor) {
+    return Math.pow(2, floor + 3);
+  }
+
+  function floorClear() {
+    if (G.over) return;
+    G.floorClearing = true;
+    sfxClear();
+    shake(14);
+    toast("第 " + G.floor + " 层已稳定！");
+    setLog("层结构稳定。请选择遗物，深入下一层。");
+    G.animating = false;
+    setTimeout(function () {
+      offerRelics();
+    }, 450);
+  }
+
+  function offerRelics() {
+    var owned = {};
+    for (var i = 0; i < G.relics.length; i++) owned[G.relics[i].id] = true;
+    var candidates = RELIC_POOL.filter(function (r) { return !owned[r.id]; });
+    if (!candidates.length) {
+      nextFloor();
+      return;
+    }
+    var picks = [];
+    var pool = candidates.slice();
+    for (var k = 0; k < 3 && pool.length; k++) {
+      var idx = Math.floor(Math.random() * pool.length);
+      picks.push(pool[idx]);
+      pool.splice(idx, 1);
+    }
+    var box = $("relicChoices");
+    box.innerHTML = "";
+    for (var j = 0; j < picks.length; j++) {
+      (function (rel) {
+        var btn = document.createElement("button");
+        btn.className = "choice";
+        btn.innerHTML = '<div class="icon">' + rel.icon + '</div><div class="name">' + rel.name +
+          '</div><div class="desc">' + rel.desc + '</div>';
+        btn.addEventListener("click", function () {
+          ensureAudio();
+          sfxPick();
+          G.relics.push(rel);
+          recomputeRelicMods();
+          renderRelics();
+          $("relicOverlay").classList.remove("show");
+          nextFloor();
+        });
+        box.appendChild(btn);
+      })(picks[j]);
+    }
+    $("relicOverlay").classList.add("show");
+  }
+
+  function nextFloor() {
+    G.floorClearing = false;
+    G.floor++;
+    G.goalValue = goalForFloor(G.floor);
+    G.pressure = 0;
+    G.moves = 0;
+    G.comboMerge = 0;
+    G.undoLeft = getHook("undoPerFloor") || 0;
+    recomputeRelicMods();
+    clearBoardVisual();
+    G.grid = emptyGrid();
+    spawnNormal(false);
+    spawnNormal(false);
+    if (G.floor >= 3) {
+      var pos = randomEmpty(false);
+      if (pos) {
+        var seedVal = Math.pow(2, Math.min(G.floor, 6));
+        var t = { id: G.nextId++, value: seedVal, corrupt: false, hp: 0, maxHp: 0, r: pos.r, c: pos.c, el: null };
+        G.grid[pos.r][pos.c] = t;
+        createTileEl(t);
+        if (t.el && window.gsap) {
+          gsap.fromTo(t.el, { scale: 0 }, { scale: 1, duration: 0.4, ease: "back.out(1.8)" });
+        }
+      }
+    }
+    G.undoSnapshot = null;
+    setLog("进入第 " + G.floor + " 层。目标：合成 " + G.goalValue + " 晶核。");
+    renderHUD();
+  }
+
+  function clearBoardVisual() {
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        if (G.grid[r] && G.grid[r][c]) removeTileEl(G.grid[r][c]);
+        if (G.grid[r]) G.grid[r][c] = null;
+      }
+    }
+    tilesEl.innerHTML = "";
+  }
+
+  function gameOver(title, desc) {
+    if (G.over) return;
+    G.over = true;
+    G.animating = false;
+    shake(18);
+    sfxHurt();
+    $("overTitle").textContent = title;
+    $("overDesc").textContent = desc;
+    $("resultFloor").textContent = String(G.floor);
+    $("resultScore").textContent = String(G.score);
+    $("resultMoves").textContent = String(G.totalMoves);
+    $("resultKills").textContent = String(G.kills);
+    setTimeout(function () {
+      $("overOverlay").classList.add("show");
+    }, 350);
+  }
+
+  function resetRun() {
+    G.nextId = 1;
+    G.floor = 1;
+    G.score = 0;
+    G.moves = 0;
+    G.totalMoves = 0;
+    G.kills = 0;
+    G.hp = START_HP;
+    G.maxHp = START_HP;
+    G.pressure = 0;
+    G.mergeCount = 0;
+    G.echo = 0;
+    G.inertia = 0;
+    G.comboMerge = 0;
+    G.lastMergeValue = 0;
+    G.undoLeft = 0;
+    G.undoSnapshot = null;
+    G.relics = [];
+    G.over = false;
+    G.animating = false;
+    G.floorClearing = false;
+    G.goalValue = goalForFloor(1);
+    G.started = true;
+    clearBoardVisual();
+    G.grid = emptyGrid();
+    recomputeRelicMods();
+    renderRelics();
+    spawnNormal(false);
+    spawnNormal(false);
+    setLog("第 1 层。合成 16 晶核即可稳定结构。");
+    renderHUD();
+  }
+
+  function doUndo() {
+    if (!G.undoLeft || !G.undoSnapshot || G.animating || G.over) return;
+    restore(G.undoSnapshot);
+    G.undoLeft--;
+    G.undoSnapshot = null;
+    toast("时间回溯");
+    sfxPick();
+    renderHUD();
+  }
+
+  document.addEventListener("keydown", function (e) {
+    var k = e.key.toLowerCase();
+    if (k === "arrowleft" || k === "a") { e.preventDefault(); move("left"); }
+    else if (k === "arrowright" || k === "d") { e.preventDefault(); move("right"); }
+    else if (k === "arrowup" || k === "w") { e.preventDefault(); move("up"); }
+    else if (k === "arrowdown" || k === "s") { e.preventDefault(); move("down"); }
+    else if (k === "u") { e.preventDefault(); doUndo(); }
+  });
+
+  var touchStart = null;
+  boardEl.addEventListener("pointerdown", function (e) {
+    touchStart = { x: e.clientX, y: e.clientY };
+  });
+  boardEl.addEventListener("pointerup", function (e) {
+    if (!touchStart) return;
+    var dx = e.clientX - touchStart.x;
+    var dy = e.clientY - touchStart.y;
+    touchStart = null;
+    var absx = Math.abs(dx), absy = Math.abs(dy);
+    if (Math.max(absx, absy) < 24) return;
+    if (absx > absy) move(dx > 0 ? "right" : "left");
+    else move(dy > 0 ? "down" : "up");
+  });
+  boardEl.addEventListener("pointercancel", function () { touchStart = null; });
+
+  var stage = document.querySelector(".stage");
+  stage.addEventListener("pointermove", function (e) {
+    var rect = stage.getBoundingClientRect();
+    var px = (e.clientX - rect.left) / rect.width - 0.5;
+    var py = (e.clientY - rect.top) / rect.height - 0.5;
+    var rx = 14 - py * 10;
+    var ry = px * 12;
+    boardTilt.style.transform = "rotateX(" + rx + "deg) rotateY(" + ry + "deg) translateZ(0)";
+  });
+  stage.addEventListener("pointerleave", function () {
+    boardTilt.style.transform = "rotateX(14deg) rotateY(0deg) translateZ(0)";
+  });
+
+  $("startBtn").addEventListener("click", function () {
+    ensureAudio();
+    $("startOverlay").classList.remove("show");
+    resetRun();
+  });
+  $("againBtn").addEventListener("click", function () {
+    ensureAudio();
+    $("overOverlay").classList.remove("show");
+    resetRun();
+  });
+  $("restartBtn").addEventListener("click", function () {
+    ensureAudio();
+    $("overOverlay").classList.remove("show");
+    $("relicOverlay").classList.remove("show");
+    resetRun();
+    toast("回廊已重置");
+  });
+  $("helpBtn").addEventListener("click", function () {
+    $("helpOverlay").classList.add("show");
+  });
+  $("closeHelpBtn").addEventListener("click", function () {
+    $("helpOverlay").classList.remove("show");
+  });
+  undoBtn.addEventListener("click", function () {
+    ensureAudio();
+    doUndo();
+  });
+
+  // prevent page scroll on swipe
+  document.addEventListener("touchmove", function (e) {
+    if (e.target && e.target.closest && e.target.closest("#board")) e.preventDefault();
+  }, { passive: false });
+
+  // init
+  buildCells();
+  G.grid = emptyGrid();
+  renderHUD();
+  renderRelics();
+  $("startOverlay").classList.add("show");
+
+})();
+
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4fefd53add854ea4b22475a4d86bdd4c","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>街头快打 · Street Brawl</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="stage">
+    <header id="hud-top">
+      <div class="hud-brand">
+        <span id="score">SCORE 000000</span>
+        <span id="hi-score">HI 000000</span>
+      </div>
+      <div class="hud-mid" id="wave-banner"></div>
+      <div class="hud-brand right">
+        <span id="combo" class="combo hidden">COMBO x0</span>
+        <button id="mute-btn" type="button" title="音效开关">🔊</button>
+      </div>
+    </header>
+
+    <canvas id="game" width="960" height="540"></canvas>
+
+    <div id="hud-bottom">
+      <div id="player-bars">
+        <div class="name-tag">玩家</div>
+        <div class="bar hp-bar"><div id="hp-fill" class="fill"></div></div>
+        <div id="lives" class="lives"></div>
+      </div>
+    </div>
+
+    <!-- Start overlay -->
+    <div id="screen-menu" class="screen">
+      <h1 class="title">街头快打</h1>
+      <p class="subtitle">STREET BRAWL · 单人 2D 横版格斗</p>
+      <div class="menu-box">
+        <p class="controls-title">操作说明</p>
+        <ul class="controls">
+          <li><b>W A S D</b> · 移动（上下左右）</li>
+          <li><b>空格</b> · 跳跃</li>
+          <li><b>J</b> · 拳击（可连按三连击）</li>
+          <li><b>K</b> · 踢腿（重击、击退）</li>
+          <li><b>H</b> · 音效开关</li>
+        </ul>
+      </div>
+      <button id="start-btn" class="big-btn">开始游戏</button>
+      <p class="hint">或按 回车 / Enter 开始</p>
+    </div>
+
+    <!-- Game over / victory overlay -->
+    <div id="screen-over" class="screen hidden">
+      <h1 id="over-title" class="title over">游戏结束</h1>
+      <p id="over-stat" class="over-stat"></p>
+      <button id="retry-btn" class="big-btn">再来一次</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

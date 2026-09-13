@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>古戈尔机 · 从 1 数到不可名状</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="brand">
+      <div class="logo">10<sup>100</sup></div>
+      <div class="titles">
+        <h1>古戈尔机</h1>
+        <p id="era">计数纪元</p>
+      </div>
+    </div>
+    <div class="headline">
+      <div class="label">总数值 <span class="mono">N</span></div>
+      <div class="value mono" id="numTotal">10</div>
+      <div class="sub" id="numSub"></div>
+    </div>
+    <div class="topstats" id="topStats"></div>
+  </header>
+
+  <div id="formula" class="formula mono"></div>
+  <nav id="tabs"></nav>
+  <main id="body"></main>
+  <footer id="foot">
+    <span id="footLeft"></span>
+    <span id="footRight"></span>
+  </footer>
+  <div id="toasts"></div>
+
+  <!-- 悬浮示意：单色工业线条动画，指针停在哪就演示哪一种计数原理 -->
+  <aside id="demo">
+    <div class="dhead">
+      <span id="demoTitle">计数原理</span>
+      <span id="demoSym" class="mono"></span>
+      <button class="dbtn" data-dact="fold" title="折叠">▼</button>
+    </div>
+    <canvas id="demoCanvas" width="320" height="168"></canvas>
+    <div class="dcap" id="demoCap"></div>
+    <div class="dctl">
+      <button class="dbtn" data-dact="play" title="播放 / 暂停">❙❙</button>
+      <button class="dbtn" data-dact="step" title="步进 0.1">+.1</button>
+      <button class="dbtn" data-dact="speed" title="速度">1×</button>
+      <button class="dbtn" data-dact="pin" title="钉住（不自动隐藏）">📍</button>
+      <div class="dbar" id="demoBar"><i></i></div>
+    </div>
+  </aside>
+</div>
+
+<script src="src/bignum.js"></script>
+<script src="src/data.js"></script>
+<script src="src/codex-content.js"></script>
+<script src="src/game.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/demo.js"></script>
+</body>
+</html>

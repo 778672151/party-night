@@ -68,6 +68,45 @@
 
 > 棋盘、轮到谁、胜负、悔棋全部由房主判定后广播，客户端只负责画和把点击换算成坐标。
 
+## 🎮 小游戏厅（16 款成品小游戏）
+
+大厅最下方是**小游戏厅**：这些是**不需要联机**的成品小游戏（单机 / 同屏双人），点开在一个浮层里直接玩，退出就回大厅（房间不丢、分数不动）。
+
+- 两个人凑一个屏幕的：**双截龙**、**拳皇格斗**（P1 用 WASD+JKUI，P2 用方向键+小键盘）
+- 单机耐玩的：**经典超级马里奥**、**植物大战僵尸**、**2048 肉鸽版**、**魔方动画实验室**、**三维弹球**
+- 治愈 / 解谜的：**鲸鱼推箱子**（很萌）、**幽灵诡计**、**密码破译局**、**3D 重力迷宫**（手机能晃）
+- 棋牌的：**弈・棋道初启**（围棋教学+AI）、**骨牌顶牛**
+
+文件放在仓库的 `mini/<作品id>/`（**是完整的原始目录**，多文件工程连 `assets/`/`js/` 一起下，不是只有个 index.html），清单在 `data/mini.json`。
+浮层会自动判断目录在哪：从仓库根打开是 `mini/`，只开 `dist/party-night.html` 时自动退到 `../mini/`，两种都能玩。
+
+> ⚠️ 有几款依赖外网 CDN（`cdn.jsdelivr.net` 的库、Google Fonts 字体）：断网时会缺样式或功能。其余是自包含的。
+> 少数游戏是为键鼠做的（拳皇/双截龙/超级马里奥），手机上最好是横屏 + 外接键盘，或者就在电脑上两个人玩。
+
+### 小游戏来源（逐款署名）
+
+全部来自 <https://deepdemos.top>（AI 网页 Demo 作品集）。站点与作品都**没有附许可证声明**；经项目使用者确认可直接取用后才下载整合。
+如果原作者希望调整或移除，改 `data/mini.json` 与 `mini/` 即可，不影响其它功能。
+
+| 小游戏 | 站点作品 id | 站点作者 |
+| --- | --- | --- |
+| 经典超级马里奥 | `super-mario-bros-45c8c08f` | HWDyzzZ |
+| 双截龙 | `demo-b46e4974` | public |
+| 拳皇格斗 | `kof-fighter-6a3a5699` | HWDyzzZ |
+| 植物大战僵尸 | `plants-vs-zombies-web-f6819bdc` | HWDyzzZ |
+| 2048 肉鸽版 | `2048-roguelike-ed8cf859` | qq2586 |
+| 魔方动画实验室 | `rubik-anime-lab-0b0c6984` | HWDyzzZ |
+| 鲸鱼推箱子 | `plus-2265f7c6` | HWDyzzZ |
+| 幽灵诡计 | `demo-70c71aac` | HWDyzzZ |
+| 密码破译局 | `demo-6fd4896a` | public |
+| 骨牌顶牛 | `demo-c046ab75` | zhang77 |
+| 弈・棋道初启 | `demo-29b78d69` | QwenchC |
+| 3D 重力迷宫 | `3d-754ac5bb` | admin |
+| 三维弹球 | `glm5-3flash-b71c60b6` | hywx |
+| 弹球英雄 | `demo-2aa8ee29` | rtdrs |
+| 古戈尔增量 | `demo-35017a55` | 2657933656 |
+| 单文件靶场 | `ak-47-svg-83ece2c6` | public |
+
 ## 来源与致谢
 
 《五子棋》的**规则判定与画布渲染思路**移植自 <https://deepdemos.top> 上的作品《实时胜率五子棋》（slug `demo-ce927755`）。
@@ -121,6 +160,7 @@
     node test/memory-test.mjs             # 合作翻牌：牌堆不泄露/回合规则/翻错换人/记忆策略打完整局/挂机保护（29 项）
     node test/codraw-test.mjs             # 心有灵犀：两块画布不串/揭晓才给对方的画/交卷与表态/兜底/换主（34 项）
     node test/gomoku-test.mjs             # 五子棋：落子规则/四方向连五+长连/平局/悔棋需对方同意/换主（35 项）
+    node test/mini-test.mjs               # 小游戏厅：清单与文件一致/没有空壳/没有死链（11 项）
     node test/style-check.mjs             # CSS 静态检查：注释成对/括号成对/没有空选择器（防「漏 */ 吞掉整段样式」）
     node test/regress-fixes.mjs           # 核心缺陷护栏：答案泄露 / 设置失效 / 房主迁移 / 掉线丢分 / 挂机兜底 / 整段回放自愈（24 项）
     node test/integration-drawgame.mjs    # 真实 broker 跑完整一局（选词→作画→猜中→揭晓→回放→换轮）
@@ -130,7 +170,7 @@
 
 真浏览器端到端（Windows Edge + CDP，多个浏览器上下文 = 两个玩家；用法见 \`test/browser/README.md\`）：
 
-    node test/browser/regress.mjs         # 8 组：lobby / rejoin / migration / tacit / memory / codraw / gomoku / fullgame
+    node test/browser/regress.mjs         # 9 组：lobby / mini / rejoin / migration / tacit / memory / codraw / gomoku / fullgame
     node test/browser/regress.mjs memory  # 也可以只跑其中一组（换成自己想跑的名字）
     node test/browser/regress-stroke.mjs  # 画笔专项：慢画快画、丢包注入、掩码、不许出现「起点连终点」
     node test/browser/mobile-audit.mjs    # 各手机视口下不许横向溢出

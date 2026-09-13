@@ -1,0 +1,1327 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%"
+     preserveAspectRatio="xMidYMid meet" style="background:#0a0f16;touch-action:none;cursor:crosshair">
+  <title>AK-47 靶场 · 单文件 SVG 射击</title>
+  <desc>纯 SVG 实现的 AK-47 打靶游戏。移动鼠标瞄准，按住左键射击，R 换弹，B 切换单发/连发。</desc>
+
+  <defs>
+    <!-- ===== 天空 / 远景 ===== -->
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d4f7d"/>
+      <stop offset="0.35" stop-color="#4e8cbd"/>
+      <stop offset="0.68" stop-color="#9dc6e0"/>
+      <stop offset="1" stop-color="#e8dcc0"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6cf" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#ffe9a3" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffd98a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mtnFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fa6be"/>
+      <stop offset="1" stop-color="#b9c8d6"/>
+    </linearGradient>
+    <linearGradient id="mtnMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6c86a1"/>
+      <stop offset="1" stop-color="#8ea4b8"/>
+    </linearGradient>
+    <linearGradient id="hazeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e6dcc2" stop-opacity="0"/>
+      <stop offset="1" stop-color="#e6dcc2" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="bermGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b99a63"/>
+      <stop offset="0.45" stop-color="#a3824f"/>
+      <stop offset="1" stop-color="#7d6038"/>
+    </linearGradient>
+    <linearGradient id="rangeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f8f4c"/>
+      <stop offset="0.5" stop-color="#7ea057"/>
+      <stop offset="1" stop-color="#5f7f42"/>
+    </linearGradient>
+    <linearGradient id="foreGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f6d38"/>
+      <stop offset="1" stop-color="#2f4522"/>
+    </linearGradient>
+    <linearGradient id="dirtGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b79a6c"/>
+      <stop offset="1" stop-color="#8d7148"/>
+    </linearGradient>
+    <pattern id="sandDots" width="26" height="18" patternUnits="userSpaceOnUse">
+      <rect width="26" height="18" fill="none"/>
+      <circle cx="4" cy="5" r="1.1" fill="#6f5730" opacity="0.35"/>
+      <circle cx="15" cy="11" r="0.9" fill="#e0c894" opacity="0.3"/>
+      <circle cx="22" cy="3" r="0.8" fill="#6f5730" opacity="0.28"/>
+    </pattern>
+    <pattern id="turf" width="30" height="14" patternUnits="userSpaceOnUse">
+      <rect width="30" height="14" fill="none"/>
+      <path d="M2,14 q3,-7 6,0 M16,14 q3,-6 6,0" stroke="#43602e" stroke-width="1.2" fill="none" opacity="0.5"/>
+    </pattern>
+
+    <!-- ===== 木料 / 布料 ===== -->
+    <linearGradient id="woodBench" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b07a3f"/>
+      <stop offset="0.35" stop-color="#8e5c29"/>
+      <stop offset="1" stop-color="#5e3a17"/>
+    </linearGradient>
+    <linearGradient id="woodBench2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6f4520"/>
+      <stop offset="0.4" stop-color="#94602c"/>
+      <stop offset="1" stop-color="#553316"/>
+    </linearGradient>
+    <linearGradient id="bagGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfb887"/>
+      <stop offset="0.45" stop-color="#ab8f5e"/>
+      <stop offset="1" stop-color="#6f5a34"/>
+    </linearGradient>
+    <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c48343"/>
+      <stop offset="0.28" stop-color="#a8682c"/>
+      <stop offset="0.75" stop-color="#824c1b"/>
+      <stop offset="1" stop-color="#5d3411"/>
+    </linearGradient>
+    <linearGradient id="woodGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b3763a"/>
+      <stop offset="0.4" stop-color="#945a25"/>
+      <stop offset="1" stop-color="#633913"/>
+    </linearGradient>
+    <linearGradient id="gripGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a5423"/>
+      <stop offset="0.4" stop-color="#b0753a"/>
+      <stop offset="1" stop-color="#5f3714"/>
+    </linearGradient>
+
+    <!-- ===== 金属 ===== -->
+    <linearGradient id="metalBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5e666f"/>
+      <stop offset="0.18" stop-color="#454c54"/>
+      <stop offset="0.55" stop-color="#333940"/>
+      <stop offset="1" stop-color="#22262b"/>
+    </linearGradient>
+    <linearGradient id="metalTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d757e"/>
+      <stop offset="0.3" stop-color="#4a5158"/>
+      <stop offset="1" stop-color="#2b3036"/>
+    </linearGradient>
+    <linearGradient id="metalBarrel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7c848d"/>
+      <stop offset="0.25" stop-color="#565d65"/>
+      <stop offset="0.7" stop-color="#33383e"/>
+      <stop offset="1" stop-color="#1e2226"/>
+    </linearGradient>
+    <linearGradient id="metalTube" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8d959e"/>
+      <stop offset="0.35" stop-color="#5b626a"/>
+      <stop offset="1" stop-color="#282c31"/>
+    </linearGradient>
+    <linearGradient id="boltMetal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b9c2cb"/>
+      <stop offset="0.4" stop-color="#8b949d"/>
+      <stop offset="1" stop-color="#565d65"/>
+    </linearGradient>
+    <linearGradient id="magGrad" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0" stop-color="#c07a35"/>
+      <stop offset="0.35" stop-color="#a2601f"/>
+      <stop offset="0.75" stop-color="#7a4413"/>
+      <stop offset="1" stop-color="#5a3110"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0d489"/>
+      <stop offset="0.4" stop-color="#c9a24a"/>
+      <stop offset="1" stop-color="#8a6a22"/>
+    </linearGradient>
+    <linearGradient id="steelGrad" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#d6dde4"/>
+      <stop offset="0.4" stop-color="#a7b1bb"/>
+      <stop offset="0.75" stop-color="#78828d"/>
+      <stop offset="1" stop-color="#59626c"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d868f"/>
+      <stop offset="1" stop-color="#3b4249"/>
+    </linearGradient>
+
+    <!-- ===== UI ===== -->
+    <linearGradient id="panelBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1620" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#060b12" stop-opacity="0.66"/>
+    </linearGradient>
+    <linearGradient id="btnGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0603a"/>
+      <stop offset="1" stop-color="#a8331c"/>
+    </linearGradient>
+    <linearGradient id="btnGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f5062"/>
+      <stop offset="1" stop-color="#1d2731"/>
+    </linearGradient>
+    <linearGradient id="flashGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fffbe8" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#ffd25a" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ff7a18" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="flashGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff3b0" stop-opacity="0.85"/>
+      <stop offset="0.5" stop-color="#ffb03a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff7a18" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.45"/>
+    </radialGradient>
+
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="glow6" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="blur2" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.4"/>
+    </filter>
+
+    <!-- 复用的树 / 草丛 -->
+    <g id="tree">
+      <rect x="-1.6" y="-9" width="3.2" height="10" fill="#3b2a17"/>
+      <path d="M0,-64 L-9,-46 L-4,-46 L-15,-28 L-8,-28 L-21,-8 L21,-8 L8,-28 L15,-28 L4,-46 L9,-46 Z" fill="#2f5540"/>
+      <path d="M0,-64 L-9,-46 L-4,-46 L-15,-28 L-8,-28 L-21,-8 L0,-8 Z" fill="#26483a" opacity="0.75"/>
+    </g>
+    <g id="tuft">
+      <path d="M0,0 C-3,-9 -7,-14 -13,-18 M0,0 C-1,-11 0,-17 2,-24 M0,0 C4,-9 8,-14 14,-18 M0,0 C1,-7 3,-11 7,-14"
+            stroke="#4d7a3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+    <g id="bush">
+      <ellipse cx="0" cy="0" rx="22" ry="10" fill="#3a5c33"/>
+      <ellipse cx="-12" cy="2" rx="14" ry="7" fill="#31502c"/>
+      <ellipse cx="13" cy="1" rx="15" ry="8" fill="#436a38"/>
+    </g>
+  </defs>
+
+  <style><![CDATA[
+    text{font-family:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none}
+    .num{font-variant-numeric:tabular-nums}
+    .cloud{animation:drift 52s ease-in-out infinite alternate}
+    .cloud.b{animation-duration:74s;animation-delay:-18s}
+    .cloud.c{animation-duration:63s;animation-delay:-31s}
+    @keyframes drift{from{transform:translateX(-46px)}to{transform:translateX(118px)}}
+    .bird{animation:fly 46s linear infinite}
+    .bird.b{animation-duration:61s;animation-delay:-24s}
+    @keyframes fly{from{transform:translate(60px,0)}to{transform:translate(-1420px,-46px)}}
+    .grass{transform-box:fill-box;transform-origin:50% 100%;animation:sway 3.6s ease-in-out infinite}
+    @keyframes sway{0%,100%{transform:rotate(-3.2deg)}50%{transform:rotate(3.2deg)}}
+    .blink{animation:blink 0.9s steps(2,end) infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+    .ui{cursor:pointer}
+    .btn:hover .btn-bg{filter:brightness(1.2)}
+    .btn:active .btn-bg{filter:brightness(0.85)}
+    .fadeUp{animation:fadeUp 0.95s ease-out forwards}
+    @keyframes fadeUp{0%{opacity:0;transform:translateY(6px) scale(0.8)}18%{opacity:1;transform:translateY(0) scale(1.08)}
+      60%{opacity:1;transform:translateY(-16px) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(0.95)}}
+    .puff{animation:puff 0.75s ease-out forwards}
+    @keyframes puff{0%{opacity:1;transform:scale(0.35)}100%{opacity:0;transform:scale(1.7)}}
+    .tracer{animation:tfade 0.13s linear forwards}
+    @keyframes tfade{from{opacity:0.95}to{opacity:0}}
+    .hitmk{animation:hm 0.4s ease-out forwards}
+    @keyframes hm{0%{opacity:0;transform:scale(1.7)}25%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(0.85)}}
+    .smoke{animation:sm 1.9s ease-out forwards}
+    @keyframes sm{0%{opacity:0.55;transform:translate(0,0) scale(0.5)}
+      100%{opacity:0;transform:translate(38px,-56px) scale(2.4)}}
+    .comboPop{animation:cp 0.5s ease-out}
+    @keyframes cp{0%{transform:scale(1.6)}100%{transform:scale(1)}}
+  ]]></style>
+
+  <!-- ================= 天空 ================= -->
+  <g id="skyLayer">
+    <rect x="0" y="0" width="1280" height="470" fill="url(#skyGrad)"/>
+    <circle cx="1032" cy="96" r="190" fill="url(#sunGlow)"/>
+    <circle cx="1032" cy="96" r="30" fill="#fffbee" opacity="0.92"/>
+    <g id="clouds" fill="#ffffff"></g>
+    <g id="birds" stroke="#33414f" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.6">
+      <path class="bird" d="M0,0 q7,-6 14,0 q7,-6 14,0" transform="translate(720,132)"/>
+      <path class="bird b" d="M0,0 q5,-5 10,0 q5,-5 10,0" transform="translate(980,196)"/>
+      <path class="bird" d="M0,0 q5,-5 10,0 q5,-5 10,0" transform="translate(880,150)" opacity="0.75"/>
+    </g>
+  </g>
+
+  <!-- ================= 远山 ================= -->
+  <g id="mountains">
+    <path d="M0,404 L0,318 L96,236 L188,318 L262,262 L376,352 L470,282 L576,368 L664,318 L762,392 L872,330 L980,398 L1092,338 L1200,398 L1280,360 L1280,420 L0,420 Z"
+          fill="url(#mtnFar)"/>
+    <path d="M96,236 L140,282 L120,286 L162,314 L118,318 L96,318 L70,300 L92,290 L60,268 Z" fill="#eef3f8" opacity="0.85"/>
+    <path d="M470,282 L516,326 L494,330 L532,356 L486,360 L470,360 L448,340 L468,332 L440,310 Z" fill="#eef3f8" opacity="0.75"/>
+    <path d="M0,430 L0,376 L128,320 L236,382 L338,330 L452,398 L548,344 L676,414 L790,362 L912,420 L1032,368 L1150,420 L1280,382 L1280,440 L0,440 Z"
+          fill="url(#mtnMid)" opacity="0.95"/>
+    <rect x="0" y="352" width="1280" height="96" fill="url(#hazeGrad)"/>
+  </g>
+
+  <!-- ================= 树林 / 土坡 ================= -->
+  <g id="treeline"></g>
+  <g id="berm">
+    <path d="M470,472 Q520,388 660,372 Q820,354 990,368 Q1160,382 1280,372 L1280,480 L470,480 Z" fill="url(#bermGrad)"/>
+    <path d="M470,472 Q520,388 660,372 Q820,354 990,368 Q1160,382 1280,372 L1280,392 Q1140,402 980,388 Q812,374 668,392 Q548,406 500,478 Z"
+          fill="#cdae74" opacity="0.55"/>
+    <rect x="470" y="360" width="810" height="120" fill="url(#sandDots)" opacity="0.5"/>
+    <!-- 土坡护木桩 -->
+    <g stroke="#5b4223" stroke-width="7" stroke-linecap="round">
+      <path d="M520,470 L528,398 M620,470 L632,392 M740,470 L754,386 M880,470 L894,384 M1020,470 L1034,386 M1160,470 L1174,390"/>
+    </g>
+    <!-- 警示牌 -->
+    <g transform="translate(1206,300)">
+      <rect x="-3" y="0" width="6" height="86" fill="#6b4a24"/>
+      <rect x="-46" y="-4" width="92" height="46" rx="4" fill="#f3ede0" stroke="#b02a1e" stroke-width="5"/>
+      <text x="0" y="14" text-anchor="middle" font-size="15" font-weight="700" fill="#b02a1e">射击区</text>
+      <text x="0" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#b02a1e">严禁入内</text>
+    </g>
+  </g>
+
+  <!-- ================= 靶场地面 ================= -->
+  <g id="range">
+    <rect x="0" y="404" width="1280" height="230" fill="url(#rangeGrad)"/>
+    <path d="M0,470 L1280,440 L1280,470 L0,500 Z" fill="#5d7d40" opacity="0.45"/>
+    <path d="M0,510 L1280,478 L1280,510 L0,542 Z" fill="#6d8f4b" opacity="0.5"/>
+    <path d="M0,556 L1280,520 L1280,556 L0,592 Z" fill="#5a7a3e" opacity="0.45"/>
+    <rect x="0" y="404" width="1280" height="230" fill="url(#turf)" opacity="0.5"/>
+    <!-- 靶位土路 -->
+    <path d="M560,600 Q660,540 760,528 Q900,512 1030,506 Q1160,500 1280,502 L1280,522 Q1150,520 1030,526 Q900,532 780,548 Q676,562 596,614 Z"
+          fill="url(#dirtGrad)" opacity="0.55"/>
+    <g id="grassFar"></g>
+    <!-- 距离牌 -->
+    <g font-size="15" font-weight="700" fill="#f0e6cf" text-anchor="middle">
+      <g transform="translate(800,470)"><rect x="-4" y="0" width="8" height="46" fill="#6b4a24"/>
+        <rect x="-30" y="-24" width="60" height="26" rx="3" fill="#7a5a30" stroke="#4d3517" stroke-width="2"/>
+        <text y="-5">50m</text></g>
+      <g transform="translate(1010,444)"><rect x="-4" y="0" width="8" height="40" fill="#6b4a24"/>
+        <rect x="-32" y="-22" width="64" height="24" rx="3" fill="#7a5a30" stroke="#4d3517" stroke-width="2"/>
+        <text y="-4">75m</text></g>
+      <g transform="translate(1210,424)"><rect x="-4" y="0" width="8" height="36" fill="#6b4a24"/>
+        <rect x="-36" y="-21" width="72" height="23" rx="3" fill="#7a5a30" stroke="#4d3517" stroke-width="2"/>
+        <text y="-3">100m</text></g>
+    </g>
+    <!-- 风旗 -->
+    <g transform="translate(586,300)" id="windFlag">
+      <rect x="-3.5" y="0" width="7" height="118" fill="url(#metalTube)"/>
+      <g id="flagCloth">
+        <path d="M4,4 L74,14 L52,28 L74,42 L4,52 Z" fill="#e8b23a" stroke="#a97c17" stroke-width="1.6"/>
+        <path d="M4,4 L74,14 L52,28 L74,42 L4,52 Z" fill="#d8571f" opacity="0.55" transform="scale(0.62,1)"/>
+      </g>
+      <circle cx="0" cy="0" r="7" fill="#3c434a"/>
+    </g>
+  </g>
+
+  <!-- ================= 目标 ================= -->
+  <g id="targetsLayer"></g>
+
+  <!-- ================= 射击台 ================= -->
+  <g id="bench">
+    <!-- 台面 -->
+    <path d="M-30,556 L556,552 L556,588 L-30,592 Z" fill="url(#woodBench)"/>
+    <path d="M-30,556 L556,552 L556,560 L-30,564 Z" fill="#d09b58" opacity="0.55"/>
+    <g stroke="#4d2f12" stroke-width="1.2" opacity="0.4" fill="none">
+      <path d="M-30,570 Q140,566 300,566 T556,562"/>
+      <path d="M-30,580 Q160,578 320,576 T556,572"/>
+    </g>
+    <!-- 桌腿 -->
+    <path d="M40,588 L74,588 L96,720 L52,720 Z" fill="url(#woodBench2)"/>
+    <path d="M406,586 L440,586 L466,720 L422,720 Z" fill="url(#woodBench2)"/>
+    <path d="M212,588 L240,588 L250,700 L218,700 Z" fill="url(#woodBench2)" opacity="0.9"/>
+    <path d="M40,632 L466,626 L466,644 L40,650 Z" fill="#6b4119"/>
+    <!-- 弹药箱 -->
+    <g transform="translate(60,470)" filter="url(#softShadow)">
+      <path d="M0,20 L96,16 L96,86 L0,90 Z" fill="#4e6b3c"/>
+      <path d="M0,20 L96,16 L96,30 L0,34 Z" fill="#5d7c48"/>
+      <path d="M0,34 L-14,28 L-14,80 L0,90 Z" fill="#3f5730"/>
+      <path d="M8,44 L88,40 M8,58 L88,54 M8,72 L88,68" stroke="#2f4425" stroke-width="1.4" opacity="0.6"/>
+      <text x="48" y="72" text-anchor="middle" font-size="17" font-weight="700" fill="#d9c489" transform="rotate(-2 48 72)">7.62×39</text>
+      <g id="crateRounds"></g>
+    </g>
+    <!-- 沙袋支撑 -->
+    <g filter="url(#softShadow)">
+      <path d="M300,556 Q292,486 350,470 Q420,452 462,486 Q482,512 470,556 Z" fill="url(#bagGrad)"/>
+      <path d="M300,556 Q292,486 350,470 Q420,452 462,486 Q482,512 470,556" fill="none" stroke="#6d5731" stroke-width="2.4"/>
+      <path d="M306,522 Q380,506 466,522" fill="none" stroke="#6d5731" stroke-width="2.2" stroke-dasharray="7 5"/>
+      <path d="M316,494 Q380,478 452,498" fill="none" stroke="#8a7043" stroke-width="1.6" opacity="0.7"/>
+      <path d="M96,556 Q88,492 140,478 Q200,462 240,494 Q258,518 248,556 Z" fill="url(#bagGrad)"/>
+      <path d="M96,556 Q88,492 140,478 Q200,462 240,494 Q258,518 248,556" fill="none" stroke="#6d5731" stroke-width="2.4"/>
+      <path d="M100,524 Q168,506 246,524" fill="none" stroke="#6d5731" stroke-width="2.2" stroke-dasharray="7 5"/>
+      <path d="M112,500 Q168,486 234,504" fill="none" stroke="#8a7043" stroke-width="1.6" opacity="0.7"/>
+    </g>
+    <!-- 桌上的散落弹壳 -->
+    <g id="benchBrass" opacity="0.95"></g>
+  </g>
+
+  <!-- ================= AK-47 ================= -->
+  <g id="gunRig">
+    <g id="gun" filter="url(#softShadow)">
+      <!-- 枪托 -->
+      <path class="akp" d="M-282,-16 L-352,-23 L-496,-30 Q-512,-31 -512,-20 L-512,30 Q-512,43 -496,44 L-380,41 Q-330,38 -300,35 L-282,33 Z"
+            fill="url(#woodGrad)" stroke="#3d2109" stroke-width="1.4" stroke-linejoin="round"/>
+      <g stroke="#4a2a0d" stroke-width="1.1" fill="none" opacity="0.45">
+        <path d="M-300,-6 Q-390,-14 -500,-22"/>
+        <path d="M-300,4 Q-392,-2 -500,-8"/>
+        <path d="M-302,14 Q-400,10 -500,6"/>
+        <path d="M-320,26 Q-410,26 -496,26"/>
+      </g>
+      <path d="M-514,-31 Q-504,-34 -504,-24 L-504,36 Q-504,46 -514,44 Z" fill="#2b3036" stroke="#171a1e" stroke-width="1.2"/>
+      <path d="M-470,-28 L-430,-27 L-430,-16 L-470,-17 Z" fill="#2b3036" opacity="0.9"/>
+      <circle cx="-486" cy="38" r="5" fill="none" stroke="#2b3036" stroke-width="3"/>
+      <!-- 机匣 -->
+      <rect x="-282" y="-16" width="274" height="50" rx="4" fill="url(#metalBody)" stroke="#171a1e" stroke-width="1.4"/>
+      <rect x="-282" y="10" width="274" height="3" fill="#5c646d" opacity="0.35"/>
+      <rect x="-278" y="18" width="266" height="9" fill="#2a2f35" opacity="0.55"/>
+      <!-- 铆钉 -->
+      <g fill="#767f88" opacity="0.9">
+        <circle cx="-32" cy="-4" r="3.1"/><circle cx="-32" cy="22" r="3.1"/>
+        <circle cx="-262" cy="-4" r="3.1"/><circle cx="-262" cy="22" r="3.1"/>
+        <circle cx="-148" cy="22" r="2.8"/><circle cx="-108" cy="22" r="2.8"/>
+      </g>
+      <!-- 机匣盖 -->
+      <path d="M-16,-16 L-16,-24 Q-16,-30 -24,-30 L-262,-30 Q-276,-30 -276,-20 L-276,-16 Z"
+            fill="url(#metalTop)" stroke="#171a1e" stroke-width="1.4" stroke-linejoin="round"/>
+      <g stroke="#6f7880" stroke-width="1.2" opacity="0.4" fill="none">
+        <path d="M-30,-25 L-262,-25"/><path d="M-30,-20 L-262,-20"/>
+      </g>
+      <rect x="-40" y="-30" width="24" height="6" rx="3" fill="#2b3036"/>
+      <!-- 抛壳窗 + 枪机 -->
+      <rect x="-130" y="-16" width="68" height="16" rx="4" fill="#14171a" stroke="#0d0f11" stroke-width="1"/>
+      <rect id="bolt" x="-126" y="-14" width="60" height="12" rx="3" fill="url(#boltMetal)"/>
+      <rect id="charge" x="-160" y="-15" width="30" height="9" rx="4" fill="#464d55" stroke="#171a1e" stroke-width="1"/>
+      <!-- 保险 / 快慢机 -->
+      <g id="safety" transform="translate(-268,2)">
+        <path d="M0,0 Q34,2 62,10 Q76,14 84,22" fill="none" stroke="#5a626b" stroke-width="7" stroke-linecap="round"/>
+        <path d="M0,0 Q34,2 62,10 Q76,14 84,22" fill="none" stroke="#8d959e" stroke-width="2.4" stroke-linecap="round" opacity="0.7"/>
+        <rect x="64" y="6" width="26" height="15" rx="3" fill="#4b525a" stroke="#171a1e" stroke-width="1.2"/>
+      </g>
+      <!-- 弹匣扣 -->
+      <rect x="-198" y="30" width="16" height="15" rx="3" fill="#4b525a" stroke="#171a1e" stroke-width="1.2"/>
+      <!-- 弹匣 (可动) -->
+      <g id="magGrp">
+        <path d="M-50,32 Q-60,110 0,168 L-108,190 Q-135,110 -150,32 Z"
+              fill="url(#magGrad)" stroke="#2f1a07" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M-50,32 Q-58,110 -6,166 L-16,170 Q-70,116 -62,32 Z" fill="#d59a52" opacity="0.3"/>
+        <g stroke="#4a2a0c" stroke-width="1.5" fill="none" opacity="0.55">
+          <path d="M-46,55 Q-92,52 -146,50"/>
+          <path d="M-42,80 Q-88,78 -137,74"/>
+          <path d="M-34,106 Q-80,104 -122,98"/>
+          <path d="M-24,132 Q-64,130 -104,122"/>
+        </g>
+        <path d="M0,168 L-108,190 L-112,178 L-4,157 Z" fill="#8a4f14" stroke="#2f1a07" stroke-width="1.4"/>
+      </g>
+      <!-- 扳机护圈 / 扳机 -->
+      <path d="M-212,32 L-212,54 Q-212,66 -224,66 L-268,66 Q-280,66 -280,54 L-280,32"
+            fill="none" stroke="#4b525a" stroke-width="7" stroke-linecap="round"/>
+      <path d="M-236,30 C-229,42 -232,53 -240,59 C-248,53 -249,42 -245,30 Z" fill="#2b3036" stroke="#14171a" stroke-width="1"/>
+      <!-- 握把 -->
+      <path d="M-238,30 L-296,30 L-320,94 Q-327,110 -312,114 L-278,114 Q-264,110 -262,94 Z"
+            fill="url(#gripGrad)" stroke="#3d2109" stroke-width="1.4" stroke-linejoin="round"/>
+      <g stroke="#4a2a0d" stroke-width="1.4" opacity="0.5" fill="none">
+        <path d="M-268,52 Q-286,54 -302,58"/><path d="M-272,72 Q-290,74 -306,78"/><path d="M-277,92 Q-292,94 -308,98"/>
+      </g>
+      <!-- 枪管（护木内衬，避免上下护木之间透空）-->
+      <rect x="46" y="-10" width="222" height="19" fill="url(#metalBarrel)" stroke="#171a1e" stroke-width="1.2"/>
+      <!-- 下护木 -->
+      <path d="M56,4 L214,4 L214,24 Q214,32 204,32 L66,32 Q56,32 56,24 Z"
+            fill="url(#woodGrad2)" stroke="#3d2109" stroke-width="1.4" stroke-linejoin="round"/>
+      <g stroke="#4a2a0d" stroke-width="1.2" opacity="0.45" fill="none">
+        <path d="M62,12 Q140,9 208,11"/><path d="M62,24 Q140,22 208,23"/>
+      </g>
+      <rect x="206" y="-2" width="12" height="38" rx="3" fill="#3f464d" stroke="#171a1e" stroke-width="1.1"/>
+      <!-- 导气管 -->
+      <rect x="52" y="-23" width="184" height="14" rx="7" fill="url(#metalTube)" stroke="#171a1e" stroke-width="1.2"/>
+      <!-- 上护木 -->
+      <path d="M62,-8 L206,-8 L201,-26 Q197,-32 187,-32 L74,-32 Q63,-32 62,-24 Z"
+            fill="url(#woodGrad2)" stroke="#3d2109" stroke-width="1.4" stroke-linejoin="round"/>
+      <g stroke="#4a2a0d" stroke-width="1.2" opacity="0.4" fill="none">
+        <path d="M70,-18 Q140,-21 200,-19"/>
+      </g>
+      <!-- 导气箍 -->
+      <path d="M214,10 L214,-22 L240,-29 L262,-8 L262,10 Z" fill="url(#metalBody)" stroke="#171a1e" stroke-width="1.4" stroke-linejoin="round"/>
+      <rect x="238" y="-30" width="16" height="10" rx="3" fill="#3a4148"/>
+      <!-- 枪管 -->
+      <rect x="252" y="-6" width="70" height="12" fill="url(#metalBarrel)" stroke="#171a1e" stroke-width="1.2"/>
+      <rect x="256" y="-4" width="64" height="3" fill="#9aa3ac" opacity="0.35"/>
+      <!-- 通条 -->
+      <rect x="196" y="8" width="94" height="4.4" rx="2.2" fill="#8d959e" stroke="#171a1e" stroke-width="0.8"/>
+      <circle cx="288" cy="10" r="4" fill="#6f7880"/>
+      <!-- 准星座 -->
+      <path d="M282,12 L282,-8 L291,-8 L291,-30 L304,-30 L304,-8 L326,-8 L326,12 L318,12 L318,19 L290,19 Z"
+            fill="url(#metalBody)" stroke="#171a1e" stroke-width="1.4" stroke-linejoin="round"/>
+      <rect x="295" y="-39" width="4.4" height="11" fill="#2b3036"/>
+      <rect x="285" y="-44" width="25" height="5" rx="2" fill="#3f464d"/>
+      <!-- 刺刀座 -->
+      <path d="M288,19 L308,19 L308,30 L298,34 L288,30 Z" fill="url(#metalBody)" stroke="#171a1e" stroke-width="1.2" stroke-linejoin="round"/>
+      <!-- 斜切制退器 -->
+      <rect x="318" y="-12" width="9" height="24" rx="2.5" fill="#4b525a" stroke="#171a1e" stroke-width="1.2"/>
+      <path d="M327,-11 L351,-11 L344,11 L327,11 Z" fill="url(#metalBarrel)" stroke="#171a1e" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M330,-7 L347,-7 L344,0 L330,0 Z" fill="#1b1f23" opacity="0.75"/>
+      <!-- 表尺座 -->
+      <path d="M-8,14 L-8,-22 L20,-16 L56,-4 L56,14 Z" fill="url(#metalBody)" stroke="#171a1e" stroke-width="1.4" stroke-linejoin="round"/>
+      <g transform="rotate(-7 -6 -26)">
+        <rect x="-14" y="-32" width="44" height="9" rx="3.5" fill="#22262b" stroke="#0f1214" stroke-width="1"/>
+        <rect x="-4" y="-30" width="4" height="5" fill="#0f1214"/>
+      </g>
+      <rect x="30" y="-14" width="22" height="8" rx="3" fill="#3a4148"/>
+      <!-- 高光 -->
+      <rect x="-278" y="-15" width="266" height="2.4" fill="#8f98a1" opacity="0.35"/>
+    </g>
+    <!-- 枪口焰 -->
+    <g id="flash" opacity="0" transform="translate(352,0)">
+      <g id="flashSpin">
+        <circle cx="8" cy="0" r="34" fill="url(#flashGlow)"/>
+        <path d="M0,0 L74,-17 L36,-4 L92,0 L36,4 L74,17 Z" fill="url(#flashGrad)"/>
+        <path d="M0,0 L46,-26 L24,-6 L54,0 L24,6 L46,26 Z" fill="url(#flashGrad)" opacity="0.8"/>
+        <circle cx="6" cy="0" r="13" fill="#fffbe4"/>
+        <circle cx="2" cy="0" r="22" fill="#ffd76a" opacity="0.5"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ================= 特效层 ================= -->
+  <g id="fx"></g>
+  <g id="casings"></g>
+  <rect x="0" y="0" width="1280" height="720" fill="url(#vignette)" pointer-events="none"/>
+
+  <!-- ================= 准星 ================= -->
+  <g id="crosshair" pointer-events="none">
+    <g id="chRing">
+      <circle id="chCircle" r="30" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="6 7" opacity="0.5"/>
+      <path id="chT" d="M0,-46 L0,-16 M0,16 L0,46 M-46,0 L-16,0 M16,0 L46,0" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/>
+      <circle r="2.4" fill="#ff4a3d"/>
+    </g>
+    <g id="hitmark" opacity="0">
+      <path d="M-13,-13 L-5,-5 M13,-13 L5,-5 M-13,13 L-5,5 M13,13 L5,5" stroke="#ff4436" stroke-width="3.2" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- ================= HUD ================= -->
+  <g id="hud">
+    <!-- 左上：分数 -->
+    <g transform="translate(22,18)">
+      <rect x="0" y="0" width="266" height="96" rx="12" fill="url(#panelBg)" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="16" y="26" font-size="13" fill="#8fb4cc" letter-spacing="2">得分 SCORE</text>
+      <text id="scoreVal" class="num" x="16" y="62" font-size="34" font-weight="700" fill="#ffe9a8">0</text>
+      <text x="150" y="40" font-size="13" fill="#8fb4cc" letter-spacing="1">连击</text>
+      <text id="comboVal" class="num" x="150" y="66" font-size="24" font-weight="700" fill="#7fd4ff">x1</text>
+      <text x="196" y="40" font-size="13" fill="#8fb4cc" letter-spacing="1">命中</text>
+      <text id="accVal" class="num" x="196" y="66" font-size="24" font-weight="700" fill="#9ff0a8">0%</text>
+      <text id="hitVal" class="num" x="16" y="84" font-size="13" fill="#7d94a8">命中 0 / 射击 0</text>
+    </g>
+    <!-- 中上：时间 -->
+    <g transform="translate(510,18)">
+      <rect x="0" y="0" width="260" height="60" rx="12" fill="url(#panelBg)" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="14" y="24" font-size="13" fill="#8fb4cc" letter-spacing="2">剩余时间</text>
+      <text id="timeVal" class="num" x="132" y="27" font-size="21" font-weight="700" fill="#ffe9a8">90</text>
+      <rect x="14" y="36" width="232" height="10" rx="5" fill="#0a1017" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect id="timeBar" x="14" y="36" width="232" height="10" rx="5" fill="url(#btnGrad)"/>
+    </g>
+    <!-- 右上：弹药 -->
+    <g transform="translate(992,18)">
+      <rect x="0" y="0" width="266" height="96" rx="12" fill="url(#panelBg)" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="16" y="26" font-size="13" fill="#8fb4cc" letter-spacing="2">弹药 AMMO</text>
+      <text id="ammoVal" class="num" x="16" y="70" font-size="34" font-weight="700" fill="#ffd98a">30</text>
+      <text x="76" y="70" font-size="17" fill="#7d94a8">/ 30</text>
+      <g id="ammoTicks" transform="translate(16,80)"></g>
+      <g id="modeBtn" class="ui btn" transform="translate(172,30)">
+        <rect class="btn-bg" x="0" y="0" width="86" height="30" rx="8" fill="url(#btnGrad2)" stroke="#ffffff" stroke-opacity="0.2"/>
+        <text id="modeVal" x="43" y="20" text-anchor="middle" font-size="15" font-weight="700" fill="#cfe6ff">连发</text>
+      </g>
+      <g id="muteBtn" class="ui btn" transform="translate(172,66)">
+        <rect class="btn-bg" x="0" y="0" width="86" height="26" rx="7" fill="url(#btnGrad2)" stroke="#ffffff" stroke-opacity="0.2"/>
+        <text id="muteVal" x="43" y="18" text-anchor="middle" font-size="13" fill="#cfe6ff">音效 开</text>
+      </g>
+    </g>
+    <!-- 底部提示 -->
+    <g transform="translate(640,684)">
+      <rect x="-330" y="-22" width="660" height="34" rx="10" fill="#05090f" opacity="0.55"/>
+      <text id="hint" x="0" y="0" text-anchor="middle" font-size="14" fill="#b9cadb">移动鼠标瞄准 · 按住左键射击 · R 换弹 · B 切换单发/连发 · M 静音</text>
+    </g>
+    <!-- 换弹进度 -->
+    <g id="reloadUI" opacity="0">
+      <rect x="490" y="596" width="300" height="12" rx="6" fill="#0a1017" stroke="#ffffff" stroke-opacity="0.2"/>
+      <rect id="reloadBar" x="490" y="596" width="0" height="12" rx="6" fill="#ffb03a"/>
+      <text id="reloadTxt" x="640" y="588" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd98a">换弹中…</text>
+    </g>
+  </g>
+
+  <!-- ================= 开始界面 ================= -->
+  <g id="startScreen">
+    <rect x="0" y="0" width="1280" height="720" fill="#040810" opacity="0.72"/>
+    <g transform="translate(640,300)">
+      <text x="0" y="-118" text-anchor="middle" font-size="17" fill="#e8734a" letter-spacing="8">SVG 单文件射击</text>
+      <text x="0" y="-56" text-anchor="middle" font-size="76" font-weight="800" fill="#f6f2e6">AK-47 · 靶场</text>
+      <path d="M-250,-30 L250,-30" stroke="#e8734a" stroke-width="2" opacity="0.7"/>
+      <text x="0" y="8" text-anchor="middle" font-size="19" fill="#a9c2d6">木托 · 30 发弯弹匣 · 单发 / 连发 · 后坐力与弹道散布</text>
+      <text x="0" y="42" text-anchor="middle" font-size="17" fill="#8fa9bd">纸靶计环 · 钢靶叮当 · 飞碟抛靶 · 气球 · 移动靶 · 90 秒挑战</text>
+      <g id="btnStart" class="ui btn" transform="translate(0,86)">
+        <rect class="btn-bg" x="-116" y="-27" width="232" height="56" rx="14" fill="url(#btnGrad)" stroke="#ffd0b0" stroke-opacity="0.4"/>
+        <text x="0" y="9" text-anchor="middle" font-size="24" font-weight="700" fill="#fff8ee">开始射击</text>
+      </g>
+      <text x="0" y="168" text-anchor="middle" font-size="15" fill="#7d94a8">鼠标瞄准 · 左键射击 · R 换弹 · B 单发/连发 · M 静音 · P 暂停</text>
+    </g>
+  </g>
+
+  <!-- ================= 结算界面 ================= -->
+  <g id="endScreen" opacity="0" pointer-events="none">
+    <rect x="0" y="0" width="1280" height="720" fill="#040810" opacity="0.78"/>
+    <g transform="translate(640,300)">
+      <text x="0" y="-150" text-anchor="middle" font-size="20" fill="#e8734a" letter-spacing="6">射击结束</text>
+      <text x="0" y="-84" text-anchor="middle" font-size="86" font-weight="800" fill="#ffe9a8" id="finalScore">0</text>
+      <text x="0" y="-40" text-anchor="middle" font-size="18" fill="#a9c2d6" id="finalRank">评级 A · 神射手</text>
+      <g id="endStats" font-size="19" fill="#cfe0ee"></g>
+      <g id="btnAgain" class="ui btn" transform="translate(0,140)">
+        <rect class="btn-bg" x="-116" y="-27" width="232" height="56" rx="14" fill="url(#btnGrad)" stroke="#ffd0b0" stroke-opacity="0.4"/>
+        <text x="0" y="9" text-anchor="middle" font-size="24" font-weight="700" fill="#fff8ee">再来一局</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ================= 暂停 ================= -->
+  <g id="pauseScreen" opacity="0" pointer-events="none">
+    <rect x="0" y="0" width="1280" height="720" fill="#040810" opacity="0.6"/>
+    <text x="640" y="350" text-anchor="middle" font-size="52" font-weight="700" fill="#f6f2e6">已暂停</text>
+    <text x="640" y="396" text-anchor="middle" font-size="18" fill="#a9c2d6">按 P 继续</text>
+  </g>
+
+  <text id="err" x="16" y="712" font-size="15" fill="#ff5a4a" opacity="0"></text>
+
+  <script id="game" type="text/javascript"><![CDATA[
+/* ============ AK-47 靶场 · 单文件 SVG 游戏逻辑 ============ */
+(function(){
+'use strict';
+var NS='http://www.w3.org/2000/svg';
+function $(id){return document.getElementById(id);}
+function mk(t,a,p){var e=document.createElementNS(NS,t);if(a){for(var k in a){e.setAttribute(k,a[k]);}}if(p){p.appendChild(e);}return e;}
+function rnd(a,b){return a+Math.random()*(b-a);}
+function ri(a,b){return Math.floor(rnd(a,b+1));}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function dst(ax,ay,bx,by){var x=ax-bx,y=ay-by;return Math.sqrt(x*x+y*y);}
+function rm(n){if(n&&n.parentNode){n.parentNode.removeChild(n);}}
+
+var svg=document.documentElement, errEl=$('err');
+function showErr(m){if(errEl){errEl.textContent='JS 错误: '+m;errEl.setAttribute('opacity','1');}}
+window.onerror=function(m,s,l,c){showErr(m+' @'+l+':'+c);};
+
+/* ---------- 常量 ---------- */
+var PIVOT={x:330,y:420};     /* 枪架支点（沙袋托枪处）*/
+var GS=0.62;                 /* 枪械绘制缩放 */
+var GY=545;                  /* 中景地面线：子弹触地高度 */
+var MAG_SIZE=30, ROUND_TIME=90, FIRE_MS=102, GUN_LEN=351;
+
+/* ---------- 状态 ---------- */
+var G={running:false,paused:false,score:0,hits:0,shots:0,combo:0,bestCombo:0,
+       ammo:MAG_SIZE,auto:true,time:ROUND_TIME,reloading:false,reloadT:0,reloadDur:2.3,
+       muted:false,disp:-0.05,recoil:0,kick:0,spread:0.005,lastShot:-9e9,comboT:0,t:0,started:false};
+var input={x:900,y:380,down:false};
+var ents=[], targets=[], flyers=[], casings=[], ammoTicks=[], reloadTimers=[];
+var flashT=0, clayT=1, balT=2, gong=null, pop1=null, rail=null, launcherX=636;
+
+/* ---------- 音效 ---------- */
+var AC=null, master=null, noiseBuf=null;
+function initAudio(){
+  if(AC){ if(AC.state==='suspended'){try{AC.resume();}catch(e){}} return; }
+  try{
+    var Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx) return;
+    AC=new Ctx(); master=AC.createGain(); master.gain.value=0.5; master.connect(AC.destination);
+    var n=Math.floor(AC.sampleRate*0.5), b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0);
+    for(var i=0;i<n;i++){d[i]=Math.random()*2-1;}
+    noiseBuf=b;
+  }catch(e){AC=null;}
+}
+function env(node,t,a,peak,dur){
+  var g=AC.createGain(); g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(peak,t+a);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  node.connect(g); return g;
+}
+function sfx(kind){
+  if(!AC||G.muted||!noiseBuf) return;
+  var t=AC.currentTime;
+  try{
+    if(kind==='shot'){
+      var s=AC.createBufferSource(); s.buffer=noiseBuf; s.playbackRate.value=1.4;
+      var bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1150; bp.Q.value=0.7;
+      s.connect(bp); env(bp,t,0.004,0.75,0.22).connect(master); s.start(t); s.stop(t+0.3);
+      var o=AC.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(170,t);
+      o.frequency.exponentialRampToValueAtTime(48,t+0.16);
+      env(o,t,0.003,0.6,0.2).connect(master); o.start(t); o.stop(t+0.24);
+      var s2=AC.createBufferSource(); s2.buffer=noiseBuf; s2.playbackRate.value=1.8;
+      var hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=3200;
+      s2.connect(hp); env(hp,t,0.002,0.26,0.09).connect(master); s2.start(t); s2.stop(t+0.12);
+    } else if(kind==='ping'){
+      var f=[1380,2070,2980];
+      for(var i=0;i<f.length;i++){
+        var o2=AC.createOscillator(); o2.type='triangle'; o2.frequency.value=f[i]*(1+rnd(-0.02,0.02));
+        env(o2,t+i*0.004,0.003,0.3/(i+1),0.9-i*0.22).connect(master); o2.start(t); o2.stop(t+0.95);
+      }
+    } else if(kind==='pop'){
+      var s3=AC.createBufferSource(); s3.buffer=noiseBuf; s3.playbackRate.value=1.8;
+      var bp3=AC.createBiquadFilter(); bp3.type='bandpass'; bp3.frequency.value=2400; bp3.Q.value=1.2;
+      s3.connect(bp3); env(bp3,t,0.002,0.45,0.14).connect(master); s3.start(t); s3.stop(t+0.2);
+    } else if(kind==='break'){
+      var s4=AC.createBufferSource(); s4.buffer=noiseBuf;
+      var hp4=AC.createBiquadFilter(); hp4.type='highpass'; hp4.frequency.value=1800;
+      s4.connect(hp4); env(hp4,t,0.002,0.4,0.5).connect(master); s4.start(t); s4.stop(t+0.55);
+    } else if(kind==='empty'){
+      var s5=AC.createBufferSource(); s5.buffer=noiseBuf; s5.playbackRate.value=2.2;
+      var bp5=AC.createBiquadFilter(); bp5.type='bandpass'; bp5.frequency.value=3400; bp5.Q.value=3;
+      s5.connect(bp5); env(bp5,t,0.001,0.35,0.05).connect(master); s5.start(t); s5.stop(t+0.08);
+    } else if(kind==='click'){
+      var s6=AC.createBufferSource(); s6.buffer=noiseBuf; s6.playbackRate.value=2.6;
+      var bp6=AC.createBiquadFilter(); bp6.type='bandpass'; bp6.frequency.value=1900; bp6.Q.value=2.4;
+      s6.connect(bp6); env(bp6,t,0.001,0.3,0.07).connect(master); s6.start(t); s6.stop(t+0.1);
+    }
+  }catch(e){}
+}
+
+/* ================= 场景装饰 ================= */
+(function decor(){
+  var i, cl=$('clouds');
+  var clouds=[[110,86,1.5],[300,52,0.9],[520,116,1.2],[760,68,1.0],[980,140,1.35],[1180,74,0.85],[420,168,0.7]];
+  for(i=0;i<clouds.length;i++){
+    var c=clouds[i], g=mk('g',{'class':'cloud'+(i%3===1?' b':(i%3===2?' c':''))},cl), s=c[2];
+    mk('ellipse',{cx:0,cy:0,rx:56*s,ry:19*s,fill:'#ffffff',opacity:rnd(0.6,0.9).toFixed(2)},g);
+    mk('ellipse',{cx:-24*s,cy:6*s,rx:32*s,ry:13*s,fill:'#ffffff',opacity:rnd(0.5,0.8).toFixed(2)},g);
+    mk('ellipse',{cx:26*s,cy:4*s,rx:38*s,ry:15*s,fill:'#ffffff',opacity:rnd(0.5,0.8).toFixed(2)},g);
+    mk('ellipse',{cx:2*s,cy:-12*s,rx:30*s,ry:16*s,fill:'#ffffff',opacity:rnd(0.6,0.9).toFixed(2)},g);
+    g.setAttribute('transform','translate('+c[0]+','+c[1]+')');
+    g.style.animationDelay=(-rnd(0,40)).toFixed(1)+'s';
+  }
+  var tl=$('treeline');
+  for(i=0;i<34;i++){
+    var x=rnd(-10,1290), y=rnd(400,418), sc=clamp(1-(x-500)/1600,0.32,1);
+    mk('use',{href:'#tree',transform:'translate('+x.toFixed(0)+','+y.toFixed(0)+') scale('+(rnd(0.5,1.0)*sc+0.3).toFixed(2)+')',
+      opacity:(0.9-sc*0.25).toFixed(2)},tl);
+  }
+  for(i=0;i<8;i++){
+    mk('use',{href:'#bush',transform:'translate('+rnd(560,1270).toFixed(0)+','+rnd(410,430).toFixed(0)+') scale('+rnd(0.6,1.1).toFixed(2)+')',opacity:'0.7'},tl);
+  }
+  var gf=$('grassFar');
+  for(i=0;i<70;i++){
+    var gg=mk('g',{transform:'translate('+rnd(0,1280).toFixed(0)+','+rnd(472,540).toFixed(0)+')'},gf);
+    mk('use',{href:'#tuft',transform:'scale('+rnd(0.5,0.9).toFixed(2)+')','class':'grass'},gg);
+    gg.style.animationDelay=(-rnd(0,4)).toFixed(1)+'s';
+  }
+  var fg=mk('g',{id:'foreGrass'},null);
+  mk('path',{d:'M0,600 Q320,584 640,592 Q960,600 1280,588 L1280,720 L0,720 Z',fill:'url(#foreGrad)'},fg);
+  for(i=0;i<90;i++){
+    var ff=mk('g',{transform:'translate('+rnd(-10,1290).toFixed(0)+','+rnd(608,716).toFixed(0)+')'},fg);
+    mk('use',{href:'#tuft',transform:'scale('+rnd(0.9,2.1).toFixed(2)+')','class':'grass',stroke:'#3d5c2b',opacity:rnd(0.55,0.95).toFixed(2)},ff);
+    ff.style.animationDelay=(-rnd(0,4)).toFixed(1)+'s';
+  }
+  var bench=$('bench');
+  if(bench&&bench.parentNode) bench.parentNode.insertBefore(fg,bench); else svg.appendChild(fg);
+  var bb=$('benchBrass');
+  for(i=0;i<7;i++){
+    var bx=rnd(30,520), by=rnd(566,580);
+    mk('rect',{x:bx.toFixed(0),y:by.toFixed(0),width:15,height:5.6,rx:2.4,fill:'url(#brass)',stroke:'#5c4512','stroke-width':0.7,
+      transform:'rotate('+rnd(-40,40).toFixed(0)+' '+bx.toFixed(0)+' '+by.toFixed(0)+')'},bb);
+  }
+  var cr=$('crateRounds');
+  for(i=0;i<9;i++){
+    var cx=6+i*9.6, cy=16-(i%2)*2;
+    mk('rect',{x:cx.toFixed(1),y:cy,width:6.4,height:16,rx:1.6,fill:'url(#brass)'},cr);
+    mk('path',{d:'M'+cx.toFixed(1)+','+cy+' L'+(cx+3.2).toFixed(1)+','+(cy-5.6)+' L'+(cx+6.4).toFixed(1)+','+cy+' Z',fill:'#c9a24a'},cr);
+  }
+})();
+
+/* ================= 目标 ================= */
+function hitCircle(t,ox,oy,dx,dy){
+  var mx=ox-t.x,my=oy-t.y,b=mx*dx+my*dy,c=mx*mx+my*my-t.r*t.r,disc=b*b-c;
+  if(disc<0) return -1; var s=Math.sqrt(disc),tt=-b-s; if(tt<0) tt=-b+s; return tt<0?-1:tt;
+}
+function hitRect(t,ox,oy,dx,dy){
+  var t0=-1e9,t1=1e9,a,b,tm;
+  if(Math.abs(dx)<1e-6){ if(ox<t.x0||ox>t.x1) return -1; }
+  else{ a=(t.x0-ox)/dx; b=(t.x1-ox)/dx; if(a>b){tm=a;a=b;b=tm;} if(a>t0)t0=a; if(b<t1)t1=b; }
+  if(Math.abs(dy)<1e-6){ if(oy<t.y0||oy>t.y1) return -1; }
+  else{ a=(t.y0-oy)/dy; b=(t.y1-oy)/dy; if(a>b){tm=a;a=b;b=tm;} if(a>t0)t0=a; if(b<t1)t1=b; }
+  if(t0>t1||t1<0) return -1; return t0<0?0:t0;
+}
+function hitTest(t,ox,oy,dx,dy){ return t.kind==='c'?hitCircle(t,ox,oy,dx,dy):hitRect(t,ox,oy,dx,dy); }
+function addTarget(o){targets.push(o);return o;}
+function killTarget(t){
+  t.alive=false; rm(t.node);
+  var i=flyers.indexOf(t); if(i>=0) flyers.splice(i,1);
+  i=targets.indexOf(t); if(i>=0) targets.splice(i,1);
+}
+
+function paperTarget(cx,cy,r,base,label){
+  var g=mk('g',{transform:'translate('+cx+','+cy+')'},$('targetsLayer')), bo=base-cy;
+  mk('path',{d:'M-8,'+(r-8)+' L-11,'+bo+' M8,'+(r-8)+' L11,'+bo+' M-40,'+(bo-24)+' L40,'+(bo-24),
+    stroke:'#7a5227','stroke-width':9,'stroke-linecap':'round',fill:'none'},g);
+  mk('ellipse',{cx:0,cy:bo+3,rx:50,ry:9,fill:'#1c2a12',opacity:'0.35'},g);
+  mk('circle',{r:r,fill:'#f6efdc',stroke:'#cbbb98','stroke-width':2.5},g);
+  mk('circle',{r:(r*0.9).toFixed(1),fill:'none',stroke:'#e4d9bb','stroke-width':1.6},g);
+  mk('circle',{r:(r*0.72).toFixed(1),fill:'none',stroke:'#c8443a','stroke-width':3.6},g);
+  mk('circle',{r:(r*0.45).toFixed(1),fill:'none',stroke:'#c8443a','stroke-width':3.6},g);
+  mk('circle',{r:(r*0.2).toFixed(1),fill:'#26262a'},g);
+  mk('circle',{r:(r*0.1).toFixed(1),fill:'none',stroke:'#f6efdc','stroke-width':2.4},g);
+  mk('text',{x:0,y:-r-12,'text-anchor':'middle','font-size':'15','font-weight':'700',fill:'#5b5340'},g).textContent=label+'靶';
+  var holes=mk('g',{},g);
+  return addTarget({kind:'c',type:'paper',x:cx,y:cy,r:r,cx:cx,cy:cy,holes:holes,alive:true,node:g});
+}
+function steelGong(cx,cy,r,frameBase){
+  var g=mk('g',{},$('targetsLayer'));
+  mk('path',{d:'M'+(cx-r-16)+','+(cy-14)+' L'+(cx-r-16)+','+frameBase+' M'+(cx+r+16)+','+(cy-14)+' L'+(cx+r+16)+','+frameBase+
+    ' M'+(cx-r-30)+','+(cy-14)+' L'+(cx+r+30)+','+(cy-14),stroke:'#6b5233','stroke-width':9,'stroke-linecap':'round',fill:'none'},g);
+  mk('path',{d:'M'+(cx-r-16)+','+(cy-26)+' L'+(cx+r+16)+','+(cy-26),stroke:'#6b5233','stroke-width':7},g);
+  var sw=mk('g',{},g);
+  mk('path',{d:'M'+(cx-r*0.5)+','+(cy-26)+' L'+cx+','+(cy-r-2)+' M'+(cx+r*0.5)+','+(cy-26)+' L'+cx+','+(cy-r-2),
+    stroke:'#8d959e','stroke-width':3,fill:'none'},sw);
+  mk('circle',{cx:cx,cy:cy,r:r,fill:'url(#steelGrad)',stroke:'#4d545c','stroke-width':2.5},sw);
+  mk('circle',{cx:cx,cy:cy,r:r*0.62,fill:'none',stroke:'#d9603b','stroke-width':5},sw);
+  mk('circle',{cx:cx-r*0.25,cy:cy-r*0.28,r:r*0.22,fill:'#eef3f8',opacity:'0.5'},sw);
+  return addTarget({kind:'c',type:'steel',x:cx,y:cy,r:r,alive:true,node:sw,swing:0,swingV:0,pivotY:cy-26});
+}
+function popper(cx,base,w,h){
+  var g=mk('g',{},$('targetsLayer'));
+  mk('ellipse',{cx:cx,cy:base+3,rx:w*0.9,ry:8,fill:'#1c2a12',opacity:'0.35'},g);
+  mk('rect',{x:cx-w*0.8,y:base-7,width:w*1.6,height:9,rx:3,fill:'#4b525a'},g);
+  var pl=mk('g',{},g);
+  mk('path',{d:'M'+cx+','+(base-6)+' L'+(cx-w/2)+','+(base-6)+' L'+(cx-w/2)+','+(base-h*0.55)+
+    ' Q'+(cx-w/2)+','+(base-h)+' '+(cx-w*0.24)+','+(base-h)+' L'+(cx+w*0.34)+','+(base-h*0.98)+
+    ' L'+(cx+w*0.42)+','+(base-h*0.5)+' L'+(cx+w/2)+','+(base-6)+' Z',
+    fill:'url(#steelGrad)',stroke:'#4d545c','stroke-width':2.4,'stroke-linejoin':'round'},pl);
+  mk('circle',{cx:cx-w*0.06,cy:base-h*0.66,r:w*0.15,fill:'none',stroke:'#d9603b','stroke-width':5},pl);
+  return addTarget({kind:'c',type:'popper',x:cx,y:base-h*0.55,r:Math.max(w,h)*0.42,alive:true,node:pl,down:0,base:base});
+}
+function railPlate(x0,x1,y){
+  var g=mk('g',{},$('targetsLayer'));
+  mk('path',{d:'M'+x0+','+y+' L'+x1+','+y,stroke:'#5c646d','stroke-width':6,'stroke-linecap':'round'},g);
+  mk('path',{d:'M'+x0+','+y+' L'+x0+','+(y+70)+' M'+x1+','+y+' L'+x1+','+(y+70),stroke:'#5c646d','stroke-width':5},g);
+  var pl=mk('g',{},g);
+  mk('rect',{x:-17,y:-17,width:34,height:34,rx:5,fill:'url(#steelGrad)',stroke:'#4d545c','stroke-width':2.4},pl);
+  mk('circle',{r:8,fill:'none',stroke:'#d9603b','stroke-width':4},pl);
+  var t=addTarget({kind:'c',type:'rail',x:(x0+x1)/2,y:y,r:19,alive:true,node:pl,x0:x0,x1:x1,vx:82});
+  pl.setAttribute('transform','translate('+t.x+','+t.y+')');
+  return t;
+}
+var papers=[];
+function buildTargets(){
+  papers[0]=paperTarget(700,468,58,545,'1 号');
+  papers[1]=paperTarget(1012,418,38,498,'2 号');
+  gong=steelGong(1158,346,27,470);
+  pop1=popper(878,542,44,102);
+  rail=railPlate(1046,1244,268);
+  var g=mk('g',{transform:'translate('+launcherX+',548)'},$('targetsLayer'));
+  mk('path',{d:'M-34,0 L34,0 L28,-22 L-28,-22 Z',fill:'#3f464d',stroke:'#20242a','stroke-width':2},g);
+  mk('path',{d:'M-22,-22 L-6,-46 L6,-46 L20,-22 Z',fill:'#4b525a',stroke:'#20242a','stroke-width':2},g);
+  mk('circle',{cx:0,cy:-46,r:9,fill:'#5c646d',stroke:'#20242a','stroke-width':2},g);
+  var arm=mk('g',{id:'launchArm'},g);
+  mk('path',{d:'M0,-46 L42,-70 L46,-64 L4,-40 Z',fill:'#8d959e',stroke:'#20242a','stroke-width':2},arm);
+  mk('path',{d:'M4,-44 L44,-26 L48,-32 L8,-50 Z',fill:'#6f7880',stroke:'#20242a','stroke-width':2},arm);
+  var st=mk('g',{transform:'translate(-8,-60)'},g);
+  for(var i=0;i<5;i++){
+    mk('ellipse',{cx:0,cy:-i*4,rx:13,ry:5,fill:i%2?'#e07a2c':'#c9622a',stroke:'#8a3f14','stroke-width':1.2},st);
+  }
+  mk('text',{x:0,y:26,'text-anchor':'middle','font-size':'13','font-weight':'700',fill:'#f0e6cf'},g).textContent='抛靶机';
+}
+
+/* ================= 特效 ================= */
+function addEnt(o){ents.push(o);return o;}
+function tracer(x1,y1,x2,y2){
+  var l=mk('line',{x1:x1,y1:y1,x2:x2,y2:y2,stroke:'#ffe9a0','stroke-width':2.4,opacity:'0.9','stroke-linecap':'round','class':'tracer'},$('fx'));
+  setTimeout(function(){rm(l);},180);
+}
+function sparks(x,y,n){
+  for(var i=0;i<n;i++){
+    var a=rnd(0,Math.PI*2), sp=rnd(60,250);
+    var l=mk('line',{x1:x,y1:y,x2:x,y2:y,stroke:'#ffe9a0','stroke-width':2,'stroke-linecap':'round'},$('fx'));
+    addEnt({type:'spark',node:l,x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-60,life:rnd(0.2,0.45),max:0.45});
+  }
+  var f=mk('circle',{cx:x,cy:y,r:4,fill:'#fff6d0',opacity:'0.95'},$('fx'));
+  addEnt({type:'flashdot',node:f,x:x,y:y,r:4,life:0.16,max:0.16});
+}
+function dust(x,y,big){
+  var n=big?6:4;
+  for(var i=0;i<n;i++){
+    var c=mk('circle',{cx:x+rnd(-5,5),cy:y+rnd(-4,3),r:rnd(3,7),fill:'#cdb68d',opacity:'0.65'},$('fx'));
+    addEnt({type:'dust',node:c,x:x+rnd(-5,5),y:y,vx:rnd(-45,55),vy:rnd(-62,-16),r:rnd(3,7),life:rnd(0.45,0.85),max:0.85});
+  }
+}
+function popText(x,y,txt,col,size){
+  var t=mk('text',{x:x,y:y,'text-anchor':'middle','font-size':size||24,'font-weight':'800',
+    fill:col||'#ffe9a8',stroke:'#1a1206','stroke-width':4,'paint-order':'stroke'},$('fx'));
+  t.textContent=txt;
+  addEnt({type:'text',node:t,x:x,y:y,life:1,max:1});
+}
+function shards(x,y,col,n){
+  for(var i=0;i<(n||7);i++){
+    var a=rnd(0,Math.PI*2), sp=rnd(70,230);
+    var p=mk('path',{d:'M0,0 L6,-3 L8,3 L2,5 Z',fill:col,stroke:'#8a3f14','stroke-width':0.8},$('fx'));
+    addEnt({type:'shard',node:p,x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-40,rot:rnd(0,360),vr:rnd(-700,700),life:rnd(0.6,1.1),max:1.1});
+  }
+}
+function confetti(x,y,col){
+  for(var i=0;i<12;i++){
+    var a=rnd(0,Math.PI*2), sp=rnd(50,190);
+    var r=mk('rect',{x:-4,y:-3,width:8,height:6,rx:1.5,fill:i%2?col:'#fff3c4'},$('fx'));
+    addEnt({type:'shard',node:r,x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-30,rot:rnd(0,360),vr:rnd(-800,800),life:rnd(0.5,1),max:1});
+  }
+}
+function smoke(){
+  var p=gunPt(GUN_LEN+4,0);
+  var c=mk('circle',{cx:p.x,cy:p.y,r:7,fill:'#cfd6dd',opacity:'0.5','filter':'url(#blur2)'},$('fx'));
+  addEnt({type:'smoke',node:c,x:p.x,y:p.y,r:7,life:1.7,max:1.7});
+}
+function ejectCasing(){
+  var p=gunPt(-112,-10);
+  var n=mk('g',{},$('casings'));
+  mk('rect',{x:-8,y:-3,width:16,height:6,rx:2.4,fill:'url(#brass)',stroke:'#5c4512','stroke-width':0.8},n);
+  mk('rect',{x:6,y:-3.4,width:2.6,height:6.8,rx:1,fill:'#7d6220'},n);
+  n.setAttribute('transform','translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')');
+  var e=addEnt({type:'casing',node:n,x:p.x,y:p.y,vx:rnd(40,105),vy:rnd(-240,-155),rot:rnd(0,360),vr:rnd(-980,980),life:7,max:7,landed:false});
+  casings.push(e);
+  while(casings.length>34){ var old=casings.shift(); rm(old.node); old.life=0; }
+}
+function gunPt(lx,ly){
+  var a=G.disp+G.recoil,c=Math.cos(a),s=Math.sin(a),k=G.kick*GS*0.9;
+  return {x:PIVOT.x-k*c+GS*(lx*c-ly*s), y:PIVOT.y-k*s+GS*(lx*s+ly*c)};
+}
+function totalAngle(){return G.disp+G.recoil;}
+
+/* ================= 射击 ================= */
+function fireRay(ang){
+  var ox=PIVOT.x,oy=PIVOT.y,dx=Math.cos(ang),dy=Math.sin(ang),bt=1e9,best=null,i,t,tt;
+  for(i=0;i<targets.length;i++){
+    t=targets[i];
+    if(!t.alive) continue;
+    if(t.type==='popper'&&t.down>0.5) continue;
+    tt=hitTest(t,ox,oy,dx,dy);
+    if(tt>=0&&tt<bt){bt=tt;best=t;}
+  }
+  var ground=false;
+  if(dy>0.0001){
+    var tg=(GY-oy)/dy;
+    if(tg>0&&tg<bt){var gx=ox+tg*dx; if(gx>-40&&gx<1320){bt=tg;best=null;ground=true;}}
+  }
+  if(bt>1e8) bt=1600;
+  return {t:bt,target:best,x:ox+bt*dx,y:oy+bt*dy,ang:ang,ground:ground};
+}
+function onHit(r){
+  var t=r.target,x=r.x,y=r.y,pts=0,label='',col='#ffe9a8',size=24;
+  if(t.type==='paper'){
+    if(dst(input.x,input.y,t.cx,t.cy)<=t.r*1.06){x=input.x;y=input.y;}
+    var d=dst(x,y,t.cx,t.cy), ring=d<t.r*0.2?10:(d<t.r*0.45?9:(d<t.r*0.72?8:7));
+    addHole(t,x,y);
+    pts=ring; label='+'+ring; col=ring===10?'#ff8ad8':(ring>=9?'#ffe9a8':'#cfe0ee');
+    if(ring===10){label='10 环 +10';size=30;}
+    sfx('pop'); sparks(x,y,4);
+  } else if(t.type==='steel'){
+    pts=20;t.swingV=-4.6;sfx('ping');sparks(x,y,14);label='钢靶 +20';size=28;col='#bfe8ff';
+  } else if(t.type==='popper'){
+    pts=35;t.down=1;sfx('ping');sparks(x,y,16);label='钢碟 +35';size=28;col='#bfe8ff';
+  } else if(t.type==='rail'){
+    pts=25;sfx('ping');sparks(x,y,10);label='移动靶 +25';size=26;col='#bfe8ff';
+  } else if(t.type==='clay'){
+    pts=25;sfx('break');shards(x,y,'#e07a2c');killTarget(t);label='飞碟 +25';size=26;col='#ffb46a';
+  } else if(t.type==='balloon'){
+    pts=18;sfx('pop');confetti(x,y,t.col);killTarget(t);label='气球 +18';size=24;col=t.col;
+  }
+  G.hits++; G.combo++; G.comboT=2.6;
+  if(G.combo>G.bestCombo) G.bestCombo=G.combo;
+  var mult=Math.min(5,1+Math.floor(G.combo/3));
+  G.score+=pts*mult;
+  popText(x,y-14,(mult>1?('x'+mult+' '):'')+label,col,size);
+  if(mult>1&&G.combo%3===0) popText(x,y-48,'连击 x'+mult,'#7fd4ff',22);
+  hitMark();
+  updateHUD();
+}
+function onMiss(r){
+  var x=r.x,y=r.y;
+  if((r.ground||y>GY)&&x>540){y=GY;dust(x,y,true);}
+  else dust(x,Math.min(y,GY),false);
+  G.combo=0;G.comboT=0;updateHUD();
+}
+function addHole(t,x,y){
+  var rx=clamp(x-t.cx,-t.r*0.94,t.r*0.94), ry=clamp(y-t.cy,-t.r*0.94,t.r*0.94);
+  var pts='',n=9,i;
+  for(i=0;i<n;i++){var a=i/n*Math.PI*2,rr=rnd(2.2,4.4);pts+=(Math.cos(a)*rr).toFixed(1)+','+(Math.sin(a)*rr).toFixed(1)+' ';}
+  mk('circle',{cx:rx.toFixed(1),cy:ry.toFixed(1),r:rnd(5,6.6).toFixed(1),fill:'#cabfa2',opacity:'0.6'},t.holes);
+  mk('polygon',{points:pts,fill:'#17150f',transform:'translate('+rx.toFixed(1)+','+ry.toFixed(1)+')'},t.holes);
+  while(t.holes.childNodes.length>200) t.holes.removeChild(t.holes.firstChild);
+}
+function hitMark(){
+  var h=$('hitmark'); h.setAttribute('opacity','1'); h.setAttribute('class','hitmk');
+  setTimeout(function(){h.setAttribute('opacity','0');h.removeAttribute('class');},200);
+}
+function doFlash(){
+  var f=$('flash'); f.setAttribute('opacity','1');
+  $('flashSpin').setAttribute('transform','rotate('+rnd(-26,26).toFixed(1)+') scale('+rnd(0.85,1.3).toFixed(2)+')');
+  clearTimeout(flashT); flashT=setTimeout(function(){f.setAttribute('opacity','0');},50);
+}
+function shoot(){
+  if(!G.running||G.paused||G.reloading) return;
+  if(G.ammo<=0){ sfx('empty'); emptyWarn(); return; }
+  G.ammo--; G.shots++;
+  G.recoil+=0.030+Math.random()*0.012;
+  G.kick=Math.min(7,G.kick+5.5);
+  G.spread=Math.min(0.075,G.spread+0.0115);
+  doFlash(); smoke(); ejectCasing(); sfx('shot');
+  var ang=totalAngle()+(Math.random()-0.5)*G.spread*2;
+  var r=fireRay(ang);
+  var m=gunPt(GUN_LEN+8,0);
+  tracer(m.x,m.y,r.x,r.y);
+  if(r.target) onHit(r); else onMiss(r);
+  if(G.ammo===0) emptyWarn();
+  updateHUD();
+}
+function emptyWarn(){
+  var h=$('hint');
+  h.textContent='弹匣已空 —— 按 R 键换弹';
+  h.setAttribute('fill','#ff9a6a'); h.setAttribute('class','blink');
+}
+function resetHint(){
+  var h=$('hint');
+  h.removeAttribute('class'); h.setAttribute('fill','#b9cadb');
+  h.textContent='移动鼠标瞄准 · 按住左键射击 · R 换弹 · B 切换单发/连发 · M 静音';
+}
+
+/* ================= 换弹 ================= */
+function reload(){
+  if(!G.running||G.paused||G.reloading||G.ammo===MAG_SIZE) return;
+  G.reloading=true; G.reloadT=0; sfx('click');
+  $('reloadUI').setAttribute('opacity','1');
+  var mag=$('magGrp');
+  var drop=mk('g',{},$('casings'));
+  var inner=mk('g',{},drop);
+  var shp=mk('g',{transform:'scale('+GS+')'},inner);
+  mk('path',{d:'M-50,32 Q-60,110 0,168 L-108,190 Q-135,110 -150,32 Z',fill:'url(#magGrad)',stroke:'#2f1a07','stroke-width':1.6},shp);
+  mk('path',{d:'M0,168 L-108,190 L-112,178 L-4,157 Z',fill:'#8a4f14',stroke:'#2f1a07','stroke-width':1.4},shp);
+  var p=gunPt(-100,60), rot=totalAngle()*57.2958;
+  inner.setAttribute('transform','translate('+p.x.toFixed(0)+','+p.y.toFixed(0)+') rotate('+rot.toFixed(0)+')');
+  addEnt({type:'dropmag',node:drop,inner:inner,x:p.x,y:p.y,vy:-30,rot:rot,vr:rnd(120,230),life:2.0,max:2.0});
+  mag.setAttribute('opacity','0');
+  reloadTimers.push(setTimeout(function(){sfx('click');},520));
+  reloadTimers.push(setTimeout(function(){mag.setAttribute('opacity','1');sfx('click');},1450));
+  reloadTimers.push(setTimeout(function(){sfx('click');rackBolt();},1780));
+  reloadTimers.push(setTimeout(function(){
+    G.ammo=MAG_SIZE; G.reloading=false; $('reloadUI').setAttribute('opacity','0');
+    $('reloadBar').setAttribute('width','0'); resetHint(); updateHUD();
+  },2300));
+}
+function rackBolt(){
+  var b=$('bolt'), c=$('charge'), n=0;
+  var id=setInterval(function(){
+    n++; var k=n%2?1:0;
+    b.setAttribute('x',(-126+k*18).toString());
+    c.setAttribute('x',(-160+k*18).toString());
+    if(n>5){clearInterval(id);b.setAttribute('x','-126');c.setAttribute('x','-160');}
+  },62);
+}
+
+/* ================= 飞靶 ================= */
+function spawnClay(){
+  if(!G.running||G.paused) return;
+  var x=launcherX+22,y=488;
+  var n=mk('g',{},$('targetsLayer'));
+  mk('ellipse',{rx:13,ry:5,fill:'#e07a2c',stroke:'#8a3f14','stroke-width':1.4},n);
+  mk('ellipse',{rx:8,ry:2.6,fill:'#f6c48a',opacity:'0.85'},n);
+  var t=addTarget({kind:'c',type:'clay',x:x,y:y,r:12,alive:true,node:n,vx:rnd(215,285),vy:rnd(-275,-215),rot:rnd(0,360),vr:rnd(-260,260)});
+  flyers.push(t);
+  n.setAttribute('transform','translate('+x+','+y+')');
+  setTimeout(function(){ if(t.alive) killTarget(t); },5400);
+}
+function spawnBalloon(){
+  if(!G.running||G.paused) return;
+  var cols=['#e0453a','#3a7fe0','#f0c33a','#4fc06a','#c45ad6'];
+  var col=cols[ri(0,cols.length-1)], x=rnd(700,1230), y=rnd(470,510);
+  var n=mk('g',{},$('targetsLayer'));
+  mk('path',{d:'M0,14 Q0,30 0,42',stroke:'#efe9d8','stroke-width':1.4,fill:'none',opacity:'0.75'},n);
+  mk('ellipse',{cx:0,cy:-2,rx:14,ry:17,fill:col,stroke:'#00000033','stroke-width':1.2},n);
+  mk('ellipse',{cx:-4,cy:-8,rx:4.5,ry:6,fill:'#ffffff',opacity:'0.45'},n);
+  mk('path',{d:'M-5,15 L0,21 L5,15 Z',fill:col},n);
+  var t=addTarget({kind:'c',type:'balloon',x:x,y:y,r:17,alive:true,node:n,col:col,vx:rnd(-14,14),vy:rnd(-92,-58),ph:rnd(0,6)});
+  flyers.push(t);
+  n.setAttribute('transform','translate('+x+','+y+')');
+}
+
+/* ================= 主循环 ================= */
+var last=0;
+function update(dt){
+  G.t+=dt;
+  var i,e,t,a,gun;
+  if(G.running&&!G.paused){
+    G.time-=dt;
+    if(G.time<=0){G.time=0;endRound();}
+  }
+  var dx=input.x-PIVOT.x, dy=input.y-PIVOT.y;
+  var base=clamp(Math.atan2(dy,dx),-0.60,0.60);
+  if(!G.running) base=-0.05+Math.sin(G.t*0.7)*0.022;
+  G.disp+=(base-G.disp)*Math.min(1,dt*16);
+  G.recoil*=Math.exp(-dt*6.5);
+  G.kick*=Math.exp(-dt*10);
+  G.spread*=Math.exp(-dt*2.2);
+  if(G.spread<0.005) G.spread=0.005;
+  a=totalAngle();
+  gun=$('gunRig');
+  var kx=-G.kick*GS*0.9*Math.cos(a), ky=-G.kick*GS*0.9*Math.sin(a);
+  gun.setAttribute('transform','translate('+kx.toFixed(2)+','+ky.toFixed(2)+') translate('+PIVOT.x+','+PIVOT.y+
+    ') rotate('+(a*57.2958).toFixed(3)+') scale('+GS+')');
+  var md=clamp(dst(input.x,input.y,PIVOT.x,PIVOT.y),90,1500);
+  var cxp=PIVOT.x+Math.cos(a)*md, cyp=PIVOT.y+Math.sin(a)*md;
+  $('crosshair').setAttribute('transform','translate('+cxp.toFixed(1)+','+cyp.toFixed(1)+')');
+  $('chCircle').setAttribute('r',(13+G.spread*540).toFixed(1));
+  var hov=hoverTarget(), colr=hov?'#ff5040':'#ffffff';
+  $('chT').setAttribute('stroke',colr);
+  $('chCircle').setAttribute('stroke',colr);
+  if(input.down&&G.running&&!G.paused&&!G.reloading&&G.auto){
+    if(G.t-G.lastShot>FIRE_MS/1000){G.lastShot=G.t;shoot();}
+  }
+  if(G.comboT>0){G.comboT-=dt;if(G.comboT<=0&&G.combo>0){G.combo=0;updateHUD();}}
+  if(G.running&&!G.paused){
+    clayT-=dt;balT-=dt;
+    if(clayT<=0&&flyers.length<6){clayT=rnd(2.3,3.6);spawnClay();}
+    if(balT<=0&&flyers.length<8){balT=rnd(3.0,4.8);spawnBalloon();}
+  }
+  for(i=flyers.length-1;i>=0;i--){
+    t=flyers[i];
+    if(t.type==='clay'){t.vy+=430*dt;t.x+=t.vx*dt;t.y+=t.vy*dt;t.rot+=t.vr*dt;}
+    else {t.ph+=dt*2.2;t.y+=t.vy*dt;t.x+=t.vx*dt+Math.sin(t.ph)*24*dt;}
+    t.node.setAttribute('transform','translate('+t.x.toFixed(1)+','+t.y.toFixed(1)+')'+(t.type==='clay'?' rotate('+t.rot.toFixed(0)+')':''));
+    if(t.y>GY+60||t.x>1300||t.y<-60||t.x<-40){ killTarget(t); }
+  }
+  if(gong){
+    gong.swingV+=(-gong.swing*22-gong.swingV*3.4)*dt;
+    gong.swing+=gong.swingV*dt;
+    gong.node.setAttribute('transform','rotate('+(gong.swing*2.8).toFixed(2)+' '+gong.x+' '+gong.pivotY+')');
+  }
+  if(rail){
+    rail.x+=rail.vx*dt;
+    if(rail.x>rail.x1-20){rail.x=rail.x1-20;rail.vx*=-1;}
+    if(rail.x<rail.x0+20){rail.x=rail.x0+20;rail.vx*=-1;}
+    rail.node.setAttribute('transform','translate('+rail.x.toFixed(1)+','+rail.y+')');
+  }
+  if(pop1&&pop1.down>0){
+    pop1.down=Math.max(0,pop1.down-dt*0.3);
+    pop1.node.setAttribute('transform','rotate('+((1-pop1.down)*84).toFixed(2)+' '+pop1.x+' '+(pop1.base-6)+')');
+  }
+  var arm=$('launchArm');
+  if(arm) arm.setAttribute('transform','rotate('+(Math.sin(G.t*1.6)*3).toFixed(2)+')');
+  var fl=$('flagCloth');
+  if(fl) fl.setAttribute('transform','skewY('+(Math.sin(G.t*2.4)*5.5).toFixed(2)+')');
+  updateEnts(dt);
+  if(G.running){
+    $('timeVal').textContent=Math.ceil(G.time);
+    $('timeBar').setAttribute('width',(232*clamp(G.time/ROUND_TIME,0,1)).toFixed(1));
+  }
+  if(G.reloading){
+    G.reloadT+=dt;
+    $('reloadBar').setAttribute('width',(300*clamp(G.reloadT/G.reloadDur,0,1)).toFixed(1));
+  }
+}
+function updateEnts(dt){
+  for(var i=ents.length-1;i>=0;i--){
+    var e=ents[i]; e.life-=dt;
+    if(e.life<=0){rm(e.node);ents.splice(i,1);continue;}
+    var k=e.life/e.max;
+    if(e.type==='casing'){
+      if(!e.landed){
+        e.vy+=1500*dt; e.x+=e.vx*dt; e.y+=e.vy*dt; e.rot+=e.vr*dt;
+        var gy=(e.x<548)?560:602;
+        if(e.y>gy){e.y=gy;e.landed=true;e.vx=0;e.vy=0;e.rot=rnd(-100,-70);}
+      }
+      e.node.setAttribute('transform','translate('+e.x.toFixed(1)+','+e.y.toFixed(1)+') rotate('+e.rot.toFixed(0)+')');
+      if(e.life<1.4) e.node.setAttribute('opacity',(e.life/1.4).toFixed(2));
+    } else if(e.type==='smoke'){
+      e.y-=13*dt;e.x+=7*dt;e.r+=24*dt;
+      e.node.setAttribute('cy',e.y.toFixed(1));e.node.setAttribute('cx',e.x.toFixed(1));
+      e.node.setAttribute('r',e.r.toFixed(1));e.node.setAttribute('opacity',(0.5*k).toFixed(3));
+    } else if(e.type==='dust'){
+      e.vy+=95*dt;e.x+=e.vx*dt;e.y+=e.vy*dt;e.r+=22*dt;
+      e.node.setAttribute('cx',e.x.toFixed(1));e.node.setAttribute('cy',e.y.toFixed(1));
+      e.node.setAttribute('r',e.r.toFixed(1));e.node.setAttribute('opacity',(0.6*k).toFixed(3));
+    } else if(e.type==='spark'){
+      e.vy+=520*dt;e.x+=e.vx*dt;e.y+=e.vy*dt;
+      e.node.setAttribute('x1',e.x.toFixed(1));e.node.setAttribute('y1',e.y.toFixed(1));
+      e.node.setAttribute('x2',(e.x-e.vx*0.022).toFixed(1));e.node.setAttribute('y2',(e.y-e.vy*0.022).toFixed(1));
+      e.node.setAttribute('opacity',k.toFixed(2));
+    } else if(e.type==='flashdot'){
+      e.node.setAttribute('r',(e.r+24*(1-k)).toFixed(1));e.node.setAttribute('opacity',k.toFixed(2));
+    } else if(e.type==='shard'){
+      e.vy+=620*dt;e.x+=e.vx*dt;e.y+=e.vy*dt;e.rot+=e.vr*dt;
+      e.node.setAttribute('transform','translate('+e.x.toFixed(1)+','+e.y.toFixed(1)+') rotate('+e.rot.toFixed(0)+')');
+      e.node.setAttribute('opacity',Math.min(1,k*2).toFixed(2));
+    } else if(e.type==='text'){
+      e.y-=36*dt;
+      e.node.setAttribute('y',e.y.toFixed(1));
+      e.node.setAttribute('opacity',Math.min(1,k*1.8).toFixed(2));
+    } else if(e.type==='dropmag'){
+      e.vy+=1400*dt;e.y+=e.vy*dt;e.rot+=e.vr*dt;
+      e.inner.setAttribute('transform','translate('+e.x.toFixed(0)+','+e.y.toFixed(0)+') rotate('+e.rot.toFixed(0)+')');
+      e.node.setAttribute('opacity',Math.min(1,k*2.2).toFixed(2));
+      if(e.y>556){e.y=556;e.vy*=-0.22;e.vr*=0.4;if(Math.abs(e.vy)<28)e.vy=0;}
+    }
+  }
+}
+function hoverTarget(){
+  for(var i=0;i<targets.length;i++){
+    var t=targets[i]; if(!t.alive) continue;
+    if(t.type==='popper'&&t.down>0.5) continue;
+    if(t.kind==='c'){ if(dst(input.x,input.y,t.x,t.y)<=t.r) return t; }
+    else if(input.x>=t.x0&&input.x<=t.x1&&input.y>=t.y0&&input.y<=t.y1) return t;
+  }
+  return null;
+}
+
+/* ================= HUD / 流程 ================= */
+function updateHUD(){
+  $('scoreVal').textContent=G.score;
+  $('comboVal').textContent='x'+Math.min(5,1+Math.floor(G.combo/3));
+  $('accVal').textContent=(G.shots?Math.round(G.hits/G.shots*100):0)+'%';
+  $('hitVal').textContent='命中 '+G.hits+' / 射击 '+G.shots;
+  $('ammoVal').textContent=G.ammo;
+  $('ammoVal').setAttribute('fill',G.ammo<=6?'#ff6a4a':'#ffd98a');
+  for(var i=0;i<ammoTicks.length;i++){ ammoTicks[i].setAttribute('opacity',i<G.ammo?'1':'0.15'); }
+}
+function buildHUD(){
+  var tk=$('ammoTicks');
+  for(var i=0;i<MAG_SIZE;i++){
+    ammoTicks.push(mk('rect',{x:(i*5.0).toFixed(1),y:0,width:3.6,height:11,rx:1.4,fill:'#ffd98a'},tk));
+  }
+}
+function clearEnts(kinds){
+  for(var i=ents.length-1;i>=0;i--){
+    if(kinds.indexOf(ents[i].type)>=0){rm(ents[i].node);ents.splice(i,1);}
+  }
+}
+function startGame(){
+  initAudio();
+  G.running=true;G.paused=false;G.score=0;G.hits=0;G.shots=0;G.combo=0;G.bestCombo=0;
+  G.ammo=MAG_SIZE;G.time=ROUND_TIME;G.reloading=false;G.reloadT=0;G.spread=0.005;G.recoil=0;G.kick=0;G.started=true;
+  clayT=0.8;balT=1.6;
+  for(var i=0;i<reloadTimers.length;i++) clearTimeout(reloadTimers[i]);
+  reloadTimers.length=0;
+  $('magGrp').setAttribute('opacity','1');
+  $('bolt').setAttribute('x','-126');$('charge').setAttribute('x','-160');
+  $('reloadUI').setAttribute('opacity','0');$('reloadBar').setAttribute('width','0');
+  $('pauseScreen').setAttribute('opacity','0');
+  $('endScreen').setAttribute('opacity','0');$('endScreen').setAttribute('pointer-events','none');
+  $('startScreen').setAttribute('opacity','0');$('startScreen').setAttribute('pointer-events','none');
+  for(i=0;i<papers.length;i++){ while(papers[i].holes.firstChild) papers[i].holes.removeChild(papers[i].holes.firstChild); }
+  for(i=flyers.length-1;i>=0;i--) killTarget(flyers[i]);
+  flyers.length=0;
+  clearEnts(['casing','dropmag']);
+  casings.length=0;
+  if(pop1) pop1.down=0;
+  $('timeVal').textContent=ROUND_TIME;$('timeBar').setAttribute('width','232');
+  resetHint();updateHUD();
+}
+function endRound(){
+  G.running=false;G.paused=false;input.down=false;
+  $('timeVal').textContent='0';$('timeBar').setAttribute('width','0');
+  $('pauseScreen').setAttribute('opacity','0');
+  var acc=G.shots?Math.round(G.hits/G.shots*100):0;
+  var rank='D',txt='新兵蛋子';
+  if(G.score>=5000){rank='S';txt='传奇枪王';}
+  else if(G.score>=3000){rank='A';txt='神射手';}
+  else if(G.score>=1600){rank='B';txt='老练射手';}
+  else if(G.score>=700){rank='C';txt='合格射手';}
+  $('finalScore').textContent=G.score;
+  $('finalRank').textContent='评级 '+rank+' · '+txt;
+  var st=$('endStats');
+  while(st.firstChild) st.removeChild(st.firstChild);
+  var rows=[['命中率',acc+'%'],['命中 / 射击',G.hits+' / '+G.shots],['最高连击','x'+G.bestCombo]];
+  for(var i=0;i<rows.length;i++){
+    mk('text',{x:-170,y:i*34,'font-size':'19',fill:'#8fb4cc'},st).textContent=rows[i][0];
+    mk('text',{x:170,y:i*34,'font-size':'19',fill:'#e8f1f8','text-anchor':'end','font-weight':'700'},st).textContent=rows[i][1];
+  }
+  $('endScreen').setAttribute('opacity','1');
+  $('endScreen').setAttribute('pointer-events','auto');
+  resetHint();
+}
+function togglePause(){
+  if(!G.running) return;
+  G.paused=!G.paused;
+  $('pauseScreen').setAttribute('opacity',G.paused?'1':'0');
+  if(G.paused) input.down=false;
+}
+function toggleMode(){
+  G.auto=!G.auto;
+  $('modeVal').textContent=G.auto?'连发':'单发';
+  sfx('click');
+  $('safety').setAttribute('transform','translate(-268,2) rotate('+(G.auto?0:-9)+')');
+}
+function toggleMute(){
+  G.muted=!G.muted;
+  $('muteVal').textContent=G.muted?'音效 关':'音效 开';
+  if(!G.muted){ initAudio(); sfx('click'); }
+}
+
+/* ================= 输入 ================= */
+function toLocal(ev){
+  try{
+    var m=svg.getScreenCTM();
+    if(m&&svg.createSVGPoint){var p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;var q=p.matrixTransform(m.inverse());return {x:q.x,y:q.y};}
+  }catch(e){}
+  var r=svg.getBoundingClientRect();
+  return {x:(ev.clientX-r.left)*1280/(r.width||1280),y:(ev.clientY-r.top)*720/(r.height||720)};
+}
+function inUI(ev){
+  var t=ev.target;
+  if(!t||!t.closest) return false;
+  return !!(t.closest('.ui')||t.closest('#hud'));
+}
+svg.addEventListener('pointermove',function(ev){
+  var p=toLocal(ev); input.x=p.x; input.y=p.y;
+},{passive:true});
+svg.addEventListener('pointerdown',function(ev){
+  var p=toLocal(ev); input.x=p.x; input.y=p.y;
+  if(inUI(ev)) return;
+  if(!G.running){ if(!G.started){ startGame(); } return; }
+  if(G.paused){ togglePause(); return; }
+  input.down=true; G.lastShot=G.t; shoot();
+  if(ev.preventDefault) ev.preventDefault();
+});
+window.addEventListener('pointerup',function(){input.down=false;});
+window.addEventListener('pointercancel',function(){input.down=false;});
+document.addEventListener('contextmenu',function(e){e.preventDefault();});
+document.addEventListener('keydown',function(e){
+  var k=e.key?e.key.toLowerCase():'';
+  if(k===' '||k==='spacebar'){ if(G.running&&!G.paused&&!G.reloading){G.lastShot=G.t;shoot();} if(e.preventDefault)e.preventDefault(); }
+  else if(k==='r'){ reload(); }
+  else if(k==='b'){ toggleMode(); }
+  else if(k==='m'){ toggleMute(); }
+  else if(k==='p'){ togglePause(); }
+  else if(k==='enter'){ if(!G.running&&!G.started) startGame(); }
+});
+function bindUI(){
+  function on(id,fn){ var el=$(id); if(el) el.addEventListener('click',function(e){e.stopPropagation();fn();}); }
+  on('btnStart',startGame); on('btnAgain',startGame); on('muteBtn',toggleMute); on('modeBtn',toggleMode);
+  ['pointerdown','pointerup','click'].forEach(function(t){
+    ['startScreen','endScreen','hud'].forEach(function(id){
+      var el=$(id); if(el) el.addEventListener(t,function(e){e.stopPropagation();},false);
+    });
+  });
+}
+
+/* ================= 启动 ================= */
+var FORCE_DT=location.hash.indexOf('sim')>=0?1/60:0;
+function boot(){
+  buildTargets();
+  buildHUD();
+  bindUI();
+  var gun=$('gunRig');
+  if(!gun.getAttribute('transform')) gun.setAttribute('transform','translate(0,0) translate(330,420) rotate(-3) scale(0.62)');
+  updateHUD();
+  requestAnimationFrame(function step(ts){
+    var dt=FORCE_DT||(last?Math.min(0.05,(ts-last)/1000):0.016); last=ts;
+    try{ update(dt); }catch(err){ showErr(err&&err.message?err.message:err); }
+    requestAnimationFrame(step);
+  });
+  if(location.hash.indexOf('pose')>=0){
+    setTimeout(function(){ startGame(); input.x=1000; input.y=418; },200);
+  }
+  if(location.hash.indexOf('auto')>=0){
+    setTimeout(function(){
+      startGame();
+      var n=0,id=setInterval(function(){
+        n++;
+        input.x=rnd(660,1240); input.y=rnd(260,520);
+        G.lastShot=G.t; shoot();
+        if(n>34){clearInterval(id);}
+      },110);
+    },350);
+  }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+  ]]></script>
+</svg>

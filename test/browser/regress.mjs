@@ -390,6 +390,64 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 9. 小游戏厅：大厅能开、浮层里真跑起来、退出回大厅 ============ */
+S.mini = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  await A.waitFor('!!document.querySelector(".mini-sec")', '大厅出现小游戏厅', 25000);
+  const n = await A.eval('document.querySelectorAll(".mini-card").length');
+  assert(n >= 10, '小游戏厅里有 ' + n + ' 款游戏卡片');
+  assert(await A.eval('!!document.querySelector(".mini-card .mini-ico")'), '卡片有图标');
+  assert(await A.eval('document.querySelector(".mini-sec").textContent.indexOf("同屏双人") >= 0'), '标了"同屏双人"这类玩法标签');
+  assert(await A.eval('PN.app.state.mode === "lobby"'), '打开小游戏不需要切模式（还在大厅）');
+  await A.eval('document.querySelector(".mini-sec").scrollIntoView({ block: "start" })');
+  await sleep(400);
+  await A.shot('mini-1-hall');
+
+  // 点第一款 → 浮层出现、iframe 真的加载到内容
+  await A.click('.mini-card');
+  await A.waitFor('!!document.querySelector(".mini-ov .mini-frame")', '浮层打开', 15000);
+  await sleep(2500);
+  const info = JSON.parse(await A.eval(`(() => {
+    const f = document.querySelector('.mini-ov .mini-frame');
+    let inner = 'loading', kids = 0, title = '';
+    try {
+      const d = f.contentDocument;
+      if (d) { inner = String(d.readyState); kids = d.body ? d.body.children.length : 0; title = d.title || ''; }
+    } catch (e) { inner = 'blocked:' + e.message; }
+    return JSON.stringify({src: f.getAttribute('src'), inner: inner, kids: kids, title: title});
+  })()`));
+  assert(/mini\//.test(info.src || ''), 'iframe 指向 mini/ 目录（' + info.src + '）');
+  assert(info.inner === 'complete', '小游戏文档加载完成（readyState=' + info.inner + '）');
+  assert(info.kids > 0, '游戏页面里有真实内容（body 子节点 ' + info.kids + ' 个，标题「' + info.title + '」）');
+  assert(await A.eval('PN.app.state.mode === "lobby" && !!document.querySelector(".mini-sec")'), '浮层打开时大厅还在，没有切走');
+  await A.shot('mini-2-playing');
+
+  // 退出浮层 → 回到大厅（游戏元素清掉）
+  await A.click('#mini-close');
+  await sleep(600);
+  assert(!(await A.eval('!!document.querySelector(".mini-ov")')), '点「返回大厅」后浮层移除');
+  assert(await A.eval('!!document.querySelector(".mini-sec") && !!document.querySelector(".mini-card")'), '大厅恢复正常');
+
+  // 第二款也能开（不是只有一个能跑）
+  await A.eval('document.querySelectorAll(".mini-card")[1].click()');
+  await A.waitFor('!!document.querySelector(".mini-ov .mini-frame[src]")', '第二款浮层打开', 15000);
+  await sleep(2000);
+  const info2 = JSON.parse(await A.eval(`(() => {
+    const f = document.querySelector('.mini-ov .mini-frame');
+    let kids = -1; try { kids = f.contentDocument && f.contentDocument.body ? f.contentDocument.body.children.length : -1; } catch (e) {}
+    return JSON.stringify({src: f.getAttribute('src'), kids: kids});
+  })()`));
+  assert(info2.kids > 0, '第二款也真的加载出内容了（' + info2.src.split('/')[1] + '）');
+  await A.click('#mini-close');
+  await sleep(500);
+
+  const ov = JSON.parse(await overflow(A));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口小游戏厅无横向溢出（' + ov.vw + 'px）');
+  const eA = await A.consoleErrors();
+  assert(eA === '[]', '小游戏厅全程无 JS 报错：' + eA);
+  await A.dispose();
+};
+
 /* ============ 8. 五子棋：双人真人对局（画布点击 → 同步 → 悔棋协商 → 连五结算） ============ */
 S.gomoku = async (cdp) => {
   const A = await createRoom(cdp, '小桃');
@@ -650,7 +708,7 @@ async function btnHostClick(H, O, tag) {
 const name = process.argv[2];
 // 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
 // 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
-const ORDER = ['lobby', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'fullgame'];
+const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'fullgame'];
 const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);

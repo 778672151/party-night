@@ -1,0 +1,133 @@
+{
+ "note": "小游戏厅：从 deepdemos.top 下载的成品小游戏（多为单机/同屏双人），每个是 mini/<id>/ 下的完整目录；来源与致谢见 README。",
+ "games": [
+  {
+   "id": "super-mario-bros-45c8c08f",
+   "title": "经典超级马里奥",
+   "emoji": "🍄",
+   "desc": "顶砖块、踩蘑菇，经典到不能再经典",
+   "cat": "动作",
+   "dir": "super-mario-bros-45c8c08f"
+  },
+  {
+   "id": "demo-b46e4974",
+   "title": "双截龙",
+   "emoji": "🥊",
+   "desc": "同屏双打，两个人一台设备就能开打",
+   "cat": "同屏双人",
+   "dir": "demo-b46e4974"
+  },
+  {
+   "id": "kof-fighter-6a3a5699",
+   "title": "拳皇格斗",
+   "emoji": "👊",
+   "desc": "同屏对打，连招和超必杀",
+   "cat": "同屏双人",
+   "dir": "kof-fighter-6a3a5699"
+  },
+  {
+   "id": "plants-vs-zombies-web-f6819bdc",
+   "title": "植物大战僵尸",
+   "emoji": "🌻",
+   "desc": "摆植物挡僵尸，经典塔防",
+   "cat": "策略",
+   "dir": "plants-vs-zombies-web-f6819bdc"
+  },
+  {
+   "id": "2048-roguelike-ed8cf859",
+   "title": "2048 肉鸽版",
+   "emoji": "🔢",
+   "desc": "会玩的 2048，还带 Roguelike 加成",
+   "cat": "益智",
+   "dir": "2048-roguelike-ed8cf859"
+  },
+  {
+   "id": "rubik-anime-lab-0b0c6984",
+   "title": "魔方动画实验室",
+   "emoji": "🧩",
+   "desc": "三阶魔方，能转能看动画",
+   "cat": "益智",
+   "dir": "rubik-anime-lab-0b0c6984"
+  },
+  {
+   "id": "plus-2265f7c6",
+   "title": "鲸鱼推箱子",
+   "emoji": "🐳",
+   "desc": "治愈系推箱子，画风很萌",
+   "cat": "治愈",
+   "dir": "plus-2265f7c6"
+  },
+  {
+   "id": "demo-70c71aac",
+   "title": "幽灵诡计",
+   "emoji": "👻",
+   "desc": "四分钟扭转命运的推理小游戏",
+   "cat": "解谜",
+   "dir": "demo-70c71aac"
+  },
+  {
+   "id": "demo-6fd4896a",
+   "title": "密码破译局",
+   "emoji": "🔐",
+   "desc": "推理 + 试错的破译玩法",
+   "cat": "解谜",
+   "dir": "demo-6fd4896a"
+  },
+  {
+   "id": "demo-c046ab75",
+   "title": "骨牌顶牛",
+   "emoji": "🀄",
+   "desc": "接龙骨牌，你来我往",
+   "cat": "棋牌",
+   "dir": "demo-c046ab75"
+  },
+  {
+   "id": "demo-29b78d69",
+   "title": "弈・棋道初启",
+   "emoji": "♟️",
+   "desc": "围棋：教学 + 习题 + 五档 AI 对战",
+   "cat": "棋牌",
+   "dir": "demo-29b78d69"
+  },
+  {
+   "id": "3d-754ac5bb",
+   "title": "3D 重力迷宫",
+   "emoji": "🌀",
+   "desc": "把小球滚到终点，手机上能晃着玩",
+   "cat": "益智",
+   "dir": "3d-754ac5bb"
+  },
+  {
+   "id": "glm5-3flash-b71c60b6",
+   "title": "三维弹球",
+   "emoji": "🪅",
+   "desc": "游戏厅里那台弹球机",
+   "cat": "休闲",
+   "dir": "glm5-3flash-b71c60b6"
+  },
+  {
+   "id": "demo-2aa8ee29",
+   "title": "弹球英雄",
+   "emoji": "⚡",
+   "desc": "打砖块的爽快升级版",
+   "cat": "休闲",
+   "dir": "demo-2aa8ee29"
+  },
+  {
+   "id": "demo-35017a55",
+   "title": "古戈尔增量",
+   "emoji": "📈",
+   "desc": "数字一路涨的放置小游戏",
+   "cat": "休闲",
+   "dir": "demo-35017a55"
+  },
+  {
+   "id": "ak-47-svg-83ece2c6",
+   "title": "单文件靶场",
+   "emoji": "🎯",
+   "desc": "整个射击游戏塞进一个 SVG",
+   "cat": "休闲",
+   "dir": "ak-47-svg-83ece2c6"
+  }
+ ]
+}

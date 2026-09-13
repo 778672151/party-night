@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#070b16" />
+<title>3D 重力迷宫 · 无限关卡</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#05070e}
+  body{
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#e9f0ff;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;
+  }
+  #cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5;display:flex;flex-direction:column;justify-content:space-between}
+  .bar{display:flex;align-items:flex-start;gap:10px;padding:10px 12px}
+  .bar.top{justify-content:space-between}
+  .bar.bottom{justify-content:center;padding-bottom:14px}
+  .grp{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .grp.mid{flex-direction:column;gap:4px;flex:1;max-width:340px;align-items:center}
+  .chip{
+    display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+    background:rgba(16,24,44,.62);border:1px solid rgba(130,170,255,.16);
+    font-size:12.5px;letter-spacing:.3px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 4px 18px rgba(0,0,0,.35)
+  }
+  .chip .k{opacity:.6;font-size:11.5px}
+  .chip b{font-size:14.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+  .chip.dim{opacity:.62}
+  .chip.lives{gap:3px;padding:5px 10px;color:#ff6b81;font-size:14px;letter-spacing:1px}
+  .chip.lives .off{color:rgba(255,255,255,.16)}
+  .tbar{width:100%;height:7px;border-radius:99px;background:rgba(10,16,32,.72);border:1px solid rgba(130,170,255,.18);overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+  .tbar i{display:block;height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,#38f2c4,#5ad7ff);transition:background .3s}
+  .tbar i.warn{background:linear-gradient(90deg,#ffb347,#ff7b5a)}
+  .tbar i.danger{background:linear-gradient(90deg,#ff5f6d,#ff2d55)}
+  .tnum{font-size:12px;opacity:.75;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+  .btns{display:flex;gap:6px;pointer-events:auto}
+  #hud[data-hide="1"] .btns{pointer-events:none}
+  .ib{
+    width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;line-height:1;
+    background:rgba(16,24,44,.62);border:1px solid rgba(130,170,255,.16);color:#dbe6ff;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .12s,background .12s
+  }
+  .ib:hover{background:rgba(40,60,110,.8);transform:translateY(-1px)}
+  .ib.off{opacity:.42}
+  .hint{
+    font-size:12px;opacity:.5;padding:6px 14px;border-radius:99px;background:rgba(8,12,24,.45);
+    text-align:center;line-height:1.6
+  }
+
+  /* ---------- 关卡横幅 ---------- */
+  #banner{
+    position:fixed;left:0;right:0;top:36%;z-index:6;pointer-events:none;text-align:center;
+    opacity:0;transform:translateY(8px) scale(.98);transition:opacity .28s,transform .28s
+  }
+  #banner.show{opacity:1;transform:none}
+  #banner .t1{font-size:min(9vw,42px);font-weight:800;letter-spacing:2px;text-shadow:0 6px 30px rgba(0,0,0,.7)}
+  #banner .t2{margin-top:8px;font-size:min(3.6vw,15px);opacity:.8;letter-spacing:1px}
+  #banner .t3{margin-top:10px;font-size:min(3.2vw,13px);opacity:.55}
+  #banner .good{color:#5ef2c0}
+  #banner .bad{color:#ff6b81}
+
+  /* ---------- 弹窗 ---------- */
+  #ov{
+    position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 40%,rgba(10,16,34,.55),rgba(3,5,12,.86));
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:16px
+  }
+  #ov.show{display:flex}
+  .panel{
+    width:min(94vw,470px);max-height:92vh;overflow:auto;padding:26px 26px 22px;border-radius:20px;text-align:center;
+    background:linear-gradient(180deg,rgba(24,34,62,.95),rgba(12,18,36,.96));
+    border:1px solid rgba(130,170,255,.2);box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)
+  }
+  .panel h1{font-size:min(7.6vw,32px);letter-spacing:2px;font-weight:800;
+    background:linear-gradient(92deg,#7ef0ff,#8fa8ff 45%,#ffb6f0);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .panel h2{font-size:min(6.4vw,25px);letter-spacing:1px;margin-bottom:4px}
+  .panel .sub{font-size:12.5px;opacity:.62;margin-top:6px;letter-spacing:1px}
+  .rows{margin:16px 0 4px;display:flex;flex-direction:column;gap:7px;text-align:left}
+  .row{display:flex;align-items:center;gap:10px;font-size:13px;opacity:.88;line-height:1.5;
+    background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:8px 12px}
+  .row .ico{width:22px;text-align:center;font-size:15px;flex:none}
+  .row b{color:#fff}
+  .stats{display:flex;gap:8px;justify-content:center;margin:16px 0 6px;flex-wrap:wrap}
+  .stat{flex:1;min-width:88px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;padding:10px 8px}
+  .stat .v{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:11px;opacity:.55;margin-top:2px;letter-spacing:.5px}
+  .btn{
+    margin-top:16px;width:100%;padding:13px 18px;border:0;border-radius:14px;cursor:pointer;
+    font-size:16px;font-weight:800;letter-spacing:3px;color:#04121b;
+    background:linear-gradient(92deg,#5ef2c0,#5ad7ff);box-shadow:0 12px 30px rgba(60,220,220,.24);
+    transition:transform .12s,filter .12s;font-family:inherit
+  }
+  .btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+  .btn.ghost{background:rgba(255,255,255,.08);color:#dfe8ff;box-shadow:none;font-size:14px;letter-spacing:2px;margin-top:9px}
+  .kbd{display:inline-block;padding:1px 6px;margin:0 1px;border-radius:5px;font-size:11.5px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .tag{font-size:11.5px;padding:4px 10px;border-radius:99px;background:rgba(120,160,255,.14);
+    border:1px solid rgba(140,180,255,.22);letter-spacing:.5px}
+  .tag.warn{background:rgba(255,140,90,.14);border-color:rgba(255,150,100,.28);color:#ffcfae}
+  #flash{position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;background:#fff}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="flash"></div>
+
+<div id="hud">
+  <div class="bar top">
+    <div class="grp">
+      <div class="chip"><span class="k">关卡</span><b id="hLv">1</b></div>
+      <div class="chip"><span class="k">迷宫</span><b id="hSz">7×7</b></div>
+      <div class="chip lives" id="hLives">♥♥♥</div>
+    </div>
+    <div class="grp mid">
+      <div class="tbar"><i id="hTimeFill"></i></div>
+      <div class="tnum" id="hTime">30.0s</div>
+    </div>
+    <div class="grp">
+      <div class="chip"><span class="k">💎</span><b id="hGem">0/3</b></div>
+      <div class="chip"><span class="k">分数</span><b id="hScore">0</b></div>
+      <div class="chip dim"><span class="k">最佳</span><b id="hBest">0</b></div>
+      <div class="btns">
+        <button class="ib" id="bSound" title="音效开关 (M)">🔊</button>
+        <button class="ib" id="bTilt" title="手机重力感应" style="display:none">📱</button>
+        <button class="ib" id="bHelp" title="玩法说明 (H)">❓</button>
+        <button class="ib" id="bPause" title="暂停 (P / Esc)">⏸</button>
+      </div>
+    </div>
+  </div>
+  <div class="bar bottom">
+    <div class="hint" id="hHint">鼠标移动 / WASD / 方向键 倾斜地面 · 按住 Shift 微调 · R 重开本关</div>
+  </div>
+</div>
+
+<div id="banner"></div>
+<div id="ov"><div class="panel" id="ovPanel"></div></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   3D 重力迷宫 · 无限关卡
+   - 纯单文件：自研 Canvas 2D 三维渲染（透视投影 + 面剔除 + 行序画家算法）
+   - 玩法：倾斜地面，让小球在迷宫里滚动，避开陷洞、闸门，抵达发光出口
+   - 无限地图：每关程序化生成，尺寸/陷洞/机关/风力/视野随关数递增
+   ========================================================================= */
+(function () {
+
+/* ============================== 工具 ============================== */
+var PI = Math.PI, D2R = PI / 180;
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smooth(x) { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); }
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashInt(n) {
+  n = (n ^ 61) ^ (n >>> 16); n = n + (n << 3);
+  n = n ^ (n >>> 4); n = Math.imul(n, 0x27d4eb2d); n = n ^ (n >>> 15);
+  return n >>> 0;
+}
+function shuffle(arr, rnd) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = (rnd() * (i + 1)) | 0, t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+function rgb(c, k) {
+  return "rgb(" + ((c[0] * k) | 0) + "," + ((c[1] * k) | 0) + "," + ((c[2] * k) | 0) + ")";
+}
+function store(key, val) {
+  try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); }
+  catch (e) { return null; }
+}
+
+/* ============================== 音效 ============================== */
+var Snd = {
+  ac: null, on: true, master: null, last: 0,
+  init: function () {
+    if (this.ac) { if (this.ac.state === "suspended" && this.ac.resume) this.ac.resume(); return; }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      this.ac = new AC();
+      this.master = this.ac.createGain();
+      this.master.gain.value = 0.5;
+      this.master.connect(this.ac.destination);
+    } catch (e) { this.ac = null; }
+  },
+  tone: function (f, dur, type, vol, slide, delay) {
+    if (!this.on || !this.ac) return;
+    try {
+      var t0 = this.ac.currentTime + (delay || 0);
+      var o = this.ac.createOscillator(), g = this.ac.createGain();
+      o.type = type || "sine"; o.frequency.setValueAtTime(f, t0);
+      if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.18, t0 + Math.min(0.02, dur * 0.3));
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(this.master); o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  },
+  bump: function (v) {
+    var now = performance.now(); if (now - this.last < 55) return; this.last = now;
+    this.tone(90 + 120 * clamp(v / 3, 0, 1), 0.09, "square", 0.05 + 0.07 * clamp(v / 3, 0, 1), 0.6);
+  },
+  gem: function () { this.tone(880, 0.09, "triangle", 0.14); this.tone(1320, 0.13, "triangle", 0.12, 1, 0.06); },
+  clear: function () {
+    var n = [523, 659, 784, 1046];
+    for (var i = 0; i < n.length; i++) this.tone(n[i], 0.26, "triangle", 0.14, 1, i * 0.075);
+  },
+  die: function () { this.tone(360, 0.5, "sawtooth", 0.13, 0.12); this.tone(180, 0.6, "sine", 0.1, 0.2, 0.04); },
+  gate: function () { this.tone(150, 0.08, "square", 0.035, 1.6); },
+  tick: function () { this.tone(1500, 0.05, "square", 0.05); },
+  start: function () { this.tone(392, 0.18, "sine", 0.1); this.tone(587, 0.22, "sine", 0.09, 1, 0.09); },
+  over: function () {
+    var n = [523, 466, 392, 262];
+    for (var i = 0; i < n.length; i++) this.tone(n[i], 0.4, "sine", 0.13, 1, i * 0.16);
+  }
+};
+
+/* ============================== 常量 ============================== */
+var WALL_H = 0.60;      // 墙高（世界单位，1 = 一个格子）
+var SLAB_H = 0.45;      // 底板厚度
+var BALL_R = 0.285;     // 球半径
+var HOLE_R = 0.375;     // 陷洞半径
+var GOAL_R = 0.40;      // 出口半径
+var GATE_HW = 0.40;     // 闸门半宽
+var MAX_TILT = 21 * D2R;
+var GRAV = 11.5;        // 重力加速度
+var ROLL = 5 / 7;       // 实心球滚动系数
+var REST = 0.34;        // 墙面弹性
+var VMAX = 4.6;         // 速度上限
+var STEP = 1 / 120;     // 物理步长
+var MAT = [
+  [92, 108, 154],   // 0 内墙 A
+  [80, 95, 138],    // 1 内墙 B
+  [58, 68, 104],    // 2 外框墙
+  [214, 96, 74],    // 3 闸门（升起）
+  [255, 176, 74]    // 4 闸门（预警）
+];
+var LIGHT = (function () { var v = [-0.42, 0.86, 0.30], l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; })();
+// 局部法线：0 顶面 / 1 远面(-Z) / 2 近面(+Z) / 3 左面(-X) / 4 右面(+X)
+var NRM = [[0, 1, 0], [0, 0, -1], [0, 0, 1], [-1, 0, 0], [1, 0, 0]];
+
+/* ============================== DOM ============================== */
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d", { alpha: false });
+var elBanner = document.getElementById("banner");
+var elOv = document.getElementById("ov");
+var elPanel = document.getElementById("ovPanel");
+var elFlash = document.getElementById("flash");
+var hLv = document.getElementById("hLv"), hSz = document.getElementById("hSz");
+var hLives = document.getElementById("hLives"), hTime = document.getElementById("hTime");
+var hTimeFill = document.getElementById("hTimeFill"), hGem = document.getElementById("hGem");
+var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
+var hHint = document.getElementById("hHint");
+var elHud = document.getElementById("hud");
+var bSound = document.getElementById("bSound"), bTilt = document.getElementById("bTilt");
+var bHelp = document.getElementById("bHelp"), bPause = document.getElementById("bPause");
+
+/* ============================== 画布 / 相机 ============================== */
+var W = 0, H = 0, DPR = 1, bgGrad = null, vigGrad = null;
+var cam = { x: 0, y: 0, z: 0, L: 20, phi: 55 * D2R, cos: 0, sin: 0 };
+var focal = 900, originX = 0, originY = 0;
+var stars = [];
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.clientWidth || window.innerWidth;
+  H = cv.clientHeight || window.innerHeight;
+  cv.width = Math.max(1, Math.round(W * DPR));
+  cv.height = Math.max(1, Math.round(H * DPR));
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bgGrad = ctx.createLinearGradient(0, 0, W * 0.35, H);
+  bgGrad.addColorStop(0, "#0a1024");
+  bgGrad.addColorStop(0.45, "#080d1c");
+  bgGrad.addColorStop(1, "#04060e");
+  vigGrad = ctx.createRadialGradient(W * 0.5, H * 0.48, Math.min(W, H) * 0.28, W * 0.5, H * 0.5, Math.max(W, H) * 0.78);
+  vigGrad.addColorStop(0, "rgba(0,0,0,0)");
+  vigGrad.addColorStop(1, "rgba(0,0,0,0.62)");
+  stars.length = 0;
+  var rnd = mulberry32(7);
+  for (var i = 0; i < 90; i++) stars.push({ x: rnd() * W, y: rnd() * H * 0.8, r: 0.4 + rnd() * 1.3, a: 0.15 + rnd() * 0.5, s: 0.4 + rnd() * 2 });
+  fitCamera();
+}
+
+// 用零倾斜时棋盘四角自动求焦距与画面中心，保证任意关卡尺寸都刚好占满屏幕
+function fitCamera() {
+  if (!L) { focal = Math.min(W, H) * 1.2; originX = W / 2; originY = H / 2; return; }
+  var S = Math.max(L.cols, L.rows);
+  cam.phi = clamp(lerp(50 * D2R, 62 * D2R, (S - 7) / 10), 46 * D2R, 64 * D2R);
+  cam.L = S * 2.05 + 4;
+  cam.cos = Math.cos(cam.phi); cam.sin = Math.sin(cam.phi);
+  cam.x = 0; cam.y = cam.L * cam.sin; cam.z = cam.L * cam.cos;
+  var hx = L.cols / 2, hz = L.rows / 2;
+  var umin = 1e9, umax = -1e9, wmin = 1e9, wmax = -1e9;
+  for (var k = 0; k < 8; k++) {
+    var px = (k & 1) ? hx : -hx, pz = (k & 2) ? hz : -hz, py = (k & 4) ? WALL_H : -SLAB_H;
+    var dx = px - cam.x, dy = py - cam.y, dz = pz - cam.z;
+    var vy = dy * cam.cos - dz * cam.sin;
+    var dep = -dy * cam.sin - dz * cam.cos;
+    if (dep < 0.2) dep = 0.2;
+    var u = dx / dep, w = vy / dep;
+    if (u < umin) umin = u; if (u > umax) umax = u;
+    if (w < wmin) wmin = w; if (w > wmax) wmax = w;
+  }
+  var fx = (W * 0.94) / Math.max(1e-4, umax - umin);
+  var fy = (H * 0.84) / Math.max(1e-4, wmax - wmin);
+  focal = Math.min(fx, fy);
+  originX = W / 2 - focal * (umin + umax) / 2;
+  originY = H / 2 + focal * (wmin + wmax) / 2 + H * 0.02;
+}
+
+/* ============================== 迷宫生成 ============================== */
+// 1 = 墙, 0 = 通路；cols/rows 必须为奇数
+function genMaze(cols, rows, rnd, braid) {
+  var g = new Uint8Array(cols * rows); g.fill(1);
+  var idx = function (i, j) { return j * cols + i; };
+  var stack = [1, 1]; g[idx(1, 1)] = 0;
+  var dirs = [[2, 0], [-2, 0], [0, 2], [0, -2]];
+  while (stack.length) {
+    var cj = stack[stack.length - 1], ci = stack[stack.length - 2];
+    shuffle(dirs, rnd);
+    var moved = false;
+    for (var d = 0; d < 4; d++) {
+      var ni = ci + dirs[d][0], nj = cj + dirs[d][1];
+      if (ni > 0 && ni < cols - 1 && nj > 0 && nj < rows - 1 && g[idx(ni, nj)] === 1) {
+        g[idx(ci + dirs[d][0] / 2, cj + dirs[d][1] / 2)] = 0;
+        g[idx(ni, nj)] = 0; stack.push(ni, nj); moved = true; break;
+      }
+    }
+    if (!moved) { stack.pop(); stack.pop(); }
+  }
+  // braid：打通部分死胡同 → 产生环路，路线选择变多
+  if (braid > 0) {
+    var N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (var j = 1; j < rows - 1; j++) for (var i = 1; i < cols - 1; i++) {
+      if (g[idx(i, j)] !== 0) continue;
+      var opens = 0, k;
+      for (k = 0; k < 4; k++) if (g[idx(i + N4[k][0], j + N4[k][1])] === 0) opens++;
+      if (opens !== 1 || rnd() >= braid) continue;
+      var cand = [];
+      for (k = 0; k < 4; k++) {
+        var wi = i + N4[k][0], wj = j + N4[k][1], oi = i + 2 * N4[k][0], oj = j + 2 * N4[k][1];
+        if (oi > 0 && oi < cols - 1 && oj > 0 && oj < rows - 1 &&
+            g[idx(wi, wj)] === 1 && g[idx(oi, oj)] === 0) cand.push(idx(wi, wj));
+      }
+      if (cand.length) g[cand[(rnd() * cand.length) | 0]] = 0;
+    }
+  }
+  return g;
+}
+
+// 广搜连通性检测（把 blocked 视为不可通行）
+function pathOK(g, cols, rows, blocked, s, t) {
+  var n = cols * rows, seen = new Uint8Array(n), q = new Int32Array(n);
+  var head = 0, tail = 0; q[tail++] = s; seen[s] = 1;
+  while (head < tail) {
+    var c = q[head++];
+    if (c === t) return true;
+    var i = c % cols, j = (c - i) / cols, d;
+    if (i > 0) { d = c - 1; if (!seen[d] && !g[d] && !blocked[d]) { seen[d] = 1; q[tail++] = d; } }
+    if (i < cols - 1) { d = c + 1; if (!seen[d] && !g[d] && !blocked[d]) { seen[d] = 1; q[tail++] = d; } }
+    if (j > 0) { d = c - cols; if (!seen[d] && !g[d] && !blocked[d]) { seen[d] = 1; q[tail++] = d; } }
+    if (j < rows - 1) { d = c + cols; if (!seen[d] && !g[d] && !blocked[d]) { seen[d] = 1; q[tail++] = d; } }
+  }
+  return false;
+}
+
+/* ============================== 关卡构建 ============================== */
+var L = null, runSeed = 1;
+
+function buildLevel(level) {
+  var rnd = mulberry32(hashInt(runSeed * 2654435761 + level * 40503) ^ hashInt(level * 7919));
+  var size = Math.min(7 + 2 * Math.floor((level - 1) / 2), 17);
+  var cols = size, rows = size, n = cols * rows;
+  var idx = function (i, j) { return j * cols + i; };
+  var braid = level >= 8 ? Math.min(0.05 * (level - 7), 0.32) : 0;
+  var g = genMaze(cols, rows, rnd, braid);
+
+  // 起点 / 终点：随机对角
+  var corners = [[1, 1], [cols - 2, 1], [1, rows - 2], [cols - 2, rows - 2]];
+  var ci = (rnd() * 4) | 0;
+  var start = corners[ci], goal = corners[3 - ci];
+  var startId = idx(start[0], start[1]), goalId = idx(goal[0], goal[1]);
+
+  var open = [], i, j, c;
+  for (j = 0; j < rows; j++) for (i = 0; i < cols; i++) if (!g[idx(i, j)]) open.push(idx(i, j));
+
+  // 保护区：起点/终点及其周围一圈不放机关
+  var prot = new Uint8Array(n);
+  var pcs = [start, goal];
+  for (var p = 0; p < 2; p++) for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++) {
+    var ii = pcs[p][0] + di, jj = pcs[p][1] + dj;
+    if (ii >= 0 && ii < cols && jj >= 0 && jj < rows) prot[idx(ii, jj)] = 1;
+  }
+
+  // 陷洞：随机放置，但每放一个都做连通性校验 → 保证一定有活路
+  var hole = new Uint8Array(n);
+  var target = Math.round(open.length * Math.min(0.05 + 0.016 * level, 0.24));
+  var cand = shuffle(open.slice(), rnd), holes = 0;
+  for (var k = 0; k < cand.length && holes < target; k++) {
+    c = cand[k]; if (prot[c]) continue;
+    hole[c] = 1;
+    if (pathOK(g, cols, rows, hole, startId, goalId)) holes++; else hole[c] = 0;
+  }
+
+  // 地面材质：1 = 冰面（打滑）  2 = 沙地（迟滞）
+  var fx = new Uint8Array(n);
+  function patch(type, count, len) {
+    for (var q = 0; q < count; q++) {
+      var st = cand[(rnd() * cand.length) | 0];
+      var pi = st % cols, pj = (st - pi) / cols;
+      for (var s = 0; s < len; s++) {
+        var id = idx(pi, pj);
+        if (!g[id] && !hole[id] && id !== startId && id !== goalId && !fx[id]) fx[id] = type;
+        var ds = [], N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        for (var d = 0; d < 4; d++) {
+          var ni = pi + N4[d][0], nj = pj + N4[d][1];
+          if (ni > 0 && ni < cols - 1 && nj > 0 && nj < rows - 1 && !g[idx(ni, nj)] && !hole[idx(ni, nj)]) ds.push(N4[d]);
+        }
+        if (!ds.length) break;
+        var dd = ds[(rnd() * ds.length) | 0]; pi += dd[0]; pj += dd[1];
+      }
+    }
+  }
+  if (level >= 3) patch(1, Math.min(1 + Math.floor((level - 3) / 3), 4), 4 + ((rnd() * 4) | 0));
+  if (level >= 4) patch(2, Math.min(1 + Math.floor((level - 4) / 4), 3), 3 + ((rnd() * 3) | 0));
+
+  // 宝石：优先放在死胡同（高风险高回报）
+  function openNb(cc) {
+    var ii = cc % cols, jj = (cc - ii) / cols, o = 0;
+    if (ii > 0 && !g[cc - 1]) o++; if (ii < cols - 1 && !g[cc + 1]) o++;
+    if (jj > 0 && !g[cc - cols]) o++; if (jj < rows - 1 && !g[cc + cols]) o++;
+    return o;
+  }
+  var used = new Uint8Array(n);
+  var gems = [], gemTarget = clamp(2 + Math.floor(level / 2), 2, 6);
+  var dead = [], rest = [];
+  for (k = 0; k < cand.length; k++) {
+    c = cand[k];
+    if (hole[c] || c === startId || c === goalId || prot[c]) continue;
+    (openNb(c) === 1 ? dead : rest).push(c);
+  }
+  var pool = dead.concat(rest);
+  for (k = 0; k < pool.length && gems.length < gemTarget; k++) {
+    c = pool[k]; if (used[c]) continue; used[c] = 1;
+    var gi = c % cols, gj = (c - gi) / cols;
+    gems.push({ i: gi, j: gj, x: gi - cols / 2 + 0.5, z: gj - rows / 2 + 0.5, got: false, t: rnd() * 6 });
+  }
+
+  // 闸门：只放在“直通道”，周期升降，永不永久堵路
+  var gates = [];
+  if (level >= 5) {
+    var want = Math.min(1 + Math.floor((level - 5) / 2), 6);
+    var straight = [];
+    for (k = 0; k < cand.length; k++) {
+      c = cand[k];
+      if (hole[c] || prot[c] || used[c] || fx[c]) continue;
+      var si = c % cols, sj = (c - si) / cols;
+      var hOpen = (si > 0 && !g[c - 1]) && (si < cols - 1 && !g[c + 1]);
+      var vOpen = (sj > 0 && !g[c - cols]) && (sj < rows - 1 && !g[c + cols]);
+      if ((hOpen && !vOpen) || (vOpen && !hOpen)) straight.push(c);
+    }
+    for (k = 0; k < straight.length && gates.length < want; k++) {
+      c = straight[k];
+      var xi = c % cols, xj = (c - xi) / cols, near = false;
+      for (var q2 = 0; q2 < gates.length; q2++)
+        if (Math.abs(gates[q2].i - xi) + Math.abs(gates[q2].j - xj) <= 2) { near = true; break; }
+      if (near) continue;
+      used[c] = 1;
+      gates.push({
+        i: xi, j: xj, x: xi - cols / 2 + 0.5, z: xj - rows / 2 + 0.5,
+        // 开启窗口必须明显长于小球穿越一格所需时间，否则会被顶回来
+        period: Math.max(2.5, 3.6 + rnd() * 1.3 - Math.min(level * 0.04, 1.0)),
+        phase: rnd(), cf: 0.30 + rnd() * 0.08, h: 0, warn: 0, snd: 0
+      });
+    }
+  }
+
+  // 墙体渲染数据：按行分桶，并预计算暴露面（内部面不画）
+  var wallRows = [];
+  for (j = 0; j < rows; j++) {
+    var arr = [];
+    for (i = 0; i < cols; i++) {
+      if (!g[idx(i, j)]) continue;
+      var mask = 0;
+      if (j === 0 || !g[idx(i, j - 1)]) mask |= 1;
+      if (j === rows - 1 || !g[idx(i, j + 1)]) mask |= 2;
+      if (i === 0 || !g[idx(i - 1, j)]) mask |= 4;
+      if (i === cols - 1 || !g[idx(i + 1, j)]) mask |= 8;
+      var border = (i === 0 || j === 0 || i === cols - 1 || j === rows - 1);
+      arr.push({ i: i, mask: mask, m: border ? 2 : ((i + j) & 1) });
+    }
+    wallRows.push(arr);
+  }
+
+  var holeList = [], fxList = [];
+  for (j = 0; j < rows; j++) for (i = 0; i < cols; i++) {
+    c = idx(i, j);
+    if (hole[c]) holeList.push({ i: i, j: j, x: i - cols / 2 + 0.5, z: j - rows / 2 + 0.5 });
+    if (fx[c]) fxList.push({ i: i, j: j, t: fx[c] });
+  }
+
+  var xs = new Float64Array(cols + 1), zs = new Float64Array(rows + 1);
+  for (i = 0; i <= cols; i++) xs[i] = i - cols / 2;
+  for (j = 0; j <= rows; j++) zs[j] = j - rows / 2;
+
+  var wind = level >= 11 ? Math.min(0.6 * D2R + (level - 11) * 0.28 * D2R, 3.6 * D2R) : 0;
+  var dark = level >= 13 ? clamp(0.5 + (level - 13) * 0.08, 0, 0.94) : 0;
+  var timeLimit = Math.round((16 + open.length * 0.66) * Math.max(0.62, 1.06 - 0.028 * level));
+
+  var feats = [];
+  feats.push("陷洞×" + holes);
+  if (fx.indexOf(1) >= 0) feats.push("冰面");
+  if (fx.indexOf(2) >= 0) feats.push("沙地");
+  if (gates.length) feats.push("闸门×" + gates.length);
+  if (wind > 0) feats.push("阵风");
+  if (dark > 0) feats.push("视野受限");
+
+  return {
+    level: level, cols: cols, rows: rows, g: g, hole: hole, fx: fx, xs: xs, zs: zs,
+    start: { i: start[0], j: start[1], x: start[0] - cols / 2 + 0.5, z: start[1] - rows / 2 + 0.5 },
+    goal: { i: goal[0], j: goal[1], x: goal[0] - cols / 2 + 0.5, z: goal[1] - rows / 2 + 0.5 },
+    gems: gems, gates: gates, wallRows: wallRows, holeList: holeList, fxList: fxList,
+    holes: holes, openCount: open.length, timeLimit: timeLimit,
+    wind: wind, dark: dark, feats: feats
+  };
+}
+
+/* ============================== 游戏状态 ============================== */
+var G = {
+  state: "menu",       // menu | intro | play | dying | clear | over | pause
+  level: 1, lives: 3, score: 0, gems: 0,
+  time: 0, tLeft: 0, stateT: 0, prevState: "play",
+  best: +(store("gm3d_best") || 0), bestLv: +(store("gm3d_bestlv") || 0),
+  deathKind: "", shake: 0, tickAt: 0, hudT: 0
+};
+var ball = {
+  x: 0, z: 0, y: BALL_R, vx: 0, vz: 0, r: BALL_R, scale: 1,
+  m: [1, 0, 0, 0, 1, 0, 0, 0, 1], trail: []
+};
+var tiltX = 0, tiltZ = 0;              // 当前板面倾角（弧度）
+var czz = 1, szz = 0, cxx = 1, sxx = 0; // 每帧三角函数缓存
+var parts = [];
+
+function resetBall() {
+  ball.x = L.start.x; ball.z = L.start.z; ball.y = BALL_R;
+  ball.vx = 0; ball.vz = 0; ball.scale = 1;
+  ball.m = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  ball.trail.length = 0;
+}
+function startLevel(level, freshLayout) {
+  G.level = level;
+  if (freshLayout !== false) L = buildLevel(level);
+  else { for (var i = 0; i < L.gems.length; i++) L.gems[i].got = false; }
+  G.gems = 0; G.tLeft = L.timeLimit; G.time = 0; parts.length = 0;
+  resetBall(); fitCamera(); setState("intro");
+  banner("第 " + level + " 关", L.cols + "×" + L.rows + " · " + L.feats.join(" · "),
+    "倾斜地面，把小球滚进青色出口 · 限时 " + L.timeLimit + "s", "", 1.45);
+  Snd.start(); syncHud(true);
+}
+function setState(s) {
+  if (s === "pause") G.prevState = G.state;
+  G.state = s; G.stateT = 0;
+  if (s === "play" || s === "dying" || s === "clear" || s === "intro") hideOv();
+}
+
+/* ============================== 物理 ============================== */
+function fxAt(x, z) {
+  var i = Math.floor(x + L.cols / 2), j = Math.floor(z + L.rows / 2);
+  if (i < 0 || i >= L.cols || j < 0 || j >= L.rows) return 0;
+  return L.fx[j * L.cols + i];
+}
+// 圆 - AABB 碰撞解算，返回法向冲击强度
+function resolveBox(x0, x1, z0, z1) {
+  var px = ball.x, pz = ball.z;
+  var qx = clamp(px, x0, x1), qz = clamp(pz, z0, z1);
+  var dx = px - qx, dz = pz - qz, d2 = dx * dx + dz * dz;
+  if (d2 > BALL_R * BALL_R) return 0;
+  var nx, nz, pen, d;
+  if (d2 > 1e-9) { d = Math.sqrt(d2); nx = dx / d; nz = dz / d; pen = BALL_R - d; }
+  else { // 球心落在盒内 → 沿最小穿透轴推出（闸门升起时会把球顶开）
+    var l = px - x0, r = x1 - px, u = pz - z0, v = z1 - pz;
+    var m = Math.min(l, r, u, v);
+    if (m === l) { nx = -1; nz = 0; pen = l + BALL_R; }
+    else if (m === r) { nx = 1; nz = 0; pen = r + BALL_R; }
+    else if (m === u) { nx = 0; nz = -1; pen = u + BALL_R; }
+    else { nx = 0; nz = 1; pen = v + BALL_R; }
+  }
+  ball.x += nx * pen; ball.z += nz * pen;
+  var vn = ball.vx * nx + ball.vz * nz;
+  if (vn < 0) {
+    var tvx = ball.vx - vn * nx, tvz = ball.vz - vn * nz;
+    ball.vx = tvx * 0.9 - REST * vn * nx;
+    ball.vz = tvz * 0.9 - REST * vn * nz;
+    return -vn;
+  }
+  return 0;
+}
+function gateHeight(gt, t) {
+  var p = ((t / gt.period) + gt.phase) % 1;
+  var cf = gt.cf, ru = 0.13;
+  if (p < ru) return smooth(p / ru);
+  if (p < cf) return 1;
+  if (p < cf + ru) return 1 - smooth((p - cf) / ru);
+  return 0;
+}
+function spin(dt) {
+  var wx = ball.vz / BALL_R, wz = -ball.vx / BALL_R;
+  var len = Math.hypot(wx, wz);
+  if (len < 1e-5) return;
+  var ax = wx / len, az = wz / len, a = len * dt;
+  var s = Math.sin(a), c = Math.cos(a), t = 1 - c;
+  // 绕 (ax,0,az) 旋转
+  var r = [
+    t * ax * ax + c, -s * az, t * ax * az,
+    s * az, c, -s * ax,
+    t * ax * az, s * ax, t * az * az + c
+  ];
+  var m = ball.m, o = new Array(9);
+  for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) {
+    o[i * 3 + j] = r[i * 3] * m[j] + r[i * 3 + 1] * m[3 + j] + r[i * 3 + 2] * m[6 + j];
+  }
+  ball.m = o;
+}
+
+function stepPhysics(dt) {
+  var cx = Math.cos(tiltX), sx = Math.sin(tiltX), cz = Math.cos(tiltZ), sz = Math.sin(tiltZ);
+  var ax = -GRAV * cx * sz * ROLL, az = GRAV * sx * ROLL;
+  var mat = fxAt(ball.x, ball.z);
+  var damp = mat === 1 ? 0.22 : (mat === 2 ? 4.0 : 1.05);
+
+  // 陷洞吸附：只在球真正压到洞口时才明显（避免擦边被"吸死"）
+  var i, hl = L.holeList, PR = HOLE_R + BALL_R * 0.5;
+  for (i = 0; i < hl.length; i++) {
+    var dx = hl[i].x - ball.x, dz = hl[i].z - ball.z;
+    if (dx > PR || dx < -PR || dz > PR || dz < -PR) continue;
+    var d = Math.hypot(dx, dz);
+    if (d < PR && d > 1e-4) {
+      var pull = (1 - d / PR) * 4.2;
+      ax += (dx / d) * pull; az += (dz / d) * pull;
+    }
+  }
+  ball.vx += ax * dt; ball.vz += az * dt;
+  var f = Math.exp(-damp * dt); ball.vx *= f; ball.vz *= f;
+  var sp = Math.hypot(ball.vx, ball.vz);
+  if (sp > VMAX) { ball.vx *= VMAX / sp; ball.vz *= VMAX / sp; }
+  ball.x += ball.vx * dt; ball.z += ball.vz * dt;
+  spin(dt);
+
+  // 墙体碰撞
+  var bi = Math.floor(ball.x + L.cols / 2), bj = Math.floor(ball.z + L.rows / 2), imp = 0;
+  for (var j = bj - 1; j <= bj + 1; j++) {
+    if (j < 0 || j >= L.rows) continue;
+    for (i = bi - 1; i <= bi + 1; i++) {
+      if (i < 0 || i >= L.cols) continue;
+      if (!L.g[j * L.cols + i]) continue;
+      var k = resolveBox(L.xs[i], L.xs[i] + 1, L.zs[j], L.zs[j] + 1);
+      if (k > imp) imp = k;
+    }
+  }
+  // 闸门碰撞
+  for (i = 0; i < L.gates.length; i++) {
+    var gt = L.gates[i];
+    if (gt.h <= 0.05) continue;
+    var hw = GATE_HW * clamp(gt.h * 1.35, 0.12, 1);
+    var k2 = resolveBox(gt.x - hw, gt.x + hw, gt.z - hw, gt.z + hw);
+    if (k2 > imp) imp = k2;
+  }
+  if (imp > 0.55) { Snd.bump(imp); if (imp > 1.8) G.shake = Math.min(G.shake + imp * 0.7, 7); }
+  if (imp > 1.2) spawnDust(ball.x, ball.z, Math.min(imp, 4));
+}
+
+/* ============================== 粒子 ============================== */
+function spawnDust(x, z, k) {
+  for (var i = 0; i < 4; i++) {
+    parts.push({
+      x: x, y: 0.06, z: z, vx: (Math.random() - 0.5) * k * 0.5, vy: Math.random() * 0.8,
+      vz: (Math.random() - 0.5) * k * 0.5, life: 0.4, max: 0.4, c: "180,200,240", s: 2.4
+    });
+  }
+}
+function spawnBurst(x, z, n, col, pw) {
+  for (var i = 0; i < n; i++) {
+    var a = Math.random() * PI * 2, sp = (0.6 + Math.random() * 1.6) * pw;
+    parts.push({
+      x: x, y: 0.1 + Math.random() * 0.2, z: z, vx: Math.cos(a) * sp, vy: 1 + Math.random() * 2.6,
+      vz: Math.sin(a) * sp, life: 0.7 + Math.random() * 0.5, max: 1.2, c: col, s: 2.6 + Math.random() * 2.2
+    });
+  }
+}
+function updateParts(dt) {
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var p = parts[i];
+    p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
+    p.vy -= 7 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    if (p.y < 0.03) { p.y = 0.03; p.vy *= -0.35; p.vx *= 0.7; p.vz *= 0.7; }
+  }
+}
+
+/* ============================== 投影 ============================== */
+var gx0, gy0, gd0, gx1, gy1, gd1, gLen = 0;
+var pr = { x: 0, y: 0, d: 1, s: 1 };
+function projPoint(px, py, pz) {
+  var qx = px * czz - py * szz, qy = px * szz + py * czz;
+  var wy = qy * cxx - pz * sxx, wz = qy * sxx + pz * cxx;
+  var dx = qx - cam.x, dy = wy - cam.y, dz = wz - cam.z;
+  var vy = dy * cam.cos - dz * cam.sin;
+  var dep = -dy * cam.sin - dz * cam.cos;
+  if (dep < 0.25) dep = 0.25;
+  var s = focal / dep;
+  pr.x = originX + dx * s; pr.y = originY - vy * s; pr.d = dep; pr.s = s;
+  return pr;
+}
+function projectGrid() {
+  var cols = L.cols, rows = L.rows, need = (cols + 1) * (rows + 1);
+  if (gLen < need) {
+    gLen = need;
+    gx0 = new Float64Array(need); gy0 = new Float64Array(need); gd0 = new Float64Array(need);
+    gx1 = new Float64Array(need); gy1 = new Float64Array(need); gd1 = new Float64Array(need);
+  }
+  var xs = L.xs, zs = L.zs;
+  for (var j = 0; j <= rows; j++) {
+    var pz = zs[j], row = j * (cols + 1);
+    for (var i = 0; i <= cols; i++) {
+      var px = xs[i], id = row + i;
+      // y = 0
+      var qx = px * czz, qy = px * szz;
+      var wy = qy * cxx - pz * sxx, wz = qy * sxx + pz * cxx;
+      var dy = wy - cam.y, dz = wz - cam.z;
+      var vy = dy * cam.cos - dz * cam.sin, dep = -dy * cam.sin - dz * cam.cos;
+      if (dep < 0.25) dep = 0.25;
+      var s = focal / dep;
+      gx0[id] = originX + qx * s; gy0[id] = originY - vy * s; gd0[id] = dep;
+      // y = WALL_H
+      qx = px * czz - WALL_H * szz; qy = px * szz + WALL_H * czz;
+      wy = qy * cxx - pz * sxx; wz = qy * sxx + pz * cxx;
+      dy = wy - cam.y; dz = wz - cam.z;
+      vy = dy * cam.cos - dz * cam.sin; dep = -dy * cam.sin - dz * cam.cos;
+      if (dep < 0.25) dep = 0.25;
+      s = focal / dep;
+      gx1[id] = originX + qx * s; gy1[id] = originY - vy * s; gd1[id] = dep;
+    }
+  }
+}
+
+/* ============================== 绘制基元 ============================== */
+function quad(ax, ay, bx, by, cx2, cy2, dx2, dy2, fill) {
+  // 有向面积 < 0 → 正面朝向相机
+  var area = (ax * by - bx * ay) + (bx * cy2 - cx2 * by) + (cx2 * dy2 - dx2 * cy2) + (dx2 * ay - ax * dy2);
+  if (area > -0.6) return false;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx2, cy2); ctx.lineTo(dx2, dy2); ctx.closePath();
+  ctx.fillStyle = fill; ctx.fill();
+  return true;
+}
+// 把地面上的圆投影成仿射椭圆：3 次投影 + 变换即可
+function discXform(cx2, cz, r, y) {
+  var p = projPoint(cx2, y, cz), ox = p.x, oy = p.y;
+  var px = projPoint(cx2 + r, y, cz), ax = px.x - ox, ay = px.y - oy;
+  var pz = projPoint(cx2, y, cz + r), bx = pz.x - ox, by = pz.y - oy;
+  ctx.save(); ctx.transform(ax, ay, bx, by, ox, oy);
+  return true;
+}
+var UNIT = PI * 2;
+function unitCircle() { ctx.beginPath(); ctx.arc(0, 0, 1, 0, UNIT); }
+
+/* ============================== 渲染 ============================== */
+var SH = [], holeGrad = null, shadowGrad = null, goalGrad = null;
+function makeGrads() {
+  holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  holeGrad.addColorStop(0, "#000105");
+  holeGrad.addColorStop(0.72, "#04070f");
+  holeGrad.addColorStop(1, "#1a2338");
+  shadowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  shadowGrad.addColorStop(0, "rgba(0,0,0,.5)");
+  shadowGrad.addColorStop(0.6, "rgba(0,0,0,.26)");
+  shadowGrad.addColorStop(1, "rgba(0,0,0,0)");
+  goalGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  goalGrad.addColorStop(0, "rgba(120,255,220,.95)");
+  goalGrad.addColorStop(0.45, "rgba(40,200,190,.55)");
+  goalGrad.addColorStop(1, "rgba(30,160,180,0)");
+}
+function shadeFrame() {
+  // 每帧计算 5 个面法线的世界朝向 → 光照系数 → 各材质颜色串（避免逐格拼字符串）
+  var f = [];
+  for (var k = 0; k < 5; k++) {
+    var n = NRM[k];
+    var qx = n[0] * czz - n[1] * szz, qy = n[0] * szz + n[1] * czz, qz = n[2];
+    var wx = qx, wy = qy * cxx - qz * sxx, wz = qy * sxx + qz * cxx;
+    var d = wx * LIGHT[0] + wy * LIGHT[1] + wz * LIGHT[2];
+    f[k] = 0.40 + 0.66 * Math.max(0, d) + 0.1 * Math.max(0, -wz);
+  }
+  for (var m = 0; m < MAT.length; m++) {
+    if (!SH[m]) SH[m] = [];
+    for (k = 0; k < 5; k++) SH[m][k] = rgb(MAT[m], f[k]);
+  }
+  return f;
+}
+
+function drawSlab() {
+  var cols = L.cols, rows = L.rows, S = cols + 1;
+  var t00 = 0, t10 = cols, t01 = rows * S, t11 = rows * S + cols;
+  var b = [];
+  var cor = [[L.xs[0], L.zs[0]], [L.xs[cols], L.zs[0]], [L.xs[0], L.zs[rows]], [L.xs[cols], L.zs[rows]]];
+  for (var i = 0; i < 4; i++) { var p = projPoint(cor[i][0], -SLAB_H, cor[i][1]); b.push(p.x, p.y); }
+  var dark = rgb([26, 32, 52], 1), mid = rgb([38, 46, 72], 1);
+  // 底面
+  quad(b[0], b[1], b[2], b[3], b[6], b[7], b[4], b[5], "#0a0e18");
+  // 远(-Z)
+  quad(gx0[t00], gy0[t00], gx0[t10], gy0[t10], b[2], b[3], b[0], b[1], dark);
+  // 近(+Z)
+  quad(b[4], b[5], b[6], b[7], gx0[t11], gy0[t11], gx0[t01], gy0[t01], mid);
+  // 左(-X)
+  quad(b[0], b[1], b[4], b[5], gx0[t01], gy0[t01], gx0[t00], gy0[t00], rgb([30, 37, 58], 1));
+  // 右(+X)
+  quad(b[2], b[3], gx0[t10], gy0[t10], gx0[t11], gy0[t11], b[6], b[7], rgb([44, 53, 82], 1));
+}
+
+function drawFloor(topShade) {
+  var cols = L.cols, rows = L.rows, S = cols + 1;
+  var a = 0, bq = rows * S, c = rows * S + cols, d = cols;
+  var g2 = ctx.createLinearGradient(gx0[a], gy0[a], gx0[c], gy0[c]);
+  var base = [30, 38, 62], k = topShade;
+  g2.addColorStop(0, rgb(base, k * 0.78));
+  g2.addColorStop(1, rgb(base, k * 1.16));
+  ctx.beginPath();
+  ctx.moveTo(gx0[a], gy0[a]); ctx.lineTo(gx0[bq], gy0[bq]);
+  ctx.lineTo(gx0[c], gy0[c]); ctx.lineTo(gx0[d], gy0[d]); ctx.closePath();
+  ctx.fillStyle = g2; ctx.fill();
+
+  // 网格线
+  ctx.lineWidth = 1; ctx.strokeStyle = "rgba(140,180,255,.075)";
+  ctx.beginPath();
+  for (var i = 0; i <= cols; i++) { ctx.moveTo(gx0[i], gy0[i]); ctx.lineTo(gx0[rows * S + i], gy0[rows * S + i]); }
+  for (var j = 0; j <= rows; j++) { ctx.moveTo(gx0[j * S], gy0[j * S]); ctx.lineTo(gx0[j * S + cols], gy0[j * S + cols]); }
+  ctx.stroke();
+
+  // 冰面 / 沙地
+  for (var q = 0; q < L.fxList.length; q++) {
+    var e = L.fxList[q], id = e.j * S + e.i, id2 = id + 1, id3 = id + S + 1, id4 = id + S;
+    ctx.beginPath();
+    ctx.moveTo(gx0[id], gy0[id]); ctx.lineTo(gx0[id4], gy0[id4]);
+    ctx.lineTo(gx0[id3], gy0[id3]); ctx.lineTo(gx0[id2], gy0[id2]); ctx.closePath();
+    ctx.fillStyle = e.t === 1 ? "rgba(140,225,255,.30)" : "rgba(210,170,105,.30)";
+    ctx.fill();
+    if (e.t === 1) { ctx.strokeStyle = "rgba(200,245,255,.30)"; ctx.lineWidth = 1; ctx.stroke(); }
+  }
+}
+
+function drawHoles() {
+  for (var i = 0; i < L.holeList.length; i++) {
+    var h = L.holeList[i];
+    discXform(h.x, h.z, HOLE_R, 0.004);
+    unitCircle(); ctx.fillStyle = holeGrad; ctx.fill();
+    ctx.lineWidth = 0.09; ctx.strokeStyle = "rgba(150,180,240,.22)"; ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawGoalDecal(t) {
+  var g0 = L.goal, pulse = 0.5 + 0.5 * Math.sin(t * 3.4);
+  discXform(g0.x, g0.z, GOAL_R * 1.85, 0.006);
+  unitCircle(); ctx.globalAlpha = 0.28 + 0.22 * pulse; ctx.fillStyle = goalGrad; ctx.fill();
+  ctx.globalAlpha = 1; ctx.restore();
+  discXform(g0.x, g0.z, GOAL_R, 0.008);
+  unitCircle(); ctx.fillStyle = "#04121a"; ctx.fill();
+  ctx.lineWidth = 0.16; ctx.strokeStyle = "rgba(110,255,215," + (0.55 + 0.4 * pulse) + ")"; ctx.stroke();
+  ctx.restore();
+  discXform(g0.x, g0.z, GOAL_R * (0.30 + 0.16 * pulse), 0.01);
+  unitCircle(); ctx.fillStyle = "rgba(150,255,230,.85)"; ctx.fill();
+  ctx.restore();
+}
+
+function drawShadow() {
+  var alpha = clamp(1 - Math.max(0, ball.y - BALL_R) * 1.4, 0, 1) * ball.scale;
+  if (alpha <= 0.02) return;
+  discXform(ball.x, ball.z, BALL_R * 1.5, 0.012);
+  unitCircle(); ctx.globalAlpha = alpha; ctx.fillStyle = shadowGrad; ctx.fill();
+  ctx.globalAlpha = 1; ctx.restore();
+}
+
+function drawTrail() {
+  var tr = ball.trail; if (tr.length < 3) return;
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  for (var i = 1; i < tr.length; i++) {
+    var a = tr[i - 1], b = tr[i];
+    var pa = projPoint(a.x, 0.02, a.z), x1 = pa.x, y1 = pa.y;
+    var pb = projPoint(b.x, 0.02, b.z);
+    var k = i / tr.length;
+    ctx.strokeStyle = "rgba(120,220,255," + (0.06 + 0.16 * k) + ")";
+    ctx.lineWidth = 1 + 4 * k;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+  }
+}
+
+function drawWallRow(j) {
+  var cols = L.cols, S = cols + 1, arr = L.wallRows[j];
+  var r0 = j * S, r1 = (j + 1) * S;
+  for (var q = 0; q < arr.length; q++) {
+    var e = arr[q], i = e.i, sh = SH[e.m];
+    var a0 = r0 + i, b0 = r0 + i + 1, c0 = r1 + i + 1, d0 = r1 + i;
+    if (e.mask & 1) quad(gx0[a0], gy0[a0], gx1[a0], gy1[a0], gx1[b0], gy1[b0], gx0[b0], gy0[b0], sh[1]);
+    if (e.mask & 8) quad(gx0[b0], gy0[b0], gx1[b0], gy1[b0], gx1[c0], gy1[c0], gx0[c0], gy0[c0], sh[4]);
+    if (e.mask & 4) quad(gx0[a0], gy0[a0], gx0[d0], gy0[d0], gx1[d0], gy1[d0], gx1[a0], gy1[a0], sh[3]);
+    if (e.mask & 2) quad(gx0[d0], gy0[d0], gx0[c0], gy0[c0], gx1[c0], gy1[c0], gx1[d0], gy1[d0], sh[2]);
+    if (quad(gx1[a0], gy1[a0], gx1[d0], gy1[d0], gx1[c0], gy1[c0], gx1[b0], gy1[b0], sh[0])) {
+      ctx.strokeStyle = "rgba(190,215,255,.10)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+}
+
+function drawGate(gt, t) {
+  var hw = GATE_HW, h = gt.h * WALL_H * 1.15;
+  if (gt.h <= 0.02) {
+    // 预警圈
+    var p = ((t / gt.period) + gt.phase) % 1;
+    var near = p > 0.80 ? (p - 0.80) / 0.20 : 0;
+    discXform(gt.x, gt.z, hw * 1.15, 0.014);
+    unitCircle();
+    ctx.lineWidth = 0.1; ctx.strokeStyle = "rgba(255,150,90," + (0.18 + 0.6 * near) + ")"; ctx.stroke();
+    if (near > 0) { ctx.fillStyle = "rgba(255,130,70," + 0.22 * near + ")"; ctx.fill(); }
+    ctx.restore();
+    return;
+  }
+  var m = gt.h > 0.9 ? 3 : 4, sh = SH[m];
+  var x0 = gt.x - hw, x1 = gt.x + hw, z0 = gt.z - hw, z1 = gt.z + hw;
+  var P = [];
+  P.push(projPoint(x0, 0, z0).x, pr.y); P.push(projPoint(x1, 0, z0).x, pr.y);
+  P.push(projPoint(x1, 0, z1).x, pr.y); P.push(projPoint(x0, 0, z1).x, pr.y);
+  P.push(projPoint(x0, h, z0).x, pr.y); P.push(projPoint(x1, h, z0).x, pr.y);
+  P.push(projPoint(x1, h, z1).x, pr.y); P.push(projPoint(x0, h, z1).x, pr.y);
+  var A = 0, B = 2, C = 4, D = 6, A2 = 8, B2 = 10, C2 = 12, D2 = 14;
+  quad(P[A], P[A + 1], P[A2], P[A2 + 1], P[B2], P[B2 + 1], P[B], P[B + 1], sh[1]);
+  quad(P[B], P[B + 1], P[B2], P[B2 + 1], P[C2], P[C2 + 1], P[C], P[C + 1], sh[4]);
+  quad(P[A], P[A + 1], P[D], P[D + 1], P[D2], P[D2 + 1], P[A2], P[A2 + 1], sh[3]);
+  quad(P[D], P[D + 1], P[C], P[C + 1], P[C2], P[C2 + 1], P[D2], P[D2 + 1], sh[2]);
+  if (quad(P[A2], P[A2 + 1], P[D2], P[D2 + 1], P[C2], P[C2 + 1], P[B2], P[B2 + 1], rgb(MAT[m], 1.25))) {
+    ctx.strokeStyle = "rgba(255,230,190,.5)"; ctx.lineWidth = 1.2; ctx.stroke();
+  }
+}
+
+function drawGem(gm, t) {
+  var bob = Math.sin(t * 2.6 + gm.t) * 0.06;
+  var p = projPoint(gm.x, 0.40 + bob, gm.z);
+  var s = p.s * 0.19, x = p.x, y = p.y;
+  var rot = t * 1.8 + gm.t, sq = 0.55 + 0.45 * Math.abs(Math.cos(rot));
+  // 地面光斑
+  discXform(gm.x, gm.z, 0.3, 0.014);
+  unitCircle(); ctx.globalAlpha = 0.5; ctx.fillStyle = "rgba(120,240,255,.2)"; ctx.fill();
+  ctx.globalAlpha = 1; ctx.restore();
+  // 菱形宝石
+  ctx.beginPath();
+  ctx.moveTo(x, y - s * 1.35); ctx.lineTo(x + s * sq, y); ctx.lineTo(x, y + s * 1.35); ctx.lineTo(x - s * sq, y);
+  ctx.closePath();
+  var gg = ctx.createLinearGradient(x - s, y - s, x + s, y + s);
+  gg.addColorStop(0, "#e6fdff"); gg.addColorStop(0.45, "#54e6ff"); gg.addColorStop(1, "#1f7ad6");
+  ctx.fillStyle = gg; ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.beginPath(); ctx.arc(x, y, s * 1.9, 0, UNIT);
+  var gl = ctx.createRadialGradient(x, y, 0, x, y, s * 1.9);
+  gl.addColorStop(0, "rgba(120,240,255,.35)"); gl.addColorStop(1, "rgba(120,240,255,0)");
+  ctx.fillStyle = gl; ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+}
+
+var DOTS = [];
+(function () {
+  var g = (1 + Math.sqrt(5)) / 2, n = 9;
+  for (var i = 0; i < n; i++) {
+    var y = 1 - (2 * i) / (n - 1), r = Math.sqrt(Math.max(0, 1 - y * y)), th = 2 * PI * i / g;
+    DOTS.push([Math.cos(th) * r, y, Math.sin(th) * r]);
+  }
+})();
+function drawBall() {
+  var p = projPoint(ball.x, ball.y, ball.z);
+  var R = p.s * BALL_R * ball.scale;
+  if (R < 0.6) return;
+  var x = p.x, y = p.y;
+  // 球体
+  var gr = ctx.createRadialGradient(x - R * 0.34, y - R * 0.40, R * 0.08, x, y, R * 1.06);
+  gr.addColorStop(0, "#ffffff");
+  gr.addColorStop(0.28, "#cfefff");
+  gr.addColorStop(0.62, "#5fa8e8");
+  gr.addColorStop(1, "#123a63");
+  ctx.beginPath(); ctx.arc(x, y, R, 0, UNIT); ctx.fillStyle = gr; ctx.fill();
+  // 表面斑点（体现滚动）
+  var m = ball.m;
+  var cdx = cam.x - ball.x, cdy = cam.y - ball.y, cdz = cam.z - ball.z;
+  var cl = Math.hypot(cdx, cdy, cdz); cdx /= cl; cdy /= cl; cdz /= cl;
+  var ux = 0, uy = cam.cos, uz = -cam.sin;
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, R * 0.99, 0, UNIT); ctx.clip();
+  for (var i = 0; i < DOTS.length; i++) {
+    var d = DOTS[i];
+    var bx = m[0] * d[0] + m[1] * d[1] + m[2] * d[2];
+    var by = m[3] * d[0] + m[4] * d[1] + m[5] * d[2];
+    var bz = m[6] * d[0] + m[7] * d[1] + m[8] * d[2];
+    var qx = bx * czz - by * szz, qy = bx * szz + by * czz;
+    var wx = qx, wy = qy * cxx - bz * sxx, wz = qy * sxx + bz * cxx;
+    var vis = wx * cdx + wy * cdy + wz * cdz;
+    if (vis <= 0.08) continue;
+    var ox = wx * 1, oy = -(wy * uy + wz * uz);
+    ctx.beginPath();
+    ctx.arc(x + ox * R * 0.92, y + oy * R * 0.92, R * 0.2 * Math.sqrt(vis), 0, UNIT);
+    ctx.fillStyle = "rgba(20,60,110,.5)"; ctx.fill();
+  }
+  ctx.restore();
+  // 高光 + 边缘光
+  ctx.beginPath(); ctx.arc(x - R * 0.34, y - R * 0.40, R * 0.2, 0, UNIT);
+  ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, R * 0.97, 0, UNIT);
+  ctx.strokeStyle = "rgba(180,230,255,.35)"; ctx.lineWidth = Math.max(1, R * 0.08); ctx.stroke();
+}
+
+function drawParts() {
+  if (!parts.length) return;
+  ctx.globalCompositeOperation = "lighter";
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i], pp = projPoint(p.x, p.y, p.z);
+    var a = clamp(p.life / p.max, 0, 1);
+    var r = Math.max(0.6, p.s * pp.s * 0.012);
+    ctx.beginPath(); ctx.arc(pp.x, pp.y, r, 0, UNIT);
+    ctx.fillStyle = "rgba(" + p.c + "," + (a * 0.85) + ")"; ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function render(t) {
+  ctx.fillStyle = bgGrad || "#06090f"; ctx.fillRect(0, 0, W, H);
+  // 背景星点
+  for (var i = 0; i < stars.length; i++) {
+    var s = stars[i];
+    ctx.globalAlpha = s.a * (0.55 + 0.45 * Math.sin(t * s.s + i));
+    ctx.fillStyle = "#cfe4ff";
+    ctx.fillRect(s.x, s.y, s.r, s.r);
+  }
+  ctx.globalAlpha = 1;
+  if (!L) return;
+
+  var sk = G.shake;
+  var shx = sk ? (Math.random() - 0.5) * sk * 2 : 0, shy = sk ? (Math.random() - 0.5) * sk * 2 : 0;
+  var ox = originX, oy = originY;
+  originX += shx; originY += shy;
+
+  czz = Math.cos(tiltZ); szz = Math.sin(tiltZ);
+  cxx = Math.cos(tiltX); sxx = Math.sin(tiltX);
+  var f = shadeFrame();
+  projectGrid();
+
+  drawSlab();
+  drawFloor(f[0]);
+  drawHoles();
+  drawGoalDecal(t);
+  drawTrail();
+  drawShadow();
+
+  // 按行由远到近绘制：同排方块互不遮挡，天然得到正确遮挡关系
+  var bj = clamp(Math.floor(ball.z + L.rows / 2), 0, L.rows - 1);
+  for (var j = 0; j < L.rows; j++) {
+    drawWallRow(j);
+    for (i = 0; i < L.gates.length; i++) if (L.gates[i].j === j) drawGate(L.gates[i], t);
+    for (i = 0; i < L.gems.length; i++) if (!L.gems[i].got && L.gems[i].j === j) drawGem(L.gems[i], t);
+    if (L.goal.j === j) drawGoalFlag(t);
+    if (j === bj && G.state !== "over") drawBall();
+  }
+  drawParts();
+
+  originX = ox; originY = oy;
+
+  // 视野受限（高关卡）
+  if (L.dark > 0 && (G.state === "play" || G.state === "dying" || G.state === "intro")) {
+    var bp = projPoint(ball.x, ball.y, ball.z);
+    var rad = Math.min(W, H) * 0.34;
+    var dg = ctx.createRadialGradient(bp.x, bp.y, rad * 0.35, bp.x, bp.y, rad * 1.55);
+    dg.addColorStop(0, "rgba(2,4,10,0)");
+    dg.addColorStop(0.55, "rgba(2,4,10," + (L.dark * 0.55) + ")");
+    dg.addColorStop(1, "rgba(2,4,10," + L.dark + ")");
+    ctx.fillStyle = dg; ctx.fillRect(0, 0, W, H);
+  }
+  ctx.fillStyle = vigGrad; ctx.fillRect(0, 0, W, H);
+
+  // 时间告急红框
+  if (G.state === "play" && G.tLeft < 6) {
+    var a = (0.12 + 0.18 * Math.abs(Math.sin(t * 6))) * (1 - G.tLeft / 6);
+    ctx.strokeStyle = "rgba(255,60,90," + a + ")"; ctx.lineWidth = 14;
+    ctx.strokeRect(7, 7, W - 14, H - 14);
+  }
+}
+function drawGoalFlag(t) {
+  var p = projPoint(L.goal.x, 0.52 + Math.sin(t * 2.2) * 0.05, L.goal.z);
+  var s = p.s * 0.15, rot = t * 2.2, sq = 0.5 + 0.5 * Math.abs(Math.cos(rot));
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y - s * 1.5); ctx.lineTo(p.x + s * sq, p.y); ctx.lineTo(p.x, p.y + s * 1.5); ctx.lineTo(p.x - s * sq, p.y);
+  ctx.closePath();
+  var gg = ctx.createLinearGradient(p.x - s, p.y - s, p.x + s, p.y + s);
+  gg.addColorStop(0, "#f2fffb"); gg.addColorStop(0.5, "#5ef2c0"); gg.addColorStop(1, "#0f9d8a");
+  ctx.fillStyle = gg; ctx.fill();
+  ctx.globalCompositeOperation = "lighter";
+  var gl = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, s * 2.4);
+  gl.addColorStop(0, "rgba(110,255,215,.4)"); gl.addColorStop(1, "rgba(110,255,215,0)");
+  ctx.beginPath(); ctx.arc(p.x, p.y, s * 2.4, 0, UNIT); ctx.fillStyle = gl; ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+}
+
+/* ============================== 输入 ============================== */
+var IN = { mode: "mouse", tx: 0, tz: 0, keys: {}, slow: false, gyro: false, base: null, cal: null };
+var pointerDown = false, touchOrigin = null;
+
+function keyTargets() {
+  var k = IN.keys;
+  var l = k["ArrowLeft"] || k["a"] || k["A"], r = k["ArrowRight"] || k["d"] || k["D"];
+  var u = k["ArrowUp"] || k["w"] || k["W"], d = k["ArrowDown"] || k["s"] || k["S"];
+  if (!l && !r && !u && !d) return null;
+  return { tz: ((l ? 1 : 0) + (r ? -1 : 0)) * MAX_TILT, tx: ((d ? 1 : 0) + (u ? -1 : 0)) * MAX_TILT };
+}
+function updateTilt(dt, t) {
+  var kt = keyTargets();
+  if (kt) { IN.mode = "key"; IN.tx = kt.tx; IN.tz = kt.tz; }
+  else if (IN.mode === "key") { IN.tx = 0; IN.tz = 0; }   // 键盘松手 → 板面回正
+  var mul = IN.slow ? 0.42 : 1;
+  var goalX = IN.tx * mul, goalZ = IN.tz * mul;
+  if (G.state === "menu") { // 演示模式：自动摇板
+    goalX = Math.sin(t * 0.55) * 9 * D2R;
+    goalZ = Math.cos(t * 0.42) * 9 * D2R;
+  }
+  if (G.state === "over" || G.state === "pause") { goalX *= 0.2; goalZ *= 0.2; }
+  if (L && L.wind > 0 && G.state === "play") {
+    goalX += Math.sin(t * 1.7) * L.wind + Math.sin(t * 4.3) * L.wind * 0.4;
+    goalZ += Math.cos(t * 1.3) * L.wind + Math.cos(t * 3.7) * L.wind * 0.4;
+  }
+  goalX = clamp(goalX, -MAX_TILT * 1.2, MAX_TILT * 1.2);
+  goalZ = clamp(goalZ, -MAX_TILT * 1.2, MAX_TILT * 1.2);
+  var k = 1 - Math.exp(-8.5 * dt);
+  tiltX += (goalX - tiltX) * k;
+  tiltZ += (goalZ - tiltZ) * k;
+}
+function setPointerTilt(mx, my) {
+  var nx = clamp(((mx / W) * 2 - 1) / 0.82, -1, 1);
+  var ny = clamp(((my / H) * 2 - 1) / 0.82, -1, 1);
+  IN.mode = "mouse"; IN.tz = -nx * MAX_TILT; IN.tx = ny * MAX_TILT;
+}
+window.addEventListener("mousemove", function (e) {
+  if (IN.gyro) return;
+  setPointerTilt(e.clientX, e.clientY);
+});
+cv.addEventListener("touchstart", function (e) {
+  Snd.init(); pointerDown = true;
+  var tt = e.touches[0];
+  touchOrigin = { x: tt.clientX, y: tt.clientY, tx: IN.tx, tz: IN.tz };
+  if (G.state === "intro") setState("play");
+  e.preventDefault();
+}, { passive: false });
+cv.addEventListener("touchmove", function (e) {
+  if (!touchOrigin || IN.gyro) return;
+  var tt = e.touches[0], ref = Math.min(W, H) * 0.3;
+  IN.mode = "touch";
+  IN.tz = clamp(touchOrigin.tz - ((tt.clientX - touchOrigin.x) / ref) * MAX_TILT, -MAX_TILT, MAX_TILT);
+  IN.tx = clamp(touchOrigin.tx + ((tt.clientY - touchOrigin.y) / ref) * MAX_TILT, -MAX_TILT, MAX_TILT);
+  e.preventDefault();
+}, { passive: false });
+cv.addEventListener("touchend", function () { pointerDown = false; });
+cv.addEventListener("mousedown", function () { Snd.init(); if (G.state === "intro") setState("play"); });
+
+window.addEventListener("keydown", function (e) {
+  var k = e.key;
+  IN.keys[k] = true;
+  if (k === "Shift") IN.slow = true;
+  if (k === " " || k === "Enter") {
+    Snd.init();
+    if (G.state === "menu") { startRun(); e.preventDefault(); return; }
+    if (G.state === "intro") { setState("play"); e.preventDefault(); return; }
+    if (G.state === "over") { startRun(); e.preventDefault(); return; }
+    if (G.state === "pause") { togglePause(); e.preventDefault(); return; }
+    e.preventDefault();
+  }
+  if (k === "p" || k === "P" || k === "Escape") { togglePause(); }
+  if (k === "r" || k === "R") { if (G.state === "play" || G.state === "pause" || G.state === "intro") { hideOv(); startLevel(G.level, false); } }
+  if (k === "m" || k === "M") { toggleSound(); }
+  if (k === "h" || k === "H") { showHelp(); }
+  if (k.indexOf("Arrow") === 0) e.preventDefault();
+});
+window.addEventListener("keyup", function (e) {
+  IN.keys[e.key] = false;
+  if (e.key === "Shift") IN.slow = false;
+});
+window.addEventListener("blur", function () { IN.keys = {}; if (G.state === "play") togglePause(); });
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden && G.state === "play") togglePause();
+});
+
+/* 手机重力感应 */
+function gyroHandler(e) {
+  if (!IN.gyro) return;
+  var beta = e.beta, gamma = e.gamma;
+  if (beta === null || gamma === null) return;
+  if (!IN.cal) IN.cal = { b: beta, g: gamma };
+  var nx = clamp((gamma - IN.cal.g) / 24, -1, 1);
+  var ny = clamp((beta - IN.cal.b) / 24, -1, 1);
+  IN.mode = "gyro"; IN.tz = -nx * MAX_TILT; IN.tx = ny * MAX_TILT;
+}
+function toggleGyro() {
+  if (IN.gyro) { IN.gyro = false; IN.cal = null; bTilt.classList.add("off"); toast("重力感应已关闭"); return; }
+  var DOE = window.DeviceOrientationEvent;
+  if (!DOE) { toast("此设备不支持重力感应"); return; }
+  var go = function () {
+    IN.gyro = true; IN.cal = null; bTilt.classList.remove("off");
+    window.addEventListener("deviceorientation", gyroHandler);
+    toast("重力感应已开启 · 保持当前姿势为水平");
+  };
+  if (typeof DOE.requestPermission === "function") {
+    DOE.requestPermission().then(function (r) { if (r === "granted") go(); else toast("未获得传感器权限"); })["catch"](function () { toast("传感器权限被拒绝"); });
+  } else go();
+}
+if (window.DeviceOrientationEvent && ("ontouchstart" in window)) bTilt.style.display = "";
+
+/* ============================== UI ============================== */
+var bannerTimer = 0;
+function banner(t1, t2, t3, cls, dur) {
+  elBanner.innerHTML = '<div class="t1 ' + (cls || "") + '">' + t1 + "</div>" +
+    (t2 ? '<div class="t2">' + t2 + "</div>" : "") +
+    (t3 ? '<div class="t3">' + t3 + "</div>" : "");
+  elBanner.classList.add("show");
+  bannerTimer = dur || 1.5;
+}
+function toast(msg) { banner(msg, "", "", "", 1.2); }
+function hideOv() { elOv.classList.remove("show"); }
+function showOv(html) { elPanel.innerHTML = html; elOv.classList.add("show"); }
+function flash(color, a) {
+  elFlash.style.background = color; elFlash.style.opacity = a;
+  setTimeout(function () { elFlash.style.transition = "opacity .35s"; elFlash.style.opacity = 0; }, 30);
+  setTimeout(function () { elFlash.style.transition = ""; }, 420);
+}
+function showMenu() {
+  showOv(
+    "<h1>3D 重力迷宫</h1>" +
+    '<div class="sub">倾斜世界 · 无限关卡 · 越走越难</div>' +
+    '<div class="rows">' +
+    '<div class="row"><span class="ico">🖱️</span><div>移动<b>鼠标</b>倾斜整块地面，重力会带着小球滚动；也可用 <span class="kbd">WASD</span> / <span class="kbd">↑↓←→</span>，按住 <span class="kbd">Shift</span> 微调。</div></div>' +
+    '<div class="row"><span class="ico">🎯</span><div>滚进<b class="">发光的青色出口</b>即过关，每关地图随机生成，尺寸与机关随关数递增。</div></div>' +
+    '<div class="row"><span class="ico">🕳️</span><div>躲开<b>陷洞</b>；<b>冰面</b>打滑、<b>沙地</b>迟滞、<b>闸门</b>定时升降，高关卡还有<b>阵风</b>与<b>视野受限</b>。</div></div>' +
+    '<div class="row"><span class="ico">💎</span><div>顺路吃<b>宝石</b>加分，剩余时间也折算分数。时间耗尽或落洞会损失一条命。</div></div>' +
+    "</div>" +
+    '<div class="stats"><div class="stat"><div class="v">' + G.best + '</div><div class="l">最高分</div></div>' +
+    '<div class="stat"><div class="v">' + G.bestLv + '</div><div class="l">最远关卡</div></div></div>' +
+    '<button class="btn" id="btnStart">开 始 游 戏</button>' +
+    '<div class="sub" style="margin-top:10px;opacity:.4">空格 / 回车 开始 · P 暂停 · R 重开本关 · M 静音</div>'
+  );
+  var b = document.getElementById("btnStart");
+  if (b) b.onclick = function () { Snd.init(); startRun(); };
+}
+function showHelp() {
+  if (G.state === "play" || G.state === "pause") togglePause();
+}
+function showPause() {
+  showOv(
+    "<h2>已暂停</h2>" +
+    '<div class="sub">第 ' + G.level + " 关 · " + L.cols + "×" + L.rows + "</div>" +
+    '<div class="rows">' +
+    '<div class="row"><span class="ico">🖱️</span><div>鼠标 / <span class="kbd">WASD</span> / 方向键倾斜地面，<span class="kbd">Shift</span> 微调</div></div>' +
+    '<div class="row"><span class="ico">🕳️</span><div>陷洞 = 死亡 · 冰面打滑 · 沙地迟滞 · 闸门定时升起</div></div>' +
+    '<div class="row"><span class="ico">⌨️</span><div><span class="kbd">P</span> 继续 · <span class="kbd">R</span> 重开本关 · <span class="kbd">M</span> 音效</div></div>' +
+    "</div>" +
+    '<div class="tags">' + L.feats.map(function (x) { return '<span class="tag warn">' + x + "</span>"; }).join("") + "</div>" +
+    '<button class="btn" id="btnResume">继 续</button>' +
+    '<button class="btn ghost" id="btnRestart">重开本关</button>' +
+    '<button class="btn ghost" id="btnQuit">放弃本局</button>'
+  );
+  document.getElementById("btnResume").onclick = function () { togglePause(); };
+  document.getElementById("btnRestart").onclick = function () { hideOv(); startLevel(G.level, false); };
+  document.getElementById("btnQuit").onclick = function () { gameOver(); };
+}
+function showOver() {
+  showOv(
+    "<h2>游戏结束</h2>" +
+    '<div class="sub">' + (G.level > G.bestLv ? "新纪录！" : "再来一局？") + "</div>" +
+    '<div class="stats">' +
+    '<div class="stat"><div class="v">' + G.level + '</div><div class="l">到达关卡</div></div>' +
+    '<div class="stat"><div class="v">' + G.score + '</div><div class="l">本局得分</div></div>' +
+    '<div class="stat"><div class="v">' + G.best + '</div><div class="l">最高分</div></div>' +
+    "</div>" +
+    '<button class="btn" id="btnAgain">再 来 一 局</button>'
+  );
+  document.getElementById("btnAgain").onclick = function () { startRun(); };
+}
+function toggleSound() {
+  Snd.on = !Snd.on;
+  bSound.textContent = Snd.on ? "🔊" : "🔇";
+  bSound.classList.toggle("off", !Snd.on);
+  if (Snd.on) Snd.init();
+}
+function togglePause() {
+  if (G.state === "play") { setState("pause"); showPause(); bPause.textContent = "▶"; }
+  else if (G.state === "pause") { G.state = G.prevState === "pause" ? "play" : G.prevState; hideOv(); bPause.textContent = "⏸"; }
+}
+bSound.onclick = function () { toggleSound(); };
+bPause.onclick = function () { Snd.init(); togglePause(); };
+bHelp.onclick = function () { showHelp(); };
+bTilt.onclick = function () { Snd.init(); toggleGyro(); };
+
+var hudCache = {};
+function syncHud(force) {
+  var vis = (G.state === "menu" || G.state === "over") ? "0" : "1";
+  if (hudCache.vis !== vis) {
+    hudCache.vis = vis; elHud.style.opacity = vis; elHud.style.transition = "opacity .3s";
+    elHud.setAttribute("data-hide", vis === "0" ? "1" : "0");
+  }
+  if (!L) return;
+  function set(el, key, v) { if (force || hudCache[key] !== v) { hudCache[key] = v; el.textContent = v; } }
+  set(hLv, "lv", String(G.level));
+  set(hSz, "sz", L.cols + "×" + L.rows);
+  set(hGem, "gem", G.gems + "/" + L.gems.length);
+  set(hScore, "sc", String(G.score));
+  set(hBest, "bs", String(G.best));
+  var lv = "";
+  for (var i = 0; i < Math.max(3, G.lives); i++) lv += i < G.lives ? "♥" : '<span class="off">♥</span>';
+  if (force || hudCache.lives !== lv) { hudCache.lives = lv; hLives.innerHTML = lv; }
+  var tl = Math.max(0, G.tLeft);
+  set(hTime, "t", tl.toFixed(1) + "s");
+  var pct = clamp(tl / L.timeLimit, 0, 1);
+  hTimeFill.style.width = (pct * 100).toFixed(1) + "%";
+  var cls = pct < 0.2 ? "danger" : (pct < 0.45 ? "warn" : "");
+  if (hudCache.tcls !== cls) { hudCache.tcls = cls; hTimeFill.className = cls; }
+}
+
+/* ============================== 流程 ============================== */
+function startRun() {
+  runSeed = (Math.random() * 1e9) | 0;
+  G.score = 0; G.lives = 3; hideOv();
+  bPause.textContent = "⏸";
+  startLevel(1, true);
+  hHint.textContent = "移动鼠标 / WASD 倾斜地面 · Shift 微调 · P 暂停 · R 重开";
+}
+function gameOver() {
+  Snd.over();
+  if (G.score > G.best) { G.best = G.score; store("gm3d_best", G.best); }
+  if (G.level > G.bestLv) { G.bestLv = G.level; store("gm3d_bestlv", G.bestLv); }
+  setState("over"); showOver(); syncHud(true);
+}
+function die(kind) {
+  if (G.state !== "play") return;
+  G.deathKind = kind; setState("dying");
+  G.lives--; G.shake = 6; Snd.die();
+  flash("#ff2d55", 0.32);
+  spawnBurst(ball.x, ball.z, kind === "hole" ? 10 : 22, kind === "hole" ? "120,150,220" : "255,120,110", 1.4);
+  banner(kind === "time" ? "时间耗尽！" : "掉进洞里！",
+    G.lives > 0 ? "剩余生命 " + G.lives : "最后一条命也没了…", "", "bad", 1.0);
+  syncHud(true);
+}
+function afterDeath() {
+  if (G.lives <= 0) { gameOver(); return; }
+  startLevel(G.level, false);
+}
+function levelClear() {
+  var tb = Math.floor(Math.max(0, G.tLeft)) * 8;
+  var lb = 100 + G.level * 40;
+  G.score += tb + lb;
+  setState("clear"); Snd.clear();
+  flash("#7effe0", 0.22);
+  spawnBurst(L.goal.x, L.goal.z, 26, "120,255,220", 1.6);
+  if (G.level % 5 === 0 && G.lives < 5) { G.lives++; }
+  if (G.score > G.best) { G.best = G.score; store("gm3d_best", G.best); }
+  if (G.level > G.bestLv) { G.bestLv = G.level; store("gm3d_bestlv", G.bestLv); }
+  banner("过关！", "关卡奖励 +" + lb + " · 时间奖励 +" + tb, G.level % 5 === 0 ? "生命 +1" : "", "good", 1.5);
+  syncHud(true);
+}
+
+function updatePlay(dt, t) {
+  // 闸门状态：小球已经压在门口内侧时不再继续升起，避免把球顶回去 / 卡死
+  for (var i = 0; i < L.gates.length; i++) {
+    var gt = L.gates[i], h = gateHeight(gt, t);
+    var inside = Math.abs(ball.x - gt.x) < 0.66 && Math.abs(ball.z - gt.z) < 0.66;
+    if (inside && h > gt.h) h = gt.h;
+    if (h > 0.02 && gt.h <= 0.02) Snd.gate();
+    gt.h = h;
+  }
+  var n = Math.min(6, Math.max(1, Math.round(dt / STEP)));
+  var sub = dt / n;
+  for (i = 0; i < n; i++) stepPhysics(sub);
+
+  // 轨迹
+  var tr = ball.trail;
+  if (!tr.length || Math.hypot(tr[tr.length - 1].x - ball.x, tr[tr.length - 1].z - ball.z) > 0.07) {
+    tr.push({ x: ball.x, z: ball.z });
+    if (tr.length > 16) tr.shift();
+  }
+  // 宝石
+  for (i = 0; i < L.gems.length; i++) {
+    var gm = L.gems[i]; if (gm.got) continue;
+    if (Math.hypot(gm.x - ball.x, gm.z - ball.z) < BALL_R + 0.24) {
+      gm.got = true; G.gems++; G.score += 50; Snd.gem();
+      spawnBurst(gm.x, gm.z, 12, "120,240,255", 1);
+      banner("💎 +50", "", "", "good", 0.7);
+    }
+  }
+  // 出口
+  var dg = Math.hypot(L.goal.x - ball.x, L.goal.z - ball.z);
+  if (dg < GOAL_R - 0.05) { levelClear(); return; }
+  // 陷洞
+  for (i = 0; i < L.holeList.length; i++) {
+    var h2 = L.holeList[i];
+    if (Math.hypot(h2.x - ball.x, h2.z - ball.z) < HOLE_R - BALL_R * 0.34) { die("hole"); return; }
+  }
+  // 计时
+  G.tLeft -= dt;
+  if (G.tLeft <= 5.2 && G.tLeft > 0 && t - G.tickAt > 0.5) { G.tickAt = t; Snd.tick(); }
+  if (G.tLeft <= 0) { G.tLeft = 0; die("time"); }
+}
+
+/* ============================== 主循环 ============================== */
+var last = 0, timeAcc = 0, started = false;
+function frame(now) {
+  if (!last) last = now;
+  var dt = (now - last) / 1000; last = now;
+  if (dt > 0.1) dt = 0.1;
+  if (dt < 0) dt = 0;
+  timeAcc += dt;
+  var t = timeAcc;
+
+  updateTilt(dt, t);
+  updateParts(dt);
+  G.shake *= Math.exp(-6 * dt); if (G.shake < 0.05) G.shake = 0;
+  if (bannerTimer > 0) { bannerTimer -= dt; if (bannerTimer <= 0) elBanner.classList.remove("show"); }
+  G.stateT += dt;
+
+  if (G.state === "menu") {
+    // 演示：小球自由滚动，落洞则回到起点
+    if (L) {
+      var n = 2;
+      for (var i = 0; i < n; i++) stepPhysics(dt / n);
+      for (i = 0; i < L.holeList.length; i++) {
+        if (Math.hypot(L.holeList[i].x - ball.x, L.holeList[i].z - ball.z) < HOLE_R - BALL_R * 0.3) { resetBall(); break; }
+      }
+      if (Math.hypot(L.goal.x - ball.x, L.goal.z - ball.z) < GOAL_R) resetBall();
+      for (i = 0; i < L.gates.length; i++) L.gates[i].h = gateHeight(L.gates[i], t);
+    }
+  } else if (G.state === "intro") {
+    if (G.stateT > 1.45) setState("play");
+  } else if (G.state === "play") {
+    updatePlay(dt, t);
+  } else if (G.state === "dying") {
+    if (G.deathKind === "hole") {
+      ball.y -= dt * 2.2; ball.scale = clamp(ball.scale - dt * 1.1, 0.15, 1);
+    } else {
+      ball.scale = clamp(ball.scale - dt * 2.2, 0, 1);
+    }
+    if (G.stateT > 0.95) afterDeath();
+  } else if (G.state === "clear") {
+    ball.y = lerp(ball.y, -0.2, 1 - Math.exp(-6 * dt));
+    ball.scale = clamp(ball.scale - dt * 0.8, 0.3, 1);
+    ball.x = lerp(ball.x, L.goal.x, 1 - Math.exp(-9 * dt));
+    ball.z = lerp(ball.z, L.goal.z, 1 - Math.exp(-9 * dt));
+    if (G.stateT > 1.5) startLevel(G.level + 1, true);
+  }
+
+  G.hudT += dt;
+  if (G.hudT > 0.06) { G.hudT = 0; syncHud(false); }
+  render(t);
+  requestAnimationFrame(frame);
+}
+
+/* ============================== 启动 ============================== */
+function boot() {
+  resize();
+  makeGrads();
+  L = buildLevel(6);          // 菜单背景用一张中等地图做演示
+  fitCamera(); resetBall();
+  G.tLeft = L.timeLimit;
+  if ("ontouchstart" in window) hHint.textContent = "手指在屏幕上拖动即可倾斜地面 · 也可开启右上角 📱 重力感应";
+  showMenu(); syncHud(true);
+  requestAnimationFrame(frame);
+}
+window.addEventListener("resize", function () { resize(); });
+window.addEventListener("orientationchange", function () { setTimeout(resize, 200); });
+window.addEventListener("pointerdown", function () { Snd.init(); }, { once: true });
+boot();
+
+// 调试钩子（便于自动化冒烟测试，正常游玩无影响）
+window.__MAZE__ = {
+  G: G, ball: ball, get L() { return L; }, buildLevel: buildLevel, startLevel: startLevel,
+  startRun: startRun, setState: setState, die: die, levelClear: levelClear,
+  input: IN, tilt: function (x, z) { IN.tx = x; IN.tz = z; },
+  proj: function (x, y, z) { var p = projPoint(x, y, z); return { x: p.x, y: p.y, d: p.d, s: p.s }; },
+  setTilt: function (x, z) { tiltX = x; tiltZ = z; czz = Math.cos(z); szz = Math.sin(z); cxx = Math.cos(x); sxx = Math.sin(x); }
+};
+
+})();
+</script>
+</body>
+</html>

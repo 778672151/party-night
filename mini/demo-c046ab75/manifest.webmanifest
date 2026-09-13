@@ -1,0 +1,23 @@
+{
+  "name": "顶牛 - 河北传统骨牌游戏",
+  "short_name": "顶牛",
+  "description": "河北传统骨牌顶牛，支持人机、本地多人、在线/局域网联机。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101d14",
+  "theme_color": "#101d14",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

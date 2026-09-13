@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#101d14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>顶牛 - 河北传统骨牌游戏</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ========== PWA/网络提示条 ========== -->
+<div id="offlineBanner" class="net-banner offline" style="display:none;">⚠️ 网络已断开，请检查连接</div>
+<div id="updateBanner" class="net-banner update" style="display:none;">✨ 新版本可用 <button onclick="location.reload()">刷新</button></div>
+<div id="installBanner" class="net-banner install" style="display:none;">📲 可安装到手机桌面 <button id="installBtn">安装</button> <button class="banner-close" id="installCloseBtn" onclick="dismissInstallBanner()">×</button></div>
+
+<!-- ========== 游戏大厅 ========== -->
+<div id="lobbyScreen" class="start-screen">
+  <div class="start-bg"></div>
+  <div class="start-content">
+    <h1>游戏大厅</h1>
+    <p class="subtitle">选择游戏开始</p>
+
+    <div class="lobby-grid">
+      <div class="lobby-card" onclick="enterGame('dingniu')">
+        <div class="lobby-icon">🎲</div>
+        <h2>顶牛</h2>
+        <p>河北传统骨牌 · 4人对战</p>
+        <span class="lobby-tag playable">可玩</span>
+      </div>
+      <div class="lobby-card disabled" onclick="enterGame('mahjong')">
+        <div class="lobby-icon">🀄</div>
+        <h2>麻将</h2>
+        <p>敬请期待</p>
+        <span class="lobby-tag coming">开发中</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 顶牛开始界面（美化版） ========== -->
+<div id="startScreen" class="start-screen" style="display:none;">
+  <div class="start-bg"></div>
+  <div class="start-content">
+    <!-- 装饰骨牌 -->
+    <div class="start-tiles" aria-hidden="true">
+      <span class="deco-tile deco-tile-1">⚀</span>
+      <span class="deco-tile deco-tile-2">⚂</span>
+      <span class="deco-tile deco-tile-3">⚄</span>
+      <span class="deco-tile deco-tile-4">⚅</span>
+    </div>
+
+    <div class="menu-settings" style="justify-content:flex-start;">
+      <button class="btn-settings" onclick="backToLobby()">← 返回大厅</button>
+    </div>
+
+    <h1>顶牛</h1>
+    <p class="subtitle">河北传统骨牌游戏 · 4人对战</p>
+
+    <div class="menu-settings">
+      <label for="gameMode">游戏模式：</label>
+      <select id="gameMode" onchange="toggleGameMode()">
+        <option value="ai" selected>人机对战（3 AI）</option>
+        <option value="local">本地多人（4人轮流）</option>
+      </select>
+    </div>
+
+    <div class="menu-settings" id="aiLevelRow">
+      <label for="aiLevel">AI 难度：</label>
+      <select id="aiLevel">
+        <option value="easy">简单（随机出牌）</option>
+        <option value="medium" selected>中等（有策略）</option>
+        <option value="hard">困难（拦账+算账）</option>
+      </select>
+    </div>
+
+    <div class="menu-settings">
+      <button class="theme-btn" id="themeBtnStart" onclick="cycleTheme()">主题：暗</button>
+    </div>
+
+    <div class="menu-buttons" id="menuButtons">
+      <button class="btn-start" onclick="showDiceRoll()">开始游戏</button>
+      <button class="btn-settings" onclick="openSettings()">规则设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 摇色子界面 ========== -->
+<div id="diceScreen" class="dice-screen" style="display:none;">
+  <div class="dice-box">
+    <h2>🎲 摇色子定头牌</h2>
+    <p class="dice-hint">点击下方按钮摇色子，点数决定谁先出牌</p>
+
+    <div class="dice-area">
+      <div class="dice" id="dice1">
+        <div class="dice-face" id="diceFace1"></div>
+      </div>
+      <div class="dice-plus">+</div>
+      <div class="dice" id="dice2">
+        <div class="dice-face" id="diceFace2"></div>
+      </div>
+    </div>
+
+    <div class="dice-sum" id="diceSumDisplay"></div>
+    <div class="dice-result" id="diceResultDisplay"></div>
+
+    <button class="btn-roll" id="rollBtn" onclick="rollDice()">🎲 摇色子</button>
+    <button class="btn-start-play" id="startPlayBtn" onclick="startGameWithDealer()" style="display:none;">开始对局</button>
+  </div>
+</div>
+
+<!-- ========== 游戏界面 ========== -->
+<div id="gameScreen" class="game-container" style="display:none;">
+
+  <!-- 顶部信息栏 -->
+  <div class="top-bar">
+    <div class="info">
+      <span id="phaseText">准备开始</span>
+      <span id="dealerText">庄家：—</span>
+      <span id="turnText">—</span>
+    </div>
+    <div>
+      <button class="theme-btn" id="themeBtn" onclick="cycleTheme()">主题：暗</button>
+      <button onclick="openSettings()">规则设置</button>
+      <button class="btn-exit" onclick="exitGame()">退出</button>
+    </div>
+  </div>
+
+  <div class="rotate-hint">📱 建议横屏游玩，体验更佳</div>
+
+  <!-- 牌桌 Canvas -->
+  <div class="board-area">
+    <canvas id="gameCanvas" width="860" height="480"></canvas>
+  </div>
+
+  <!-- 玩家信息 -->
+  <div class="players-panel" id="playersPanel"></div>
+
+  <!-- 手牌区 -->
+  <div class="hand-area">
+    <div class="hand-label" id="handLabel">你的手牌（点击可出的牌出牌，点击不能出的牌选择扣牌）</div>
+    <div class="hand-tiles" id="handTiles"></div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="action-bar" id="actionBar" style="display:none;">
+    <button class="btn-pass" id="btnPass" onclick="playerPass()">扣牌</button>
+    <button class="btn-primary" id="btnConfirm" onclick="confirmPlay()" style="display:none;">出牌</button>
+    <button class="btn-side-left" id="btnSideLeft" onclick="confirmPlaySide('left')" style="display:none;">接左边</button>
+    <button class="btn-side-right" id="btnSideRight" onclick="confirmPlaySide('right')" style="display:none;">接右边</button>
+  </div>
+
+  <!-- 日志 -->
+  <div class="log-area" id="logArea"></div>
+</div>
+
+<!-- ========== 本地多人传手机遮罩 ========== -->
+<div id="passDeviceOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <h2 id="passDeviceTitle">请把手机交给 玩家</h2>
+    <p style="margin-top:8px;color:#777;">其他玩家请不要偷看</p>
+    <button id="passDeviceBtn" onclick="localPlayerReady()">我是玩家，开始</button>
+  </div>
+</div>
+
+<!-- ========== 结算弹窗 ========== -->
+<div id="settleModal" class="modal-overlay">
+  <div class="modal-box settle-box-wide">
+    <h2 id="settleTitle">本局结算</h2>
+    <div id="settleContent"></div>
+    <!-- 扣牌展示区域 -->
+    <div id="settlePassedTiles" style="margin-top:16px;"></div>
+    <div class="modal-btns" style="margin-top:18px;">
+      <button onclick="handleNextRoundClick()">摇色子下一局</button>
+      <button class="btn-suanzhang-skip" onclick="exitGame()">退出游戏</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 规则设置面板 ========== -->
+<div id="settingsPanel" class="settings-panel">
+  <div class="settings-box">
+    <h2>规则设置</h2>
+    <div class="setting-row">
+      <label>记分方式</label>
+      <select id="settingScoringMode" onchange="updateBaseScoreVisibility()">
+        <option value="fixed">固定分（经典）</option>
+        <option value="multiplier">倍数计分（底分×1/×2/×3）</option>
+      </select>
+    </div>
+    <div class="setting-hint">固定分：普通 +6、净手 +9、算账/跑红 +12（输家按 1/2/3、2/3/4、3/4/5 扣分）</div>
+    <div id="settingBaseScoreRow">
+      <div class="setting-row">
+        <label>底分</label>
+        <input type="number" id="settingBaseScore" value="10" min="1" max="100">
+      </div>
+      <div class="setting-hint">计分：普通 ×1、净手 ×2、算账/跑红 ×3（底分 10 为基准）</div>
+    </div>
+    <div class="setting-row">
+      <label>启用跑红</label>
+      <input type="checkbox" id="settingEnablePaoHong" checked>
+    </div>
+    <div class="setting-row" id="settingEnableSuanZhangRow">
+      <label>启用算账</label>
+      <input type="checkbox" id="settingEnableSuanZhang" checked>
+    </div>
+    <div class="setting-row">
+      <label>闷五帐（地区玩法）</label>
+      <input type="checkbox" id="settingEnableMenWuZhang">
+    </div>
+    <div class="setting-row">
+      <label>音效</label>
+      <input type="checkbox" id="settingSound" checked>
+    </div>
+    <div class="setting-row">
+      <label>震动</label>
+      <input type="checkbox" id="settingVibration" checked>
+    </div>
+    <div class="settings-buttons">
+      <button class="btn-save" onclick="saveSettings()">保存</button>
+      <button class="btn-cancel" onclick="closeSettings()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function (err) {
+        console.warn('Service Worker 注册失败:', err);
+      });
+    });
+  }
+</script>
+<script src="game.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
