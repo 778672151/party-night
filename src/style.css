@@ -430,3 +430,31 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .hop-hero{padding:24px 16px}
 .hop-result{font-size:28px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
   animation:qpop .5s var(--spring) both}
+
+/* ===== 扫雷（合作双人）===== */
+.mn-turn{display:flex;flex-direction:column;align-items:center;gap:2px;margin:2px 0 10px;font-size:14px;color:var(--ink2);
+  padding:10px;border-radius:var(--r2);background:var(--card2);border:2px dashed var(--line)}
+.mn-turn b{font-size:16px;color:var(--ink)}
+.mn-turn.mine{background:linear-gradient(160deg,#fff0f6,#ffe3ef);border-color:var(--acc);border-style:solid;
+  animation:qpop .34s var(--spring) both}
+.mn-turn.mine b{color:#d1578f}
+.mn-hud{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px}
+.mn-stat{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:var(--ink);
+  background:var(--card);border:2.5px solid var(--stroke);border-radius:999px;padding:4px 11px;box-shadow:var(--soft)}
+.mn-stat i{font-style:normal}
+.mn-modes{display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+.mn-board{display:grid;grid-template-columns:repeat(var(--cols,9),1fr);gap:4px;
+  max-width:clamp(240px,calc(100vh - 430px),430px);margin:0 auto;padding:10px;border-radius:var(--r);
+  background:var(--card);border:2.5px solid var(--stroke);box-shadow:var(--soft);touch-action:manipulation}
+.mn-cell{aspect-ratio:1/1;border-radius:7px;border:2px solid rgba(107,85,136,.28);background:linear-gradient(160deg,#fff,#ffe9f3);
+  font-size:clamp(11px,3.4vw,17px);font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
+  padding:0;cursor:pointer;transition:transform .1s var(--spring);user-select:none;-webkit-user-select:none}
+.mn-cell:active{transform:scale(.9)}
+.mn-hid{box-shadow:0 2px 0 rgba(107,85,136,.22)}
+.mn-open{background:var(--card2);border-color:var(--line);box-shadow:none}
+.mn-flag{background:linear-gradient(160deg,#fff4d9,#ffe9b8);border-color:var(--yellow)}
+.mn-boom{background:linear-gradient(160deg,#ffd9df,#ffc2cc);border-color:var(--bad);animation:qdone .5s var(--spring)}
+.mn-last{outline:3px solid var(--acc2);outline-offset:-1px;animation:qpop .3s var(--spring) both}
+.mn-hero{padding:24px 16px}
+.mn-result{font-size:25px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
+  animation:qpop .5s var(--spring) both}

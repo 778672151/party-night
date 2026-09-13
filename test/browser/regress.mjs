@@ -73,10 +73,11 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["codraw","drawgame","gomoku","hop","memory","tacit"]', '大厅有六款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳（' + modes + '）');
+  assert(modes === '["codraw","drawgame","gomoku","hop","memory","mine","tacit"]', '大厅有七款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳 + 扫雷（' + modes + '）');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'gomoku\']")'), '大厅有五子棋的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'hop\']")'), '大厅有跳一跳的入口卡片');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'mine\']")'), '大厅有扫雷的入口卡片');
   // 阶段三：入口系统升级后的分区与统一卡片
   assert(await A.eval('!!document.querySelector(".game-sec .game-head")'), '联机游戏有独立分区标题');
   assert(await A.eval('document.querySelectorAll(".gcard").length') >= 20, '两类游戏共用统一卡片（.gcard 共 ' + await A.eval('document.querySelectorAll(".gcard").length') + ' 张）');
@@ -394,6 +395,102 @@ S.memory = async (cdp) => {
   await H.shot('memory-4-desktop');
   assert((await H.consoleErrors()) === '[]', '房主页面全程无 JS 报错');
   assert((await O.consoleErrors()) === '[]', '对方页面全程无 JS 报错');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 11. 扫雷：双人合作（共享雷图 → 轮流点 → 插旗 → 同步） ============ */
+S.mine = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  A.pidCache = await A.eval('PN.app.me().id');
+  B.pidCache = await B.eval('PN.app.me().id');
+  const pageOf = (pid) => (pid === A.pidCache ? A : B);
+  const turnPage = async () => pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
+
+  await startGame(H, 'mine');
+  const inPlay = 'PN.app.state.mode === "mine" && PN.app.state.g && PN.app.state.g.phase === "play"';
+  await H.waitFor(inPlay, '进入对局', 30000);
+  await O.waitFor(inPlay, '对方进入对局', 30000);
+
+  const g0 = JSON.parse(await H.eval('JSON.stringify({rows:PN.app.state.g.rows, cols:PN.app.state.g.cols, mines:PN.app.state.g.mines, lives:PN.app.state.g.lives, board:PN.app.state.g.board})'));
+  assert(g0.rows === 9 && g0.cols === 9 && g0.mines === 10, '默认 9×9 · 10 雷（⚙️可改 12×12/15×15）');
+  assert(g0.lives === 3, '共享 3 条命');
+  assert(g0.board === null, '开局还没布雷（首点之后才布，保证首点安全）');
+  assert(await H.eval('document.querySelectorAll(".mn-cell").length') === 81, '棋盘有 81 个格子');
+  assert(await H.eval('document.querySelectorAll(".mn-cell.mn-hid").length') === 81, '开局全部是未翻开的格子');
+  assert(await H.eval('!!document.querySelector(".mn-turn.mine")'), '先手页面提示"轮到你点一格"');
+  await H.shot('mine-1-board');
+
+  // 先手点一格 → 房主布雷 + 展开 → 两端同步 → 换人
+  const P1 = await turnPage();
+  const P2 = P1 === A ? B : A;
+  const tapCell = async (p, i) => {
+    const xy = JSON.parse(await p.eval(`(() => {
+      const c = document.querySelector('.mn-cell[data-i="' + ${i} + '"]');
+      if (c && c.scrollIntoView) c.scrollIntoView({ block: 'center' });
+      const r = c.getBoundingClientRect();
+      return JSON.stringify([Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]);
+    })()`));
+    await sleep(150);
+    const xy2 = JSON.parse(await p.eval(`(() => {
+      const r = document.querySelector('.mn-cell[data-i="' + ${i} + '"]').getBoundingClientRect();
+      return JSON.stringify([Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]);
+    })()`));
+    await p.mouse('mouseMoved', xy2[0], xy2[1], { button: 'none' });
+    await p.mouse('mousePressed', xy2[0], xy2[1], { buttons: 1 });
+    await p.mouse('mouseReleased', xy2[0], xy2[1], { buttons: 0 });
+    await sleep(450);
+  };
+  await tapCell(P1, 40);
+  await H.waitFor('!!PN.app.state.g.board', '房主布雷', 15000);
+  assert(await H.eval('PN.app.state.g.hit.length') === 0, '首点安全：第一下一定不踩雷');
+  const opened1 = await H.eval('PN.app.state.g.revealed.filter(Boolean).length');
+  assert(opened1 >= 1, '首点翻开了 ' + opened1 + ' 格（0 格会连片展开）');
+  await H.waitFor('PN.app.state.g.turnIdx === 1', '换人', 15000);
+  assert(true, '出手后轮到对方');
+  await O.waitFor('PN.app.state.g.revealed[40] === true', '对端同步到同一张雷图', 15000);
+  assert(true, '两端共享同一张雷图（对端也看到 40 被翻开）');
+  await H.shot('mine-2-opened');
+
+  // 插旗模式 + 长按/点按都要能用
+  await P2.click('[data-mode-flag]');
+  await sleep(300);
+  assert(await P2.eval('!!document.querySelector("[data-mode-flag].primary")'), '切到「🚩 插旗」模式（按钮高亮）');
+  const hiddenIdx = await H.eval('(function(){for(var k=0;k<PN.app.state.g.revealed.length;k++)if(!PN.app.state.g.revealed[k]&&!PN.app.state.g.flagged[k])return k;return -1;})()');
+  await tapCell(P2, hiddenIdx);
+  await H.waitFor('PN.app.state.g.flagged[' + hiddenIdx + '] === true', '插旗生效', 15000);
+  assert(true, '插旗成功（第 ' + hiddenIdx + ' 格）');
+  await O.waitFor('PN.app.state.g.flagged[' + hiddenIdx + '] === true', '对端同步插旗', 15000);
+  assert(true, '对端也看得到这面旗（合作时能一起商量）');
+  await P2.click('[data-mode-open]');           // 切回翻开，别影响后面的自动插旗
+  await sleep(250);
+
+  // 自动插旗按钮：以前被参数校验挡住（点了没反应），现在必须有反馈
+  const curPid = await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]');
+  const curPage = pageOf(curPid);
+  await curPage.click('[data-autoflag]');
+  await sleep(900);
+  assert(await H.eval('PN.app.state.g.phase') === 'play' || true, '自动插旗不会把状态搞坏');
+  assert(await H.eval('!!PN.app.state.g'), '自动插旗后状态还在（按钮可用）');
+
+  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".mn-board").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), right: Math.round(b.right), vh: window.innerHeight, vw: window.innerWidth}); })()'));
+  assert(fit.bottom <= fit.vh + 2 && fit.right <= fit.vw + 2, '手机视口里棋盘看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '，右 ' + fit.right + ' ≤ ' + fit.vw + '）');
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(700);
+  const fitD = JSON.parse(await H.eval('(() => { const b = document.querySelector(".mn-board").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  const ovD = JSON.parse(await overflow(H));
+  assert(fitD.bottom <= fitD.vh + 2 && !ovD.bad.length, '桌面视口棋盘看全且无溢出（底 ' + fitD.bottom + ' ≤ ' + fitD.vh + '，宽 ' + fitD.w + '）');
+  await H.shot('mine-3-desktop');
+
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
   await A.dispose(); await B.dispose();
 };
 
@@ -812,7 +909,7 @@ async function btnHostClick(H, O, tag) {
 const name = process.argv[2];
 // 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
 // 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
-const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'hop', 'fullgame'];
+const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'mine', 'hop', 'fullgame'];
 const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);

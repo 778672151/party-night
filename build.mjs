@@ -24,6 +24,7 @@ const scripts = [
   'src/screens-codraw.js',
   'src/screens-gomoku.js',
   'src/screens-hop.js',
+  'src/screens-mine.js',
   'src/ui.js',
   'src/app.js',
 ];

@@ -561,7 +561,10 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'hop') {
+    if (mode === 'mine') {
+      rows.push(seg('难度', 'level', [[1, '9×9 · 10 雷'], [2, '12×12 · 24 雷'], [3, '15×15 · 40 雷']]));
+      rows.push(seg('团队命数', 'lives', [[1, '1 条'], [3, '3 条'], [5, '5 条']]));
+    } else if (mode === 'hop') {
       rows.push(seg('轮数', 'rounds', [[1, '1 轮'], [2, '2 轮'], [3, '3 轮'], [5, '5 轮']]));
       rows.push(seg('每人命数', 'lives', [[1, '1 条命'], [3, '3 条命'], [5, '5 条命']]));
     } else if (mode === 'gomoku') {
