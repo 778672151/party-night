@@ -10,14 +10,11 @@ const read = (p) => readFileSync(join(root, p), 'utf8');
 export function loadPN() {
   globalThis.window = globalThis.window || {};
   globalThis.window.__PN_BANKS__ = {
-    undercover: JSON.parse(read('data/undercover.json')),
-    wavelength: JSON.parse(read('data/wavelength.json')),
-    mostlikely: JSON.parse(read('data/mostlikely.json')),
     draw: JSON.parse(read('data/draw.json')),
   };
   globalThis.PN = { games: {}, pick: {}, Banks: {} };
   const core = ['src/data.js', 'src/crypto.js', 'src/mqtt.js', 'src/wire.js', 'src/room.js', 'src/host.js',
-    'src/games/drawgame.js', 'src/games/mostlikely.js', 'src/games/undercover.js', 'src/games/wavelength.js'];
+    'src/games/drawgame.js'];
   for (const p of core) eval(read(p));
   return globalThis.PN;
 }

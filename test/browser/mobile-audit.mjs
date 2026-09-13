@@ -73,47 +73,12 @@ for (const [w, h, label] of SIZES) {
   await check(A, '大厅');
   await A.shot('mobile-' + label + '-2-lobby');
   // 展开设置面板（12 个按钮最容易挤爆）
-  await A.eval('PN.app._cfgOpen = {undercover:true}; PN.app.render()');
+  await A.eval('PN.app._cfgOpen = {drawgame:true}; PN.app.render()');
   await sleep(500);
   await check(A, '大厅-设置展开');
   await A.shot('mobile-' + label + '-3-lobby-cfg');
   await A.eval('PN.app._cfgOpen = {}; PN.app.render()');
   await sleep(300);
-
-  // 谁是卧底
-  await startGame(A, 'undercover');
-  await check(A, '卧底-setup');
-  await clickUntil(A, '[data-go]', 'PN.app.state.g.phase === "describe"', '发词完成');
-  await check(A, '卧底-describe');
-  await A.shot('mobile-' + label + '-4-uc-describe');
-  const ids = {}; for (const p of pages) ids[await p.eval('PN.app.room.me.id')] = p;
-  for (const id of Object.keys(ids)) { await ids[id].eval('PN.app.send({t:"desc",text:"这是一个稍微长一点的描述文本，看看会不会把布局挤坏"})'); await sleep(250); }
-  await A.waitFor('PN.app.state.g.phase === "vote"', '进入投票');
-  await sleep(500);
-  await check(A, '卧底-vote(人头按钮×3)');
-  await A.shot('mobile-' + label + '-5-uc-vote');
-  await A.eval('PN.app.send({t:"lobby"})'); await A.waitFor('PN.app.state.mode === "lobby"', '回大厅'); await sleep(600);
-
-  // 波长
-  await startGame(A, 'wavelength');
-  await A.waitFor('PN.app.state.g.curPhase === "clue"', '线索');
-  await sleep(400);
-  await check(A, '波长-clue');
-  const psychic = await A.eval('PN.app.state.g.cur');
-  await ids[psychic].eval('PN.app.send({t:"clue",text:"偏左一点点"})');
-  await A.waitFor('PN.app.state.g.curPhase === "guess"', '猜位置');
-  await sleep(500);
-  await check(A, '波长-guess');
-  await A.shot('mobile-' + label + '-6-wave-guess');
-  await A.eval('PN.app.send({t:"lobby"})'); await A.waitFor('PN.app.state.mode === "lobby"', '回大厅'); await sleep(600);
-
-  // 谁最有可能
-  await startGame(A, 'mostlikely');
-  await A.waitFor('PN.app.state.phase === "vote"', '投票');
-  await sleep(500);
-  await check(A, '谁最可能-vote');
-  await A.shot('mobile-' + label + '-7-ml-vote');
-  await A.eval('PN.app.send({t:"lobby"})'); await A.waitFor('PN.app.state.mode === "lobby"', '回大厅'); await sleep(600);
 
   // 你画我猜（工具条 + 双栏最容易挤爆）
   await startGame(A, 'drawgame');

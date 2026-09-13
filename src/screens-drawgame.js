@@ -175,6 +175,30 @@
     }
   }
 
+  /** 应用房主发来的回放（刷新 / 中途加入）：按 i0 落位后重绘。
+   *  注意：回放常常比界面切到游戏屏更早到达，那时屏幕还没挂载、onPrivate 收不到，
+   *  所以 render() 也要兜一次 —— 否则刷新回来看到的是白板。 */
+  function applyReplay(obj) {
+    if (!obj || !obj.replay || !obj.replay.length) return false;
+    local.strokes = []; local.byId = {}; local.curId = null;
+    for (var i = 0; i < obj.replay.length; i++) {
+      var ch = obj.replay[i];
+      if (!ch || !ch.s) continue;
+      var st = local.byId[ch.id];
+      if (!st) { st = addStroke(ch.id, ch.color, ch.w, ch.r); st.pts = []; }
+      // 按 i0 落位：房主存的块可能是补发补进去的、顺序不保证，按位合并才稳
+      for (var k = 0; k < ch.s.length; k++) st.pts[(ch.i0 || 0) + k] = ch.s[k];
+    }
+    for (var j = 0; j < local.strokes.length; j++) {
+      var s2 = local.strokes[j];
+      var dense = [];                      // 稀疏数组要压紧，画布只认连续点
+      for (var q = 0; q < s2.pts.length; q++) if (s2.pts[q] !== undefined) dense.push(s2.pts[q]);
+      s2.pts = dense;
+    }
+    redrawAll();
+    return true;
+  }
+
   function dropStroke(id) {
     delete local.byId[id];
     local.strokes = local.strokes.filter(function (s) { return s.id !== id; });
@@ -413,6 +437,9 @@
       // 这里只量尺寸就够了：画布节点是复用的，位图还在，无需每次状态消息都整幅重绘
       // （笔画最多 900 段，聊天每来一条就全量重绘会明显卡）。真需要重绘时 sizeCanvas() 会自己做。
       sizeCanvas();
+      // 刷新 / 中途加入：回放常常在界面切到游戏屏之前就到了（那时屏幕还没挂载、收不到 onPrivate），
+      // 这里兜一次，否则刷新回来看到的是一片白板。
+      if (secret && secret.replay && !local.strokes.length) applyReplay(secret);
 
       /* ---------- 画家工具条 ---------- */
       if (iAmPainter && phase === 'draw') {
@@ -558,24 +585,7 @@
     onPrivate: function (obj) {
       if (!obj) return;
       if (obj.answer) local.myWord = obj.answer;
-      if (obj.replay && obj.replay.length) {
-        local.strokes = []; local.byId = {}; local.curId = null;
-        for (var i = 0; i < obj.replay.length; i++) {
-          var ch = obj.replay[i];
-          if (!ch || !ch.s) continue;
-          var st = local.byId[ch.id];
-          if (!st) { st = addStroke(ch.id, ch.color, ch.w, ch.r); st.pts = []; }
-          // 按 i0 落位：房主存的块可能是补发补进去的、顺序不保证，按位合并才稳
-          for (var k = 0; k < ch.s.length; k++) st.pts[(ch.i0 || 0) + k] = ch.s[k];
-        }
-        for (var j = 0; j < local.strokes.length; j++) {
-          var s2 = local.strokes[j];
-          var dense = [];                      // 稀疏数组要压紧，画布只认连续点
-          for (var q = 0; q < s2.pts.length; q++) if (s2.pts[q] !== undefined) dense.push(s2.pts[q]);
-          s2.pts = dense;
-        }
-        redrawAll();
-      }
+      applyReplay(obj);
     }
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -163,10 +163,10 @@
     var self = this;
     var code = this.room ? this.room.code : '';
     var dot = this.conn === 'connected' ? 'ok' : 'warn';
-    var title = '群友派对之夜';
+    var title = '两个人的游戏厅';
     var bar = this.h(
       '<div class="topbar">' +
-      '<span class="logo">🎉</span><span class="title">' + title + '</span>' +
+      '<span class="logo">🧸</span><span class="title">' + title + '</span>' +
       '<span class="spacer"></span>' +
       '<span class="chip"><span class="dot ' + dot + '"></span>' + (this.conn === 'connected' ? '在线' : '重连中…') + '</span>' +
       (code ? '<button class="chip" id="pn-copycode"><b>' + code + '</b></button>' : '') +
@@ -181,14 +181,14 @@
   };
   UI.prototype.copyLink = function () {
     var link = this.link(), self = this;
-    var done = function () { self.toast('链接已复制，甩给群友！', 'good'); };
+    var done = function () { self.toast('链接已复制，发给对方吧～', 'good'); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(link).then(done).catch(function () { prompt('复制链接（长按复制）', link); });
     } else prompt('复制链接', link);
   };
   UI.prototype.share = function () {
     var link = this.link();
-    if (navigator.share) navigator.share({ title: '群友派对之夜', text: '点进来一起玩：房号 ' + (this.room ? this.room.code : ''), url: link }).catch(function () {});
+    if (navigator.share) navigator.share({ title: '两个人的游戏厅', text: '点进来一起玩：房号 ' + (this.room ? this.room.code : ''), url: link }).catch(function () {});
     else this.copyLink();
   };
 
@@ -196,7 +196,7 @@
   UI.prototype.renderWaiting = function (text) {
     this.clear();
     this.root.appendChild(this.h(
-      '<div class="land"><div class="biglogo">🎉</div><h1>群友派对之夜</h1>' +
+      '<div class="land"><div class="biglogo">🧸</div><h1>两个人的游戏厅</h1>' +
       '<div class="sub">' + PN.esc(text) + '</div></div>'
     ));
   };
@@ -207,9 +207,9 @@
     this.clear();
     this.root.appendChild(this.h(
       '<div class="land">' +
-      '<div class="biglogo">🎉</div>' +
-      '<h1>群友派对之夜</h1>' +
-      '<div class="sub">零服务器 · 打开链接即联机 · 谁是卧底 / 波长 / 谁最有可能 / 你画我猜</div>' +
+      '<div class="biglogo">🧸</div>' +
+      '<h1>两个人的游戏厅</h1>' +
+      '<div class="sub">双人联机 · 零服务器 · 打开链接就能一起玩 · 你画我猜</div>' +
       '<div class="field"><label>你的昵称</label><input id="pn-name" maxlength="12" placeholder="如：奶茶三分糖"></div>' +
       '<div class="field"><label>选个头像</label><div class="emoji-row" id="pn-emojis"></div></div>' +
       '<div class="grid2" style="max-width:340px;margin:0 auto">' +
@@ -233,7 +233,7 @@
       emoBox.appendChild(b);
     });
     var enter = function (join) {
-      var name = nameInput.value.trim() || '神秘群友';
+      var name = nameInput.value.trim() || '神秘朋友';
       self.local('name', name);
       self.local('emoji', curEmoji);
       self.begin(name, curEmoji, join);
@@ -358,10 +358,27 @@
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       var ctx = this._ac || (this._ac = new AC());
+      if (ctx.state === 'suspended') ctx.resume();
       var o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
-      if (kind === 'win') { o.frequency.value = 880; g.gain.value = 0.08; o.start(); o.stop(ctx.currentTime + 0.18); }
-      else { o.frequency.value = 523; g.gain.value = 0.06; o.start(); o.stop(ctx.currentTime + 0.12); }
+      var t0 = ctx.currentTime;
+      // 可爱的音色：三角波/正弦 + 指数包络（「啵」的弹性来自快速上滑 + 干脆收尾）
+      if (kind === 'win') {
+        o.type = 'triangle';
+        [523.25, 659.25, 783.99].forEach(function (f, i) { o.frequency.setValueAtTime(f, t0 + i * 0.09); });
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.16, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.34);
+        o.start(t0); o.stop(t0 + 0.36);
+      } else {
+        o.type = 'sine';
+        o.frequency.setValueAtTime(420, t0);
+        o.frequency.exponentialRampToValueAtTime(900, t0 + 0.07);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+        o.start(t0); o.stop(t0 + 0.18);
+      }
     } catch (e) {}
   };
 
@@ -409,14 +426,14 @@
     wrap.appendChild(this.h(
       '<div>' + // 必须包一层：h() 只保留第一个顶层元素
       '<div class="roomcode card row">' +
-      '<div><div class="muted" style="font-size:11px">房号（复制发给群友）</div><div class="code">' + this.room.code + '</div></div>' +
+      '<div><div class="muted" style="font-size:11px">房号（发给对方）</div><div class="code">' + this.room.code + '</div></div>' +
       '<div style="flex:1"></div>' +
       '<button class="btn sm" id="pn-copy">📋 复制链接</button>' +
       '<button class="btn sm" id="pn-share">📤</button>' +
       '</div>' +
-      (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到群友了。</div></div>' : '') +
-      '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的群友（' + (s.players || []).length + '）</div>' +
-      '<div class="players">' + (playersHtml || '<div class="muted">还没人，快拉人！</div>') + '</div></div>' +
+      (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到对方了。</div></div>' : '') +
+      '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的人（' + (s.players || []).length + '）</div>' +
+      '<div class="players">' + (playersHtml || '<div class="muted">还差一个人，把对方叫进来吧～</div>') + '</div></div>' +
       '<div class="modegrid">' + modes.join('') + '</div>' +
       '<div class="row mt16" style="justify-content:center;gap:8px">' +
       '<button class="btn ghost sm" id="pn-edit">✏️ 改昵称</button>' +
@@ -466,17 +483,7 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'undercover') {
-      rows.push(seg('卧底人数', 'numUnder', [[1, '1 个'], [2, '2 个']]));
-      rows.push(seg('加白板', 'blank', [[false, '关'], [true, '开']]));
-      rows.push(seg('描述方式', 'textMode', [[true, '打字'], [false, '开口说']]));
-      rows.push(seg('每轮时长', 'roundSec', [[90, '90s'], [180, '180s'], [300, '300s']]));
-    } else if (mode === 'wavelength') {
-      rows.push(seg('总局数', 'rounds', [[4, '4'], [6, '6'], [8, '8'], [10, '10']]));
-    } else if (mode === 'mostlikely') {
-      rows.push(seg('总题数', 'rounds', [[6, '6'], [8, '8'], [10, '10'], [12, '12']]));
-      rows.push(seg('每题时长', 'eachSec', [[20, '20s'], [30, '30s'], [45, '45s']]));
-    } else if (mode === 'drawgame') {
+    if (mode === 'drawgame') {
       rows.push(seg('总回合', 'rounds', [[3, '3'], [6, '6'], [9, '9']]));
       rows.push(seg('画画时长', 'drawSec', [[60, '60s'], [90, '90s'], [120, '120s']]));
     }

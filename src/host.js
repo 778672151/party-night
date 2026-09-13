@@ -1,7 +1,7 @@
 /* ===== 房主权威状态机：公共 reducer + 计时器 + 私密下发 =====
  * state 结构：
  * {
- *   v: 3, mode: 'lobby'|'undercover'|'wavelength'|'mostlikely'|'drawgame',
+ *   v: 3, mode: 'lobby'|'drawgame',
  *   phase: 'lobby'|'wait'|'setup'|'round'|'over'|...（游戏自定义）,
  *   players: [{id,name,emoji,score,streak,host,online}],
  *   settings: { maxPlayers, language, ...mode 配置 },
@@ -97,7 +97,7 @@
     }
     if (action.t === 'lobby') { this.goLobby(); return; }
     if (action.t === 'settings') {
-      // 设置是分模式存的（settings.undercover.blank 这种）。这里以前直接写成 settings[k]，
+      // 设置是分模式存的（settings.drawgame.drawSec 这种）。这里以前直接写成 settings[k]，
       // 而游戏读的全是 settings.<模式>.<键> —— 于是大厅里所有设置项（卧底人数/白板/描述方式/
       // 每轮时长、波长局数、谁最可能题数/时长、画猜回合数/时长）统统不生效。
       var smode = action.mode || (this.state.mode !== 'lobby' ? this.state.mode : null);
@@ -135,9 +135,6 @@
       players: [],
       settings: {
         roomName: '',
-        undercover: { numUnder: 1, blank: false, textMode: true, roundSec: 180 },
-        wavelength: { rounds: 6 },
-        mostlikely: { rounds: 8, eachSec: 30 },
         drawgame: { rounds: 6, drawSec: 90, roundsPerSet: 3 }
       },
       log: [],

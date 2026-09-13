@@ -1,89 +1,93 @@
-# 群友派对之夜 🎉
+# 两个人的游戏厅 🧸
 
-单文件网页派对游戏合集，**零服务器**联机。把 `dist/party-night.html` 放到任何能打开网页的地方，群里发个链接，2–12 人立刻开玩。
+**双人联机 · 零服务器 · 单文件网页小游戏**。两个人各自打开链接、进同一个房间，一个画一个猜。
+马卡龙配色的二次元 Q 弹可爱风，手机上直接玩。
 
-🎮 **在线直接玩：<https://778672151.github.io/party-night/>**（GitHub Pages，永久链接，手机浏览器直接点开）
+🎮 **在线直接玩：<https://778672151.github.io/party-night/>**（GitHub Pages，永久链接）
 
-## 四个游戏
+## 玩法：你画我猜（双人）
 
-| 游戏 | 人数 | 一句话玩法 |
-| --- | --- | --- |
-| 🕵️ 谁是卧底 | 3–12 | 平民拿到同一个词，卧底拿到近似词，轮流描述后投票放逐 |
-| 🌊 心有灵犀（波长） | 3–12 | 通灵者知道 0–100 的目标值，只能用一句话提示，大家盲猜 |
-| 🎯 谁最有可能 | 3–12 | 每轮一个问题，全体投票给「最有可能的那个人」 |
-| 🎨 你画我猜 | 2–12 | 画家三选一，边画边被抢答，画笔实时同步、中途加入自动回放 |
+1. 一方打开页面 → 填昵称、选头像 → **开个房**，拿到 4 位房号（例如 \`K7Q2\`）
+2. 点右上角 **📤 分享**（或 📋 复制链接），把 \`.../#K7Q2\` 发给对方
+3. 对方点开 → 填昵称 → **加入房间**
+4. 房主点 **开始**：画家三选一 → 作画；猜的人打字抢答，猜中有分
+5. 一局 6 回合（可在 ⚙️ 里改回合数与单回合时长），两人轮流当画家；可以随时回大厅重开
 
-## 怎么玩（联机）
+- 画笔实时同步：一笔一笔地传，中途掉线/刷新会自动补齐
+- 猜到「差一点」会给橙色提示；全员猜中会提前揭晓
+- 房主掉线会自动选出新房主，对局不中断
 
-1. 房主打开页面 → 建房 → 得到 4 位房号（例如 `K7Q2`）
-2. 点右上角 📤 分享，复制形如 `.../party-night.html#K7Q2` 的链接，甩到群里
-3. 群友点链接 → 自动进房（人到了房主那边会立刻出现）
-4. 房主选游戏 → 开始；房主掉线会自动选出新房主，游戏不中断
-
-手机建议用浏览器直接打开链接；微信/QQ 内置浏览器也能玩。
+> 只做两个人和一个玩法，是有意的：内容少一点，每处手感都做好。
 
 ## 为什么不用服务器
 
-- **公共 MQTT broker 中转**：`wss://broker.emqx.io:8084/mqtt` 为主，`wss://broker.hivemq.com:8884/mqtt` 自动兜底，连不上就换。协议是手写的 MQTT 3.1.1 over WebSocket，没有任何依赖。
-- **房主即权威**：所有游戏状态只由房主计算，用 retained 消息广播，其他人只负责渲染；晚到的人一进房就拿到当前状态。
-- **房号即房间**：话题前缀 `pn3/{房号}/...`，不同群互不干扰。
-- **私密消息真加密**：谁是卧底的角色、波长的目标值、你画我猜的候选词，都走 ECDH P-256 协商 + AES-GCM 点对点加密，房主也看不到别人的秘密。`file://` 下浏览器不给 `crypto.subtle`，会自动降级为混淆（能玩，别用来赌钱）。
-- **公共 broker 只保证「尽力送达」**（QoS 0，忙时会丢包）：关键消息带应用层 ACK + 重传 + 去重，状态用 retained 自愈，重连后自动补齐。这是实测出来的——见下文测试。
+- **公共 MQTT broker 中转**：\`wss://broker.emqx.io:8084/mqtt\` 为主，\`wss://broker.hivemq.com:8884/mqtt\` 自动兜底。协议是手写的 MQTT 3.1.1 over WebSocket，**零依赖**。
+- **房主即权威**：所有状态只由房主计算，用 retained 消息广播，其他人只渲染；晚到/刷新的人一进房就拿到当前状态。
+- **房号即房间**：话题前缀 \`pn3/{房号}/...\`。
+- **私密消息真加密**：画家的候选词与答案走 ECDH P-256 协商 + AES-GCM 点对点加密，不走广播。
+- **画笔走专门的墨迹通道**（\`src/wire.js\`）：每块带「本块首点在整笔中的下标」，接收端按位落位 —— 公共 broker 是 QoS0 会丢包，丢块能靠**缺号自动补发 + 周期性自愈**补齐，而不是在画面上留一道断口。实测：人为每 3 块丢 1 块，对端墨迹 4366 vs 画家 4371（99.9%）。
 
-## 直接玩 / 本地跑
+## 本地跑 / 构建 / 部署
 
-- 双击 `dist/party-night.html` 就能玩（`file://` 可用，加密降级）
-- 或者起个静态服务：`python3 -m http.server 8080` 然后开 http://localhost:8080/dist/party-night.html
+    # 直接打开（file:// 也能玩，但浏览器不给 crypto.subtle，私密消息会降级为混淆）
+    xdg-open dist/party-night.html
 
-## 部署成固定公网链接
+    # 或者起个静态服务（推荐：有真加密）
+    python3 -m http.server 8080        # 然后开 http://localhost:8080/dist/party-night.html
 
-只有一个文件，任何静态托管都行：
+    # 改完源码重新打包成单文件（内联 CSS/JS/词库）
+    node build.mjs                     # → dist/party-night.html
+    cp dist/party-night.html index.html   # GitHub Pages 要的是根目录 index.html
 
-- **Cloudflare Pages / Netlify / Vercel**：把 `dist/party-night.html` 改名 `index.html`，拖进控制台即可
-- **GitHub Pages**：推一个仓库、开启 Pages（本仓库即如此，见顶部在线地址）
-- **临时应急**：`ssh -R 80:localhost:8080 localhost.run`（免注册，链接随进程存活）
+只有一个文件，任何静态托管都行：Cloudflare Pages / Netlify / Vercel 拖进去即可；GitHub Pages 就是本仓库的做法。
 
-注意：**必须用 https 或 localhost 打开**才有 `crypto.subtle`（端到端加密）；http 下会降级。
+> 必须用 **https 或 localhost** 打开才有 \`crypto.subtle\`（真加密）；http 会降级。
 
-## 构建与测试
+## 测试
 
-```bash
-node build.mjs                      # src/* → dist/party-night.html（内联 CSS/JS/词库）
-node test/mqtt-smoke.mjs            # broker 连通性
-node test/mostlikely-test.mjs       # 谁最有可能：逻辑
-node test/integration-undercover.mjs # 谁是卧底：真实 broker 四人一局
-node test/integration-wavelength.mjs # 波长：真实 broker 一回合
-node test/integration-drawgame.mjs   # 你画我猜：真实 broker 一轮（含中途加入回放）
-node test/regress-fixes.mjs         # 回归：答案泄露/设置失效/房主迁移/掉线丢分/挂机死局（零依赖）
-ln -sfn /tmp/pnt/node_modules node_modules && node test/regress-drawgame-screen.mjs; rm -f node_modules
-                                    # 画布/DOM 竞态回归（需要 jsdom，没装会 SKIP）
-```
+零依赖的 Node 用例（直接跑）：
 
-集成测试是**真的**连公共 broker、真的四五个客户端互相通信：房主 + 三个玩家各自独立连接，私密消息、动作、状态广播全部走真实网络。
+    node test/wire-test.mjs               # 墨迹通道：信封/按位落位/缺号检测/补发缓冲（16 项）
+    node test/regress-fixes.mjs           # 核心缺陷护栏：答案泄露 / 设置失效 / 房主迁移 / 掉线丢分 / 挂机兜底（18 项）
+    node test/integration-drawgame.mjs    # 真实 broker 跑完整一局（选词→作画→猜中→揭晓→回放→换轮）
+    node test/mqtt-smoke.mjs              # broker 连通性
+    ln -sfn /tmp/pnt/node_modules node_modules && node test/regress-drawgame-screen.mjs; rm -f node_modules
+                                          # 画布/DOM 竞态回归（需要 jsdom；没装会 SKIP 并退出 0）
 
-`test/regress-fixes.mjs` 把每个已修缺陷都钉住：**把 src 改回旧代码，它是 3 通过 / 11 失败**（退出码非 0），当前代码 21 通过 / 0 失败。
+真浏览器端到端（Windows Edge + CDP，多个浏览器上下文 = 两个玩家；用法见 \`test/browser/README.md\`）：
 
-`test/browser/` 是**真浏览器**回归套件（Windows Edge + CDP，多浏览器上下文 = 多玩家），
-专测 jsdom 测不出来的东西：落笔中途来状态消息不许断笔、拖滑杆不许被打断、
-打了一半的描述不许被清空、房主掉线换主后这局还能不能打完。用法见 `test/browser/README.md`。
+    node test/browser/regress.mjs         # lobby / fullgame / rejoin / migration 四组
+    node test/browser/regress-stroke.mjs  # 画笔专项：慢画快画、丢包注入、掩码、不许出现「起点连终点」
+    node test/browser/mobile-audit.mjs    # 各手机视口下不许横向溢出
+    node test/browser/shots.mjs after     # 出图（落地页/大厅/选词/作画/揭晓）
 
-`test/harness.mjs` 是共用的建桌脚手架，`test/faketimers.mjs` 把手动泵送计时器交给测试，`test/proxy.mjs` 是 TLS 透传中继（排查「消息到底有没有发出去」用），`test/debug-*.mjs` 是各类复现脚本。
+当前实测结果：wire **16 通过 / 0 失败**、regress-fixes **18 / 0**、jsdom **32 / 0**、
+真 broker 一局 **PASS**、真浏览器四组 **全部通过**（含刷新后笔迹由回放补齐 2571 vs 2568）。
 
 ## 目录
 
-```
-src/
-  app.js          启动装配
-  ui.js           界面与路由（落地页/大厅/游戏/结算）
-  screens-*.js    各屏渲染
-  room.js         房间：MQTT 收发、心跳、选主、ACK 重传、私密通道
-  mqtt.js         手写 MQTT 3.1.1 over WebSocket
-  host.js         房主权威状态机
-  crypto.js       ECDH + AES-GCM（含降级）
-  games/          四个游戏（init/action/resume/onLeave）
-  data.js         词库装载与随机
-  style.css       样式
-index.template.html  构建模板（__CSS__/__BANKS__/__SCRIPTS__ 占位）
-build.mjs            打包成单文件
-data/*.json          词库（卧底 240 对 / 波长 141 条 / 谁最可能 185 题 / 画猜 300 词）
-```
+    src/
+      app.js                启动装配
+      ui.js                 界面与路由（落地页/大厅/游戏/结算）+ 音效
+      screens-common.js     游戏屏通用组件（头部/玩家宫格/计分板）
+      screens-drawgame.js   你画我猜：画布、猜词、回放
+      wire.js               墨迹通道：v4 信封 + 按位落位 + 缺号补发
+      room.js               房间：MQTT 收发、心跳、选主、ACK 重传、私密通道
+      mqtt.js               手写 MQTT 3.1.1 over WebSocket
+      host.js               房主权威状态机（dispatch 是唯一动作入口）
+      crypto.js             ECDH + AES-GCM（含降级）
+      games/drawgame.js     玩法逻辑：选词/回合/计分/迁移恢复
+      data.js               词库装载与随机
+      style.css             二次元 Q 弹可爱风样式
+    index.template.html     构建模板（__CSS__ / __BANKS__ / __SCRIPTS__ 占位）
+    build.mjs               打包成单个 HTML
+    data/draw.json          词库：300 个词，12 个分类（动作/场景/动物/成语/食物/网络/物品/运动/交通/自然/…）
+    test/                   零依赖用例 + 真浏览器套件
+
+## 已知限制
+
+- 依赖第三方免费公共 broker：偶尔会连到备用服务器而与对方「不在同一个房间」（大厅会提示刷新）。不适合正经比赛。
+- 两人都在同一浏览器（同一 localStorage）会导致身份相同；请用两台设备/两个浏览器。
+- 只支持文字猜词，没有语音；口述靠语音通话自己解决。
+- 历史：这个仓库原本是 4 个游戏 2–12 人的派对合集（谁是卧底 / 波长 / 谁最有可能 / 你画我猜），
+  已按「只留双人可玩的那一个」收敛为你画我猜；旧版本在 git 历史里。

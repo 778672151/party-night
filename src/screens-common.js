@@ -1,4 +1,4 @@
-/* ===== 游戏屏通用组件 + 谁最有可能屏幕 ===== */
+/* ===== 游戏屏通用组件（头部/玩家宫格/积分榜/结束按钮） ===== */
 (function (root) {
   'use strict';
   var PN = root.PN = root.PN || {};
@@ -92,63 +92,7 @@
     }, 500);
   }
 
-  /* ================= 谁最有可能 ================= */
   PN.screens = PN.screens || {};
-  PN.screens.mostlikely = {
-    name: 'mostlikely',
-    render: function (state, secret) {
-      var ui = this;
-      var C = PN.gameCommon;
-      var g = state.g || {};
-      var wrap = ui.el('div');
-      ui.renderTopbar(wrap);
-      var total = (g.settings && g.settings.rounds) || 8;
-      wrap.appendChild(ui.h(C.gameHeader(ui, state, '🎯 谁最有可能', state.phase === 'vote' ? '投票中' : (state.phase === 'reveal' ? '答案揭晓' : '本局结束'),
-        g.cur && g.cur.deadline ? C.deadlineChip(g.cur.deadline) : '<span class="pill">' + (g.round || 0) + '/' + total + '</span>')));
-
-      var body = ui.el('div');
-      if (state.phase === 'vote' && g.cur) {
-        body.appendChild(ui.h(
-          '<div class="card center"><div class="muted" style="margin-bottom:6px">谁最有可能——</div>' +
-          '<div style="font-size:21px;font-weight:800;line-height:1.4">' + esc(g.cur.q) + '</div>' +
-          '<div class="muted mt8">点人头投票 · 可改票 · 可投自己 · 截止自动开奖</div></div>'
-        ));
-        var votes = g.cur.votes || {};
-        var myVote = votes[ui.pid()];
-        var sel = {}; if (myVote) sel[myVote] = true;
-        var counts = {};
-        for (var vk in votes) if (Object.prototype.hasOwnProperty.call(votes, vk)) counts[votes[vk]] = (counts[votes[vk]] || 0) + 1;
-        body.appendChild(ui.h('<div class="card"><div class="muted" style="margin-bottom:10px">已投 ' + Object.keys(votes).length + ' 人（共 ' + state.players.filter(function (p) { return p.online; }).length + ' 在线）</div>' +
-          C.playerGrid(ui, state, { sel: sel, showVotes: counts }) + '</div>'));
-        body.querySelectorAll('[data-pick]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            ui.send({ t: 'vote', id: b.getAttribute('data-pick') });
-            b.classList.add('sel');
-          });
-        });
-      } else if (state.phase === 'reveal' && g.last) {
-        var winners = {};
-        (g.last.winners || []).forEach(function (w) { winners[w] = true; });
-        var maxV = g.last.maxVotes || 0;
-        body.appendChild(ui.h(
-          '<div class="card center"><div class="muted">公布答案</div>' +
-          '<div style="font-size:18px;font-weight:800;margin:8px 0">' + esc(g.last.q || '') + '</div>' +
-          (maxV > 0 ? '<div style="font-size:15px">最高 ' + maxV + ' 票 🎉</div>' : '<div class="muted">没人被投中，各自安好</div>') +
-          '</div>'
-        ));
-        body.appendChild(ui.h('<div class="card">' + C.playerGrid(ui, state, { sel: winners, showVotes: g.last.counts }) + '</div>'));
-        body.appendChild(ui.h('<div class="muted center mt8">3 秒后自动下一题…</div>'));
-      } else {
-        body.appendChild(ui.h(C.scoreboard(state, g.winner)));
-        var btns = ui.h(C.overButtons(ui, 'mostlikely'));
-        body.appendChild(btns);
-        wireOver(btns, ui);
-      }
-      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter()); // 进行中也能回大厅
-      wrap.appendChild(body);
-      return wrap;
-    }
-  };
 
   function wireOver(btns, ui) {
     btns.querySelectorAll('[data-over]').forEach(function (b) {

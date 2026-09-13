@@ -140,6 +140,11 @@ export class Page {
     } catch (e) { return null; }
   }
   async consoleErrors() { return this.eval('JSON.stringify(window.__pnErrors || [])'); }
+  /** 原地刷新（模拟按 F5 / 断线后重开）：localStorage 里的身份会留下来 */
+  async reload() {
+    await this.send('Page.reload', { ignoreCache: false }, this.sid);
+    await this.waitFor('document.readyState === "complete"', '页面刷新');
+  }
 }
 
 export async function newPage(cdp, url, { width = 420, height = 900, mobile = true, ctxId } = {}) {
