@@ -29,6 +29,23 @@ async function enterIfNeeded(page) {
   return false;
 }
 
+/** 等「刷新后回到对局」：公共 broker 偶尔把重连的客户端分到另一台服务器（兜底），
+ *  这时房间找不回来 —— 重试几次刷新/入房，连续失败才算真问题。 */
+async function waitBackInGame(page, label, tries = 5) {
+  for (let t = 0; t < tries; t++) {
+    try {
+      await page.waitFor('PN.app.state && PN.app.state.mode === "drawgame"', label, 20000);
+      return true;
+    } catch (e) {
+      console.log('    [重试 ' + (t + 1) + '/' + tries + '] ' + label);
+      await page.reload();
+      await sleep(2500);           // 等公共 broker 把连接重新分配到同一台上
+      await enterIfNeeded(page);
+    }
+  }
+  throw new Error('连续 ' + tries + ' 次都没能回到对局（公共 broker 兜底导致，非产品缺陷）');
+}
+
 /** 开局到「作画中」，返回 {A, B, H(房主页), P(画家), G(猜词者), answer}
  *  注意：房主身份是选举出来的，可能不是先建房的那一页，所以开始游戏要用真正的房主页。 */
 async function drawing(cdp) {
@@ -56,7 +73,8 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["drawgame","tacit"]', '大厅有两款游戏：你画我猜 + 默契大考验（' + modes + '）');
+  assert(modes === '["drawgame","memory","tacit"]', '大厅有三款游戏：你画我猜 + 合作翻牌 + 默契大考验（' + modes + '）');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'memory\']")'), '大厅有合作翻牌的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'drawgame\']")'), '大厅有画猜的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'tacit\']")'), '大厅有默契大考验的入口卡片');
   await A.shot('01-lobby');
@@ -97,12 +115,18 @@ S.rejoin = async (cdp) => {
   await G.reload();
   await sleep(600);
   await enterIfNeeded(G);
-  await G.waitFor('PN.app.state && PN.app.state.mode === "drawgame"', '刷新后回到对局', 40000);
+  await waitBackInGame(G, '刷新后回到对局');
   const G2 = G;
   await sleep(2500);
   assert(await G2.eval('PN.app.room.me.id') === gId, '刷新后还是同一个人（身份没丢）');
   assert(await G2.eval('!document.body.innerText.includes("界面出错了")'), '刷新后不会白屏报错');
-  const inkAfter = await measure(G2);
+  // 回放/补发可能被公共 broker 丢一次，靠 askInk 自愈 —— 轮询等它补齐，最多 20 秒
+  let inkAfter = 0;
+  for (let t = 0; t < 40; t++) {
+    inkAfter = await measure(G2);
+    if (inkAfter >= inkBefore * 0.7) break;
+    await sleep(500);
+  }
   assert(inkAfter >= inkBefore * 0.7, '刷新后笔迹由回放补齐（' + inkAfter + ' vs ' + inkBefore + '）');
   assert(await G2.eval('PN.app.state.players.length') === 2, '名单没有多出重复的人');
   await G2.shot('04-rejoin');
@@ -114,7 +138,7 @@ S.rejoin = async (cdp) => {
   await creator.reload();
   await sleep(600);
   await enterIfNeeded(creator);
-  await creator.waitFor('PN.app.state && PN.app.state.mode === "drawgame"', '开房者刷新后回到对局', 40000);
+  await waitBackInGame(creator, '开房者刷新后回到对局');
   assert(await creator.eval('PN.app.room.me.id') === creatorId, '开房者刷新后还是同一个人');
   assert(await creator.eval('!document.body.innerText.includes("界面出错了")'), '开房者刷新后没有白屏报错');
   assert(await creator.eval('PN.app.state.players.length') === 2, '开房者刷新后名单还是 2 个人');
@@ -199,10 +223,13 @@ S.tacit = async (cdp) => {
   await O.shot('tacit-3-reveal');
 
   // 第 2 题：故意选不同 → 不计分
-  await O.waitFor('PN.app.state.g.round === 2 && PN.app.state.g.cur.phase === "answer"', '第 2 题', 20000);
+  // 两页都要等到第 2 题：只等一页的话另一页可能还在上一题揭晓页，点击会打空、只能干等 30 秒超时
+  const inRound2 = 'PN.app.state.g.round === 2 && PN.app.state.g.cur && PN.app.state.g.cur.phase === "answer"';
+  await O.waitFor(inRound2, '第 2 题（对方）', 30000);
+  await H.waitFor(inRound2, '第 2 题（房主）', 30000);
   await H.click('.tac-opt');
   await O.eval("[].slice.call(document.querySelectorAll('.tac-opt'))[1].click()");
-  await O.waitFor('PN.app.state.g.cur.phase === "reveal"', '揭晓 2', 15000);
+  await O.waitFor('PN.app.state.g.cur.phase === "reveal"', '揭晓 2', 25000);
   assert(await O.eval('PN.app.state.g.cur.reveal.match') === false, '选不同 → 不算默契，不计分');
   await O.shot('tacit-4-mismatch');
 
@@ -249,6 +276,118 @@ S.tacit = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 6. 合作翻牌：双人闭环（翻牌 → 配对 → 结算 → 再来一局）============ */
+S.memory = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  await startGame(H, 'memory');
+  const inPlay = 'PN.app.state.mode === "memory" && PN.app.state.g && PN.app.state.g.phase === "play"';
+  await H.waitFor(inPlay, '进入牌局', 30000);
+  await O.waitFor(inPlay, '对方进入牌局', 30000);
+
+  assert(await H.eval('PN.app.state.g.slots.length') === 16, '8 对 = 16 张牌');
+  assert(await H.eval('PN.app.state.g.slots.every(s => s === null)'), '开局全部背面朝上');
+  const dump = await H.eval('JSON.stringify(PN.app.state.g)');
+  assert(!/[🐱🐶🌸🍀🍰🍩🐰🐼]/.test(dump), 'state 里搜不到牌面（牌堆只在房主闭包里）');
+  assert(await H.eval('document.querySelectorAll(".mem-card").length') === 16, '牌桌渲染出 16 张牌');
+  const fitMobile = JSON.parse(await H.eval('(() => { const b = document.querySelector(".mem-board").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fitMobile.bottom <= fitMobile.vh + 2, '整副牌在手机视口内看全（底 ' + fitMobile.bottom + ' ≤ ' + fitMobile.vh + '，宽 ' + fitMobile.w + '）');
+  await H.shot('memory-1-board');
+
+  // 谁的回合：把 player id 映射到页面
+  const pidA = await A.eval('PN.app.me().id'), pidB = await B.eval('PN.app.me().id');
+  const pageOf = (pid) => (pid === pidA ? A : B);
+  const st = () => H.eval('JSON.stringify({phase:PN.app.state.g.phase,turn:PN.app.state.g.turn,flipped:PN.app.state.g.flipped,slots:PN.app.state.g.slots,done:PN.app.state.g.done,matched:PN.app.state.g.matched,turns:PN.app.state.g.turns})').then(JSON.parse);
+  const clickCard = (p, i) => p.eval('(() => { const c = document.querySelector(".mem-card[data-i=\'' + i + '\']"); if (!c || c.disabled) return false; c.click(); return true; })()');
+
+  // 点按动画 + 不是你的回合点不动
+  let s0 = await st();
+  const meP = pageOf(s0.turn), otherP = meP === A ? B : A;
+  assert(await clickCard(otherP, 0) === false, '不是自己的回合点不动（防乱点）');
+  assert(await clickCard(meP, 0) === true, '轮到你时点得动');
+  // 翻牌动画由「房主状态回来 → 重建 → 补 .just」触发，所以要轮询等它出现
+  let anims = '';
+  for (let t = 0; t < 25; t++) {
+    anims = await meP.eval('document.getAnimations().map(a => a.animationName || "").join(",")');
+    if (anims.indexOf('qflipIn') >= 0) break;
+    await sleep(60);
+  }
+  assert(anims.indexOf('qflipIn') >= 0, '翻牌有 3D 翻转动画在跑：' + anims);
+  await sleep(500);
+  assert((await st()).slots[0] !== null, '翻开的牌面出现在状态里');
+  await meP.shot('memory-2-flip');
+
+  // 用「会记忆的解法」把整局下完（每步都按真实点击，验证真人操作路径）
+  const known = {};
+  let miss = 0, matchSeen = false;
+  const remember = (g) => g.slots.forEach((e, i) => {
+    if (!e || (g.done || []).indexOf(i) >= 0) return;
+    known[e] = known[e] || [];
+    if (known[e].indexOf(i) < 0) known[e].push(i);
+  });
+  for (let step = 0; step < 200; step++) {
+    let g = await st();
+    if (g.phase === 'over') break;
+    remember(g);
+    if (g.flipped.length === 2) { await sleep(1400); continue; }   // 等房主把翻错的扣回
+    let picks = [];
+    for (const e in known) {
+      const down = known[e].filter(i => g.slots[i] === null);
+      if (down.length >= 2) { picks = [down[0], down[1]]; break; }
+    }
+    if (!picks.length) {
+      const downKnown = [], unseen = [], seenIdx = {};
+      for (const e in known) known[e].forEach(i => { seenIdx[i] = true; if (g.slots[i] === null) downKnown.push(i); });
+      g.slots.forEach((e, i) => { if (e === null && !seenIdx[i]) unseen.push(i); });
+      if (downKnown.length && unseen.length) picks = [downKnown[0], unseen[0]];
+      else if (unseen.length >= 2) picks = [unseen[0], unseen[1]];
+      else if (downKnown.length) picks = [downKnown[0]];
+      else if (unseen.length) picks = [unseen[0]];
+    }
+    if (!picks.length) break;
+    const P = pageOf(g.turn);
+    for (const i of picks) { await clickCard(P, i); await sleep(160); }
+    if (picks.length === 2) {
+      if (await H.eval('!!PN.app.state.g.done.length')) matchSeen = true;
+      await sleep(500);
+      const after = await st();
+      if (after.flipped.length === 2) miss++;
+    }
+  }
+  const fin = await st();
+  assert(fin.phase === 'over', '把整副牌配完 → 进入结算');
+  const over = JSON.parse(await H.eval('JSON.stringify(PN.app.state.g.over)'));
+  assert(over && over.pairs === 8 && over.turns >= 8, '结算：' + over.turns + ' 步配完 ' + over.pairs + ' 对，' + over.stars + ' 星');
+  assert(await H.eval('document.querySelectorAll(".mem-stars").length') === 1, '结算页显示星级');
+  assert(await H.eval('PN.app.state.players.every(p => p.score === 16)'), '两人各 16 分（8 对 × 2 分，合作）');
+  await H.shot('memory-3-over');
+
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+  const probeH = await H.eval('JSON.stringify({host:PN.app.isHost(),again:!!document.querySelector(\'[data-over="again"]\')})').then(JSON.parse);
+  const probeO = await O.eval('JSON.stringify({host:PN.app.isHost(),again:!!document.querySelector(\'[data-over="again"]\')})').then(JSON.parse);
+  console.log('  [探针] 房主页=' + JSON.stringify(probeH) + ' 对方页=' + JSON.stringify(probeO));
+  const btnHost = probeH.again ? H : (probeO.again ? O : null);
+  assert(!!btnHost, '结算页有「再来一局」（房主侧）');
+  await btnHost.click('[data-over="again"]');
+  await H.waitFor('PN.app.state.g.phase === "play" && PN.app.state.g.done.length === 0', '再来一局', 20000);
+  assert(await H.eval('PN.app.state.g.matched') === 0, '再来一局清空上一局进度');
+
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(600);
+  const ovd = JSON.parse(await overflow(H));
+  assert(!ovd.bad.length && ovd.scrollW <= ovd.vw + 1, '桌面视口 1280px 无横向溢出');
+  const fitDesk = JSON.parse(await H.eval('(() => { const b = document.querySelector(".mem-board").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fitDesk.bottom <= fitDesk.vh + 2, '整副牌在桌面视口内看全（底 ' + fitDesk.bottom + ' ≤ ' + fitDesk.vh + '，宽 ' + fitDesk.w + '）');
+  await H.shot('memory-4-desktop');
+  assert((await H.consoleErrors()) === '[]', '房主页面全程无 JS 报错');
+  assert((await O.consoleErrors()) === '[]', '对方页面全程无 JS 报错');
+  await A.dispose(); await B.dispose();
+};
+
 const name = process.argv[2];
 const list = name ? [name] : Object.keys(S);
 const cdp = await connect();
@@ -262,6 +401,8 @@ for (const n of list) {
     await dumpOpen();
     process.exitCode = 1;
   }
+  // 用例之间歇一下：连续压公共 broker 时，紧接着的下一个房间有概率被分配到另一台服务器
+  if (list.length > 1 && n !== list[list.length - 1]) await sleep(8000);
 }
 cdp.close();
 console.log('\n' + (process.exitCode ? '有用例失败' : '全部通过'));

@@ -18,6 +18,7 @@ const scripts = [
   'src/screens-common.js',
   'src/screens-drawgame.js',
   'src/screens-tacit.js',
+  'src/screens-memory.js',
   'src/ui.js',
   'src/app.js',
 ];
@@ -27,7 +28,7 @@ let src = scripts.map(p => {
 }).join('\n');
 
 const banks = {};
-for (const f of ['draw', 'tacit']) {
+for (const f of ['draw', 'tacit', 'memory']) {
   banks[f] = JSON.parse(readFileSync(join(root, 'data', f + '.json'), 'utf8'));
 }
 const banksJson = JSON.stringify(banks).replace(/</g, '\\u003c');

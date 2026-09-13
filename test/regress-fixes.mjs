@@ -160,5 +160,50 @@ section('[5] 挂机兜底', function () {
   ok(!!h.state.g.cur.deadline, '自动选词后倒计时正常起算');
 });
 
+/* ============ 6. 刷新/丢包后「整段回放」能自愈 ============
+ * 墨迹通道补得了「笔画里的洞」，补不了「整段都没收到」——刷新时那次私密消息
+ * 只要丢一次，玩家就会永远看着白板。这条钉住 self-heal。 */
+section('[6] 整段回放自愈（need_replay）', function () {
+  {
+    const A = loadPage();
+    const s = startDrawing(A);
+    const h = s.h, M = s.M;
+    const guesser = IDS4.filter(id => id !== s.painter)[0];
+    // 真实墨迹消息的形状（见 screens-drawgame 的 sendInk）：s 是这一块的点，i0 是它在整笔里的起点
+    M.onInk(h, { t: 'stroke', id: 'pX1', r: h.g().round, color: '#333', w: 3, i0: 0, s: [{ x: 1, y: 1 }, { x: 2, y: 2 }] }, s.painter);
+
+    h.sent.length = 0;
+    M.action(h, { t: 'need_replay' }, guesser);
+    const got = h.sent.find(e => e[0] === guesser && e[1] && e[1].replay);
+    ok(!!got, '猜词者手里整段没有时主动要 → 房主补发当前回合的回放');
+    ok(got && got[1].replay.length === 1 && got[1].replay[0].id === 'pX1',
+      '补发的就是那一笔（' + (got && got[1].replay ? got[1].replay.length : 0) + ' 条）');
+    ok(!(got && got[1].answer), '猜词者仍然拿不到答案（只给画家）');
+
+    h.sent.length = 0;
+    M.action(h, { t: 'need_replay' }, s.painter);
+    const gp = h.sent.find(e => e[0] === s.painter);
+    ok(gp && gp[1] && gp[1].answer === s.answer, '画家来要 → 连自己的词一起补（刷新后也不会看不到词）');
+  }
+  {
+    // 房主手里也没有（比如它自己也是刚接管）→ 应当去请画家补报，而不是干等着
+    const A = loadPage();
+    const s = startDrawing(A);
+    const guesser = IDS4.filter(id => id !== s.painter)[0];
+    s.h.sent.length = 0;
+    s.M.action(s.h, { t: 'need_replay' }, guesser);
+    const req = s.h.sent.find(e => e[0] === s.painter);
+    ok(req && req[1] && req[1].recover === true, '房主手里没有回放 → 请画家补报一次（recover 请求）');
+  }
+  {
+    const A = loadPage();
+    const s = startDrawing(A);
+    s.h.g().cur.phase = 'reveal';
+    s.h.sent.length = 0;
+    s.M.action(s.h, { t: 'need_replay' }, IDS4.filter(i => i !== s.painter)[0]);
+    ok(s.h.sent.length === 0, '不在作画阶段不响应（避免乱补）');
+  }
+});
+
 console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
 process.exit(fail ? 1 : 0);

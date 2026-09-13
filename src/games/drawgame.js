@@ -353,6 +353,19 @@
         return;
       }
 
+      // 客户端自愈：刷新/丢包后手里整段笔迹都没有（不是"有洞"，是"整段没收到"），主动要一次回放。
+      // 墨迹通道只补洞，补不了整段缺失；房主手里也没有时，就去请画家补报一次。
+      if (action.t === 'need_replay') {
+        if (!g.cur || g.cur.phase !== 'draw' || !from) return;
+        var rd1 = getRD(g.round);
+        var pl = { round: g.round };
+        if (rd1.segments && rd1.segments.length) pl.replay = rd1.segments;
+        if (from === g.cur.painter && rd1.answer) pl.answer = rd1.answer;
+        if (pl.replay || pl.answer) host.sendSecret(from, pl);
+        else if (from !== g.cur.painter) host.requestSecret(g.cur.painter, { recover: true, round: g.round });
+        return;
+      }
+
       // 画笔数据不再走动作通道：客户端直接广播到墨迹通道（见 src/wire.js），
       // 房主在这里旁听一份，用于中途加入的回放。带 i0 落位，补发的块晚到也不会把笔画写歪。
       if (action.t === 'peer' || action.t === 'clear' || action.t === 'style') {

@@ -7,6 +7,7 @@
   var injected = (typeof window !== 'undefined' && window.__PN_BANKS__) || (root.__PN_BANKS__);
   if (injected && injected.draw) PN.BANKS.draw = injected.draw;
   if (injected && injected.tacit) PN.BANKS.tacit = injected.tacit;
+  if (injected && injected.memory) PN.BANKS.memory = injected.memory;
   PN.Banks = {
     words: function () { return (PN.BANKS.draw && PN.BANKS.draw.words) || []; },
     questions: function () { return (PN.BANKS.tacit && PN.BANKS.tacit.questions) || []; }

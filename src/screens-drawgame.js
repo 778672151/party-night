@@ -179,6 +179,7 @@
    *  注意：回放常常比界面切到游戏屏更早到达，那时屏幕还没挂载、onPrivate 收不到，
    *  所以 render() 也要兜一次 —— 否则刷新回来看到的是白板。 */
   function applyReplay(obj) {
+    if (obj && obj.round) local.replayRound = obj.round;   // 本回合已经拿到回放（自愈判断用）
     if (!obj || !obj.replay || !obj.replay.length) return false;
     local.strokes = []; local.byId = {}; local.curId = null;
     for (var i = 0; i < obj.replay.length; i++) {
@@ -219,6 +220,23 @@
           if (s.pts[q] === undefined) { sweepHoles(local.ui); return; }
         }
       }
+      // 整段回放的自愈：在作画回合里、我不是画家、本回合的回放一张都没拿到 → 找房主要一次。
+      // 上面那段只处理"笔画里有洞"，处理不了"整段都没收到"（刷新/丢了一次私密消息就会这样）。
+      var ui = local.ui, st = ui.state;
+      if (!st || !st.g || !st.g.cur || st.g.cur.phase !== 'draw') return;
+      var mine = ui.pid ? ui.pid() : null;
+      if (!mine) return;
+      if (local.replayRound === st.g.round) return;      // 本回合已经拿到过了
+      if (st.g.cur.painter === mine) {
+        if (local.myWord) return;                        // 画家手里有词就不用要（刷新后才会丢）
+      } else if (local.strokes && local.strokes.length) return;   // 猜词者手里有笔迹就不用要
+      local.askReplay = local.askReplay || {};
+      var asked = local.askReplay[st.g.round] || 0;
+      if (asked >= 3) return;                            // 最多要 3 次，别刷屏
+      if (Date.now() - (local.askAt || 0) < 2500) return;
+      local.askReplay[st.g.round] = asked + 1;
+      local.askAt = Date.now();
+      ui.send({ t: 'need_replay' });
     }, 1200);
   }
 

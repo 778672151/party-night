@@ -496,7 +496,9 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'tacit') {
+    if (mode === 'memory') {
+      rows.push(seg('对数', 'pairs', [[4, '4 对'], [6, '6 对'], [8, '8 对']]));
+    } else if (mode === 'tacit') {
       rows.push(seg('题目数量', 'rounds', [[6, '6'], [8, '8'], [10, '10'], [12, '12']]));
     } else if (mode === 'drawgame') {
       rows.push(seg('总回合', 'rounds', [[3, '3'], [6, '6'], [9, '9']]));

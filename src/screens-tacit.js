@@ -91,8 +91,8 @@
           (r.match ? '心有灵犀 💞' : '咦，想的不一样～ 趁机聊聊为什么') + '</div>'));
       }
 
-      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
       wrap.appendChild(body);
+      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
       return wrap;
     }
   };
