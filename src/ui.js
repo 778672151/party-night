@@ -562,6 +562,16 @@
       '</div>' +
       '</div>'
     ));
+    // 大厅重构 第2块：小游戏区默认折叠成一行（点分区标题展开/收起），把首屏让给联机开局
+    var miniSec = wrap.querySelector('.mini-sec');
+    if (miniSec) {
+      if (!self._miniOpen) miniSec.classList.add('collapsed');
+      var mh = miniSec.querySelector('.mini-head');
+      if (mh) mh.addEventListener('click', function () {
+        self._miniOpen = !self._miniOpen;
+        miniSec.classList.toggle('collapsed', !self._miniOpen);
+      });
+    }
     $('#pn-copy').addEventListener('click', function () { self.copyLink(); });
     $('#pn-share').addEventListener('click', function () { self.share(); });
     $('#pn-edit').addEventListener('click', function () { self.editProfile(); });

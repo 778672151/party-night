@@ -1099,6 +1099,8 @@ S.hop = async (cdp) => {
 S.mini = async (cdp) => {
   const A = await createRoom(cdp, '小桃');
   await A.waitFor('!!document.querySelector(".mini-sec")', '大厅出现小游戏厅', 25000);
+    // 小游戏区默认折叠（大厅重构第2块）：用例先展开再点卡片
+    await A.eval('(()=>{const h=document.querySelector(".mini-sec.collapsed .mini-head"); if(h) h.click(); return true;})()');
   const n = await A.eval('document.querySelectorAll(".mini-card").length');
   assert(n >= 10, '小游戏厅里有 ' + n + ' 款游戏卡片');
   assert(await A.eval('!!document.querySelector(".mini-card .gc-ico")'), '卡片有图标');

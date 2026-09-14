@@ -587,3 +587,10 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .modecard .gc-desc{font-size:11.5px;margin-top:3px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .modecard .gc-meta{min-height:0;margin-top:6px}
 .modecard .go{margin-top:auto;padding-top:8px}
+
+/* 大厅重构 第2块：砍噪声 + 小游戏区折叠 */
+.game-head .muted,.mini-head .muted{display:none}
+.mini-sec .mini-head{cursor:pointer;user-select:none}
+.mini-sec .mini-head b:after{content:' ▾';font-size:11px;opacity:.7}
+.mini-sec:not(.collapsed) .mini-head b:after{content:' ▴'}
+.mini-sec.collapsed .mini-grid{display:none}
