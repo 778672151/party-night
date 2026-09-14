@@ -532,3 +532,12 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .tac-opts .tac-opt.chosen .k{background:#fff !important;color:#e2679a !important;box-shadow:0 2px 0 #e2aecb !important}
 .tac-opts .tac-opt.chosen .t{color:#fff !important}
 .tac-opts .tac-opt:active{transform:translateY(5px);box-shadow:0 0 0 #d9bfe0 !important}
+
+/* 三渲二游戏图标（大堂卡片）：平面色块 + 硬边偏移投影 + 描边，与其余三渲二画面统一 */
+.gc-ico{
+  display:inline-flex;width:54px;height:54px;align-items:center;justify-content:center;
+  border-radius:16px;
+  background:linear-gradient(180deg,#fffafd 0%,#fffafd 36%,#ffeff7 36%,#ffeff7 100%);
+  border:2.5px solid var(--stroke);
+  box-shadow:0 4px 0 rgba(107,85,136,.26), 0 7px 12px rgba(75,58,99,.10);
+}
