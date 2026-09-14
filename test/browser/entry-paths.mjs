@@ -8,7 +8,7 @@ async function trial(label, setup, hash, expectClicks) {
   await sleep(1500);
   if (setup) await p.eval(setup);
   // 重新加载以让 renderLand 走对应分支
-  await p.send('Page.navigate', { url: APP + (hash || '') + '?t=' + Date.now() }, p.sid);
+  await p.send('Page.navigate', { url: APP + '?t=' + Date.now() + (hash || '') }, p.sid);
   await sleep(2000);
   const land = await p.eval('JSON.stringify({oneClick: !!document.querySelector("#pn-edit-land"), fullForm: !!document.querySelector("#pn-name"), hash: (location.hash||"")})');
   const t0 = Date.now();
