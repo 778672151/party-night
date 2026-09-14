@@ -73,6 +73,7 @@
     action: function (host, action, from) {
       var g = host.g();
       if (!g) return;
+      g.dbg = (g.dbg || 0) + 1; g.lastT = String(action && action.t); g.lastFrom = String(from); g.lastTurn = g.turnIdx;
       if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
       if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
       if (g.phase !== 'play') return;

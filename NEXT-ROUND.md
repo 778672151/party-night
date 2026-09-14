@@ -79,6 +79,18 @@
 看实际注册了什么，再对齐 build.mjs 的屏幕清单位置（怀疑拼接位置与 ui.js 的 \`var PN\` 覆盖顺序有关）。
 
 
+
+#### 第 14 轮：把范围缩小到「动作没到达游戏层」
+
+在围棋的 \`action\` 入口加了计数探针后，判别实验给出决定性结论：
+
+- 用**屏幕上的真实按钮**（⏸️ 停一手，走 \`ui.send\`）和用 \`PN.app.send\` 两种方式发动作，结果一样
+- 房主侧 \`state.g.dbg === 0\` → **\`PN.games.go.action\` 从未被调用**
+- 而 \`src/host.js:38-49\` 的分发是通用的且形如 \`PN.games[this.state.mode].action(this, action, from)\`，骨牌走同一段代码是通的
+
+⇒ 故障在**比游戏层更上游**的地方：\`src/room.js\` 的 \`sendAction\`/{接收}，或 \`src/wire.js\` 里对动作类型的校验/白名单。
+下一轮从这里查（不再查游戏逻辑、也不再查用例写法）：先看 \`room.sendAction\` 到 \`host.dispatch\` 之间那一跳。
+
 ### 围棋第 13 轮的进展（已解决两个真问题，剩一个）
 
 **已解决 1：子串陷阱**。判断构建清单里有没有 go 屏幕时，我用的是 \`'screens-go' in s\` 和 \`grep 'screens-go'\` ——
