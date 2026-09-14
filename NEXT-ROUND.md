@@ -81,6 +81,22 @@
 
 
 
+
+#### 第 16 轮决定性证据（围棋的最后一格）
+
+在 \`ui.js:304\` 加计数探针后跑用例得到：
+
+    [诊断] onAction 门={"act":4, "host":true, "isHost":true, "t":"caps"}
+    [诊断] action 到达次数={"dbg":0}
+
+即：门进了 4 次（都是屏幕轮询发的 \`caps\`）、\`host/isHost\` 都为真、\`host.dispatch\` **被调用了**，
+但 \`PN.games.go.action\` 一次都没进 —— 连 caps 都没进。
+
+⇒ 剩下的唯一嫌疑是 \`host.dispatch\` 里这一句（\`src/host.js:42\`）：
+\`var game = this.state.mode && this.state.mode !== 'lobby' ? PN.games[this.state.mode] : null;\`
+要么 \`this.state.mode\` 在那个实例上不是 'go'，要么 \`PN.games['go']\` 当时是 undefined。
+**下一轮唯一动作**：在这句后面加 \`PN.__disp = (PN.__disp||0)+1; PN.__mode = this.state.mode; PN.__gameOk = !!(PN.games[this.state.mode] && PN.games[this.state.mode].action);\`，一次跑通即可收口。
+
 #### 第 15 轮：把分发门找到了（下一轮的最小探针写在这里）
 
 动作从发送到落地只有两跳，都已定位：
