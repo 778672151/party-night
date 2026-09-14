@@ -1,25 +1,24 @@
 /* ===== 2048 肉鸽版 屏幕（复用原作 + 双人兼容）=====
- * 原作在 iframe 里原封跑；父页面用 contentWindow.eval 完成全部双人兼容：
- *   ① 转发方向键（把权威日志逐条 dispatch 成 keydown 进 iframe）
- *   ② 在捕获阶段拦掉 iframe 内的本地按键（输入只能由我们喂，否则两端会分叉）
- *   ③ 轮询读 #scoreVal 与 #tiles 判断进度；走死时上报本局结束
- * 无需注入桥接脚本，也就不怕 iframe 重载（eval 每次重新拿窗口即可）。 */
+ * 原作在 iframe 里原封跑；父页面用 contentWindow.eval / 事件派发完成全部双人兼容：
+ *   ① 转发方向输入：既发 keydown，也发 #board 上的指针/触摸滑动（原作两条路都支持）
+ *      注意事件要往**多个目标**发 —— 事件只向上冒泡，发在 document 上不会往下传给棋盘元素
+ *   ② 捕获阶段拦掉 iframe 内的本地按键（输入只能由我们喂，否则两端会分叉）
+ *   ③ 轮询读进度：它是 canvas 渲染（#tiles 是空容器），所以从可见文本里取 SCORE n / MOVES n
+ * 不注入桥接脚本，所以 iframe 重载也不会打断同步。 */
 (function (root) {
   'use strict';
   var PN = root.PN = root.PN || {};
   var esc = PN.esc;
   var KEYS = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
   var CODES = { up: 38, down: 40, left: 37, right: 39 };
+  var VEC = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 
-  var S = {
-    frame: null, applied: 0, ui: null, mounted: false, poller: null, win: null,
-    score: 0, tiles: 0, overSent: false, lastSig: '', started: false, injectErr: null
-  };
+  var S = { frame: null, applied: 0, ui: null, poller: null, win: null,
+    score: 0, moves: 0, started: false, clickTries: 0, overSent: false, lastSig: '', err: null, dom: false };
 
   function frameWin() { try { return S.frame && S.frame.contentWindow; } catch (e) { return null; } }
   function $(w, sel) { try { return w.document.querySelector(sel); } catch (e) { return null; } }
 
-  /** 首帧：点开始 + 装上按键拦截（原作的输入只能由我们喂） */
   /** 固定种子覆盖 iframe 内的 Math.random：2048 出新方块是随机的，两端同种子才可能一致 */
   function installSeed(w) {
     var ui = S.ui, g = ui && ui.state && ui.state.g;
@@ -34,69 +33,80 @@
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
       w.__pnSeeded = g.seed;
-    } catch (e) { S.injectErr = String(e && e.message); }
+    } catch (e) { S.err = String(e && e.message); }
   }
 
   function setup(w) {
     if (!w || !w.document || !w.document.body) return;
     installSeed(w);
-    // 盘面已经有方块就不用再点了；否则继续点（原作的处理函数可能在页面加载后才挂上）
-    if (S.tiles > 0 && /MOVES/i.test(String(S.txt || ''))) { S.started = true; return; }
-    if (S.tiles > 0) { S.started = true; return; }
+    if (S.started) return;
     if ((S.clickTries || 0) > 12) return;
-    S.clickTries = (S.clickTries || 0) + 1;
+    S.clickTries++;
     var btn = $(w, '#startBtn');
     if (!btn) {
-      // 兜底：按文案找"开始/Start"，并把 iframe 里的按钮 id 记下来便于诊断
       var bs = [];
       try { bs = Array.prototype.slice.call(w.document.querySelectorAll('button, [role=button]')); } catch (e) { bs = []; }
-      S.btnIds = bs.map(function (b) { return (b.id || '') + ':' + String(b.textContent || '').trim().slice(0, 8); }).slice(0, 12);
       for (var i = 0; i < bs.length; i++) {
-        var tx = String(bs[i].textContent || '').trim();
-        if (/开始|开始游戏|^Start|^Play|开始挑战/i.test(tx) && bs[i].offsetParent !== null) { btn = bs[i]; break; }
+        if (/开始|Start|Play/i.test(String(bs[i].textContent || ''))) { btn = bs[i]; break; }
       }
     }
     if (!btn) return;
     try { btn.click(); } catch (e) {}
     try {
       w.document.addEventListener('keydown', function (e) {
-        if (w.__pnAllow) return;                       // 我们自己转发的那次放行
+        if (w.__pnAllow) return;
         e.preventDefault(); e.stopPropagation();
       }, true);
       S.started = true;
-    } catch (e) { S.injectErr = String(e && e.message); }
+    } catch (e) { S.err = String(e && e.message); }
   }
 
-  /** 把权威日志里还没落地的方向，逐条 dispatch 进 iframe */
+  /** 把权威日志里还没落地的方向，逐条喂进 iframe（键 + 指针/触摸滑动，多目标） */
   function applyLog() {
     var ui = S.ui, g = ui && ui.state && ui.state.g;
     if (!ui || !g) return;
     var w = frameWin();
     if (!w || !S.started) return;
-    if (g.log.length < S.applied) {                     // 重开：重新点开始
-      S.applied = 0;
-      try { var b = $(w, '#restartBtn') || $(w, '#againBtn'); if (b) b.click(); } catch (e) {}
-    }
+    if (g.log.length < S.applied) { S.applied = 0; return; }
     for (var i = S.applied; i < g.log.length; i++) {
-      var key = KEYS[g.log[i]];
+      var dir = g.log[i], key = KEYS[dir];
       if (!key) continue;
+      try { w.__pnAllow = true; } catch (e) {}
       try {
-        w.__pnAllow = true;
-        var bd = $(w, '#board') || w.document.body;
-        var r = bd.getBoundingClientRect();
-        var cx = r.left + r.width / 2, cy = r.top + r.height / 2, dd = Math.min(r.width, r.height) * 0.3;
-        var pt = { left: [cx + dd, cy, cx - dd, cy], right: [cx - dd, cy, cx + dd, cy], up: [cx, cy + dd, cx, cy - dd], down: [cx, cy - dd, cx, cy + dd] }[g.log[i]] || [cx + dd, cy, cx - dd, cy];
-        var mkp = function (type, x, y) {
-          var ev = new w.PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true, cancelable: true, buttons: type === 'pointerdown' ? 1 : 0 });
-          bd.dispatchEvent(ev);
-          try { w.document.dispatchEvent(ev); } catch (e3) {}
-        };
-        mkp('pointerdown', pt[0], pt[1]);
-        try { mkp('pointermove', pt[2], pt[3]); } catch (e3) {}
-        mkp('pointerup', pt[2], pt[3]);
-        w.__pnAllow = false;
-      } catch (e) { w.__pnAllow = false; }
-      } catch (e) { w.__pnAllow = false; }
+        var init = { key: key, code: key, keyCode: CODES[dir], which: CODES[dir], bubbles: true, cancelable: true };
+        var targets = [w.document, w];
+        var b = $(w, '#board'); if (b) targets.push(b);
+        var st = $(w, '.stage'); if (st) targets.push(st);
+        var cv = $(w, 'canvas'); if (cv) targets.push(cv);
+        for (var ti = 0; ti < targets.length; ti++) {
+          try { targets[ti].dispatchEvent(new w.KeyboardEvent('keydown', init)); } catch (e) {}
+        }
+        // 另一条路：原作也支持在 #board 上滑动（位移 >= 24px）
+        if (b) {
+          var r = b.getBoundingClientRect();
+          var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          var v = VEC[dir] || VEC.left;
+          var dd = Math.min(r.width, r.height) * 0.35;
+          var p0 = [cx - v[0] * dd, cy - v[1] * dd], p1 = [cx + v[0] * dd, cy + v[1] * dd];
+          var fire = function (type, x, y) {
+            try {
+              b.dispatchEvent(new w.PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true, cancelable: true, buttons: type === 'pointerdown' ? 1 : 0 }));
+            } catch (e) {}
+            try {
+              var t2 = new w.TouchEvent('touch' + (type === 'pointerdown' ? 'start' : type === 'pointerup' ? 'end' : 'move'), {
+                bubbles: true, cancelable: true,
+                touches: type === 'pointerup' ? [] : [{ clientX: x, clientY: y, identifier: 1 }],
+                targetTouches: [], changedTouches: [{ clientX: x, clientY: y, identifier: 1 }]
+              });
+              b.dispatchEvent(t2);
+            } catch (e) {}
+          };
+          fire('pointerdown', p0[0], p0[1]);
+          fire('pointermove', p1[0], p1[1]);
+          fire('pointerup', p1[0], p1[1]);
+        }
+      } catch (e) { S.err = String(e && e.message); }
+      try { w.__pnAllow = false; } catch (e) {}
     }
     if (g.log.length > S.applied) S.applied = g.log.length;
   }
@@ -111,24 +121,52 @@
     if (turn) {
       turn.className = 'sk-turn' + (mine ? ' mine' : '');
       turn.innerHTML = mine
-        ? '<b>🙋 轮到你走一步</b><span>同一盘；你合成出来的分，两个人一起记账</span>'
+        ? '<b>🙋 轮到你走一步</b><span>同一盘，两个人轮流；分数是一起攒的</span>'
         : '<b>👀 等 ' + esc(ui.p(opp) ? ui.p(opp).name : '对方') + ' 走</b><span>他走完就到你</span>';
     }
     var hud = document.getElementById('t48-hud');
     if (hud) {
-      hud.innerHTML = '<span class="sk-stat"><i>🔢</i>第 ' + (g.round || 1) + '/' + (g.rounds || 2) + ' 局</span>' +
-        '<span class="sk-stat"><i>⭐</i>' + (S.score || 0) + ' 分</span>' +
-        '<span class="sk-stat"><i>👣</i>' + (S.moves || 0) + ' 步</span>' +
+      hud.innerHTML = '<span class="sk-stat"><i>🎯</i>SCORE ' + (S.score || 0) + '</span>' +
+        '<span class="sk-stat"><i>👣</i>MOVES ' + (S.moves || 0) + '</span>' +
+        '<span class="sk-stat"><i>🔁</i>第 ' + (g.round || 1) + '/' + (g.rounds || 2) + ' 局</span>' +
         '<span class="sk-stat"><i>💯</i>最高 ' + (g.best || 0) + '</span>';
     }
-    document.querySelectorAll('[data-dir]').forEach(function (b) { b.disabled = !mine; });
+    var bs = document.querySelectorAll('[data-dir]');
+    for (var i = 0; i < bs.length; i++) bs[i].disabled = !mine;
+  }
+
+  function poll() {
+    var w = frameWin();
+    if (!w || !w.document || !w.document.body) return;
+    if (w !== S.win) { S.win = w; S.applied = 0; S.started = false; S.clickTries = 0; }
+    setup(w);
+    try {
+      var txt = String(w.document.body.innerText || '');
+      var ms = /MOVES[ \t]+([0-9]+)/i.exec(txt), ss = /SCORE[ \t]+([0-9]+)/i.exec(txt);
+      if (ms) S.moves = parseInt(ms[1], 10) || 0;
+      if (ss) S.score = parseInt(ss[1], 10) || 0;
+      S.dom = !!$(w, '#board');
+    } catch (e) { S.err = String(e && e.message); }
+    var g = S.ui && S.ui.state && S.ui.state.g;
+    if (g && g.phase === 'play') {
+      var sig = S.score + '|' + S.moves + '|' + (g.log || []).length + '|' + (g.turnIdx || 0);
+      if (sig !== S.lastSig) { S.lastSig = sig; S.ui.send({ t: 'score', score: S.score }); }
+      var again = $(w, '#againBtn');
+      var over = false;
+      try { over = !!(again && again.offsetParent !== null); } catch (e) {}
+      if (over && !S.overSent && S.applied >= (g.log || []).length && S.moves > 0) {
+        S.overSent = true;
+        S.ui.send({ t: 'over', score: S.score });
+        setTimeout(function () { S.overSent = false; }, 2000);
+      }
+    }
+    applyLog();
   }
 
   PN.screens = PN.screens || {};
   PN.screens.tile2048 = {
     name: 'tile2048',
-    debug: function () { return { applied: S.applied, score: S.score, moves: S.moves, tiles: S.tiles, started: S.started, btns: S.btnIds || null, dom: S.dom || null, injectErr: S.injectErr }; },
-    /** 恒真：游玩期间绝不重建 DOM（重排 iframe 会让原作重新加载） */
+    debug: function () { return { applied: S.applied, score: S.score, moves: S.moves, started: S.started, dom: S.dom, err: S.err }; },
     patch: function (state) {
       if (!S.frame || !state.g || state.phase === 'over' || state.mode !== 'tile2048') return false;
       syncTurn(); applyLog();
@@ -140,7 +178,6 @@
       var g = state.g || {};
       var me = ui.pid();
       var myTurn = g.phase === 'play' && g.players && g.players[g.turnIdx] === me;
-      var opp = (g.players || []).filter(function (id) { return id !== me; })[0];
       var wrap = ui.el('div');
       ui.renderTopbar(wrap);
       wrap.appendChild(ui.h(GC.gameHeader(ui, state, '🔢 2048 肉鸽版（合作）',
@@ -149,8 +186,7 @@
 
       var body = ui.el('div');
       if (g.phase === 'over') {
-        var title = '打完 ' + (g.played || 0) + ' 局！🎉';
-        body.appendChild(ui.h('<div class="card center sk-hero"><div class="sk-result">' + esc(title) + '</div>' +
+        body.appendChild(ui.h('<div class="card center sk-hero"><div class="sk-result">打完 ' + (g.played || 0) + ' 局！🎉</div>' +
           '<div class="muted mt8">最高一局 ' + (g.best || 0) + ' 分 · 双方各 +' + ((g.played || 0) * 2) + ' 分</div></div>'));
         body.appendChild(ui.h(GC.scoreboard(state, undefined, '🏆 总积分')));
         var btns = ui.h(GC.overButtons(ui, 'tile2048'));
@@ -186,7 +222,7 @@
         pad.appendChild(mk('down', '⬇️', 'primary'));
         body.appendChild(pad);
 
-        S.ui = ui; S.applied = 0; S.started = false; S.clickTries = 0; S.overSent = false;
+        S.ui = ui; S.applied = 0; S.started = false; S.clickTries = 0; S.overSent = false; S.lastSig = '';
         var mount = function (base) {
           if (!base) { ui.toast('原作文件没找到（要从仓库根目录打开，见 README）', 'info'); return; }
           if (!frame.getAttribute('src')) frame.src = base + '2048-roguelike-ed8cf859/index.html';
@@ -195,54 +231,7 @@
         if (base0) mount(base0);
         else if (ui.miniBase) ui.miniBase(mount);
         else mount('../mini/');
-
-        if (!S.poller) S.poller = setInterval(function () {
-          var w = frameWin();
-          if (!w) return;
-          if (w !== S.win) { S.win = w; S.applied = 0; S.started = false; }
-          setup(w);
-          // 读盘面分数与块数（原作把它们放在 DOM 里，最省）
-          try {
-            var sv = $(w, '#scoreVal');
-            S.score = sv ? (parseInt(String(sv.textContent).replace(/[^0-9]/g, ''), 10) || 0) : 0;
-            // 原作是 canvas 渲染（#tiles 是空容器），所以从可见文本里解析进度：
-            // 它的 HUD 里有 "SCORE n" 与 "MOVES n"，canvas 与否都读得到。
-            var txt = '';
-            try { txt = (w.document.body ? w.document.body.innerText : '') || ''; } catch (e) {}
-            var ms = /MOVES\s+(\d+)/i.exec(txt), ss = /SCORE\s+(\d+)/i.exec(txt);
-            S.moves = ms ? parseInt(ms[1], 10) : 0;
-            S.score = ss ? parseInt(ss[1], 10) : (parseInt(String(($(w, '#scoreVal') || {}).textContent || '0').replace(/[^0-9]/g, ''), 10) || 0);
-            S.tiles = ($(w, '#board') ? 1 : 0);   // 盘面出现即视为已开局（canvas 里数不到子元素）
-            try {
-              S.dom = {
-                tileEls: w.document.querySelectorAll('.tile').length,
-                tilesHTML: tl ? (tl.innerHTML || '').length : -1,
-                boardHTML: ($(w, '#board') ? ($(w, '#board').innerHTML || '').length : -1),
-                score: ($(w, '#scoreVal') ? String($(w, '#scoreVal').textContent).trim() : '?'),
-                overlays: Array.prototype.slice.call(w.document.querySelectorAll('[id*=overlay],[id*=Overlay],[class*=overlay]')).filter(function (e) { return e.offsetParent !== null; }).map(function (e) { return (e.id || e.className || '').slice(0, 18); }).slice(0, 5),
-                body: (w.document.body ? w.document.body.innerText.replace(/\s+/g, ' ').slice(0, 70) : '')
-              };
-            } catch (e) { S.dom = String(e && e.message); }
-          } catch (e) { S.injectErr = String(e && e.message); }
-          var gg = S.ui && S.ui.state && S.ui.state.g;
-          if (gg && gg.phase === 'play') {
-            var sig = S.score + '|' + S.tiles + '|' + gg.log.length;
-            if (sig !== S.lastSig) {
-              S.lastSig = sig;
-              S.ui.send({ t: 'score', score: S.score });        // 分数上报（房主取最大值当成绩）
-            }
-            // 走死了：原作会把"再来一局"按钮显示出来
-            var again = $(w, '#againBtn');
-            var over = false;
-            try { over = !!(again && again.offsetParent !== null && S.tiles > 0); } catch (e) {}
-            if (over && !S.overSent && S.applied >= (gg.log || []).length) {
-              S.overSent = true;
-              S.ui.send({ t: 'over', score: S.score });
-              setTimeout(function () { S.overSent = false; }, 2000);
-            }
-          }
-          applyLog();
-        }, 300);
+        if (!S.poller) S.poller = setInterval(poll, 300);
         syncTurn();
       }
       wrap.appendChild(body);
