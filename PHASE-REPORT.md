@@ -81,6 +81,38 @@ node test/style-check.mjs             # 全部通过
 | gomoku 悔棋/同步断言抖动（固定 sleep / 点击后立即断言） | `test/browser/regress.mjs` | 改为 `waitFor` 等状态到位（负向断言保留 settle 等待） | `gomoku` 场景全部通过（含"同意悔棋后手数回到 1""两边一致") |
 | drawgame 结束契约分叉（只写 `state.phase`，不写 `g.phase`）+ 无"在线不足 2 人"收尾 | `src/games/drawgame.js` | 补 `g.phase='over'`（已核实它从不读 `g.phase`，故纯增量）；`onLeave` 复用 `nextRound` 的结束分支 | 真浏览器：非画家离开后 `g.phase=over`、三条 toast 可见（含"对方离开了"）、零报错；`fullgame` 场景全部通过 |
 
+
+## 底层逻辑缺陷审计（第 16-20 轮，只读核查 + 一处修复）
+
+方法：读实现与调用链，对每个怀疑点先找代码证据；**不能复现的不改**。结论：4 个怀疑被代码证伪，1 个真缺陷已复现并修复。
+
+| 编号 | 怀疑点 | 结论 | 证据 |
+| --- | --- | --- | --- |
+| D6 | 幂等性/去重会漏判重复包 | ✅ 无缺陷 | `room.js:131-138` 先回 ACK 再去重；`_trimSeen` 按条数上界（>300 留 150），强于重传窗（动作 1500ms×5≈7.5s、私密 1200ms×9≈15s） |
+| D7 | 换局/回大厅后定时器不释放 | ✅ 无缺陷 | `goLobby()`（`host.js:287`）与 `adopt()`（`:302`）首行都是 `clearAll()` |
+| D8 | `removePlayer` 漏 `emit` | ✅ 无缺陷 | `host.js:69-75` 的 `_left` 分支本就有 `this.emit()` |
+| D10 | retained 状态陈旧，换房号重进复活旧局 | ✅ 无缺陷 | `emit()→publishState→publishRaw('s', state, true)`（retain）；`goLobby()` 末尾 `emit()`；`leave(true)` 向 `s`/`m` 发空 retain 清房 |
+| D11 | `adopt()` 顺序会让 `resume` 读到未就绪字段 | ✅ 无缺陷 | `clearAll → 深拷贝 state → resume() → emit()`，顺序正确（`host.js:300-306`） |
+| D13 | 人数上限/下限没被强制 | ✅ 无缺陷 | `host.js:91-96`：**按在线玩家**判 `minPlayers`/`maxPlayers` 并 `toast` + `return` |
+| **D12** | **`secretCache` 跨游戏不失效** | 🆕 **真缺陷，已修复** | 见下 |
+
+### D12 详情（发现 → 复现 → 修复 → 验证）
+
+- **缺陷**：`secretCache` 仅构造时创建（`host.js:28`）、`sendSecret` 写入（`:267`），**全项目无清理点**；
+  而重发路径（`:277`）以当前 `state.mode` 为标签发 `secretCache[pid]` → 同房间换游戏后触发「秘密重发」
+  （房主更替 / 玩家重连恢复）时，会把上一局的秘密贴上本局模式标签发出。
+- **最小复现**：新增 `test/d12-secretcache-test.mjs`，用真实 `PN.Host.prototype` 构造最小宿主
+  （只覆写 `emit/clearAll` 等副作用），下发 A 游戏秘密后调真实 `goLobby()`，断言缓存应清空。
+  修复前：`✓ 前置…✗ D12…` = **2 通过 / 1 失败（退出码 1）**；修复后：**3 通过 / 0 失败**。
+- **修复**：`src/host.js` 的 `goLobby()` 内加 `this.secretCache = {};`（回大厅=放弃本局）。
+- **回归**：受影响套件零回归 —— codraw 34/0、memory 29/0、tacit 31/0、gomoku 35/0、regress-fixes 24/0。
+- **复现命令**：`node test/d12-secretcache-test.mjs`
+
+### D1（未修，等你确认）
+`wins` / `streak` 是「只写不读」的死状态：`host.js:160` 创建、`:120` 与 `:295` 重置，
+**全项目无读取点**；且 `goLobby` 保留 `score` 却清零 `wins`，两个累计统计处理不一致。
+收敛它需要改 state 的玩家字段（数据结构），按纪律停下等你决定：删除 / 或恢复语义并一致维护。
+
 ## ⚠️ 未完成：部署
 
 远端 `origin` 指向 `gh-proxy.com` 代理，对该仓库**连续多轮 403**、`ls-remote` 亦返回空 → **线上仍为 v1.14.0**，
