@@ -78,6 +78,21 @@
 但运行时 \`PN.screens.go\` 是 undefined，且 *.go-frame* 不在 DOM。最直接：在浏览器 eval \`Object.keys(PN.screens)\`
 看实际注册了什么，再对齐 build.mjs 的屏幕清单位置（怀疑拼接位置与 ui.js 的 \`var PN\` 覆盖顺序有关）。
 
+
+### 围棋第 13 轮的进展（已解决两个真问题，剩一个）
+
+**已解决 1：子串陷阱**。判断构建清单里有没有 go 屏幕时，我用的是 \`'screens-go' in s\` 和 \`grep 'screens-go'\` ——
+而 **\`src/screens-gomoku.js\` 本身就以 \`screens-go\` 开头**，所以判断永远误判成「已存在」，\`src/screens-go.js\`
+根本没进清单；同理 \`grep -c 'PN.screens.go'\` 命中的是 \`PN.screens.gomoku\`。
+教训：**用带引号的完整文件名判断**（\`'src/screens-go.js'\`），别用前缀子串。
+
+**已解决 2：屏幕已进包**。修正后 \`grep -c go-frame dist/party-night.html\` = 1，用例前 5 项全过：
+9 路棋盘 / 黑先 / 原作整包跑在 iframe / 两端就绪 / **两端都是全新棋局（存档已清）**。
+
+**剩余卡点**：用例调 \`PN.app.send({t:'move', p:40})\`（\`src/app.js:36\` 把 UI 实例挂为 \`PN.app\`，\`UI.prototype.send\` 存在），
+但房主侧 \`state.g.log.length\` 始终 0。下一轮查两件事：① \`UI.prototype.send\` 有没有给动作带上 \`from\`（缺了会被 \`participants.indexOf(from) < 0\` 拦掉）；
+② 房主自己发出的动作是否走同一条应用路径（骨牌那款用同一 API 是能记录的，可对比 \`S.domino\` 的写法差异）。
+
 ## 围棋（mini/demo-29b78d69）—— 结构探明，**驱动方式要换，暂未上线**
 
 **决定性证据**（`test/browser/probe-go.mjs` 可复跑）：
