@@ -1198,7 +1198,9 @@ S.gomoku = async (cdp) => {
   const P1 = await turnPage();
   const P2 = P1 === A ? B : A;
   await tapCell(P1, 0, 0);
-  assert(await H.eval('PN.app.state.g.moves.length') === 1, '先手落子后手数 = 1');
+  // 点击→房主→广播→重建有延迟：等状态真的到位再断言（固定 sleep/立即断言在公共 broker 下会偶发误报）
+  await H.waitFor('PN.app.state.g.moves.length === 1', '先手落子生效', 15000);
+  assert(true, '先手落子后手数 = 1');
   assert(await H.eval('PN.app.state.g.board[0]') > 0, '黑棋出现在 (0,0)');
   await O.waitFor('PN.app.state.g.moves.length === 1', '对端棋盘同步', 15000);
   assert(true, '对端棋盘同步（也看到 1 手）');
@@ -1221,11 +1223,12 @@ S.gomoku = async (cdp) => {
 
   // 悔棋：请求 → 对方看到同意/不同意 → 同意后双方都少一子
   await P2.click('[data-undo]');
-  await sleep(600);
-  assert(await P1.eval('!!document.querySelector(".gm-ask")'), '被请求方看到「想悔一步棋 / 同意 / 不同意」');
+  await P1.waitFor('!!document.querySelector(".gm-ask")', '被请求方看到悔棋请求', 15000);
+  assert(true, '被请求方看到「想悔一步棋 / 同意 / 不同意」');
   await P1.click('[data-undo-ok]');
-  await sleep(700);
-  assert(await H.eval('PN.app.state.g.moves.length') === 1, '同意悔棋后手数回到 1');
+  await H.waitFor('PN.app.state.g.moves.length === 1', '同意悔棋后手数回到 1', 15000);
+  await O.waitFor('PN.app.state.g.moves.length === 1', '对端也同步撤子', 15000);
+  assert(true, '同意悔棋后手数回到 1');
   assert(await H.eval('PN.app.state.g.board[80]') === 0, '(8,8) 那子被撤掉了');
   assert(await P2.eval('PN.app.state.g.moves.length') === 1, '两边一致（对端也少一子）');
   await H.shot('gomoku-3-undo');
