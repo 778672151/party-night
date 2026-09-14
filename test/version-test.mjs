@@ -47,7 +47,7 @@ const onlineCount = (read('build.mjs').match(/src\/games/g) ? 1 : 0) && (() => {
 })();
 const mini = JSON.parse(read('data/mini.json')).games.length;
 ok(vj.miniGames === mini, '小游戏数量一致：' + vj.miniGames + ' = ' + mini);
-ok(vj.onlineGames === 9, '联机游戏数量 = 9（' + vj.onlineGames + '）');
+ok(vj.onlineGames === 10, '联机游戏数量 = 10（' + vj.onlineGames + '）');
 
 console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
 process.exit(fail ? 1 : 0);

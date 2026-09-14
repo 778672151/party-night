@@ -400,6 +400,79 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 17. 魔方接力：复用原作整包 + 双人轮流（stateKey 一致 / 复原结算） ============ */
+S.cube = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  const idA = await A.eval('PN.app.me().id');
+  const pageOf = (pid) => (pid === idA ? A : B);
+  const snap = async (pg) => JSON.parse(await pg.eval('JSON.stringify({log:PN.app.state.g?PN.app.state.g.log.length:-1, applied:PN.screens.cube.debug().applied, key:String(PN.screens.cube.debug().key).slice(0,18), phase:PN.app.state.g?PN.app.state.g.phase:null})'));
+
+  await startGame(H, 'cube');
+  await H.waitFor(`PN.app.state.mode === 'cube' && PN.app.state.g && PN.app.state.g.phase === 'play'`, '进入对局', 30000);
+  await O.waitFor(`PN.app.state.mode === 'cube'`, '对方进入对局', 30000);
+  const g0 = JSON.parse(await H.eval('JSON.stringify({players:PN.app.state.g.players, turn:PN.app.state.g.turnIdx})'));
+  assert(await H.eval('document.querySelectorAll(".cb-frame").length') === 1, '原作整包跑在 iframe 里');
+
+  let same0 = false;
+  for (let i = 0; i < 90; i++) {
+    const a = await snap(H), b = await snap(O);
+    if (a.key.length > 10 && b.key.length > 10 && a.key === b.key) { same0 = true; break; }
+    await sleep(500);
+  }
+  assert(same0, '两端魔方初始状态一致（同种子打乱）');
+
+  const actor = pageOf(g0.players[0]);
+  await actor.click('[data-face="R"]');
+  await H.waitFor('PN.app.state.g.log.length === 1', '房主记录一次转动', 25000);
+  assert(true, '第一次转动被房主记录');
+  await H.waitFor('PN.app.state.g.turnIdx === 1', '换人', 25000);
+  assert(true, '转一步就交给对方');
+
+  let agree = false;
+  for (let i = 0; i < 60; i++) {
+    const a = await snap(H), b = await snap(O);
+    if (a.applied >= 1 && b.applied >= 1 && a.key === b.key) { agree = true; break; }
+    await sleep(400);
+  }
+  console.log('  [诊断] 房主=' + JSON.stringify(await snap(H)) + ' 对手=' + JSON.stringify(await snap(O)));
+  assert(agree, '两端魔方没有分叉（这是双人兼容的核心）');
+
+  const p2 = pageOf(g0.players[1]);
+  await p2.eval('document.querySelectorAll("[data-face]")[1].click(); 1');
+  await H.waitFor('PN.app.state.g.log.length === 2', '第二步（带撇）', 25000);
+  let agree2 = false;
+  for (let i = 0; i < 60; i++) {
+    const a = await snap(H), b = await snap(O);
+    if (a.applied >= 2 && b.applied >= 2 && a.key === b.key) { agree2 = true; break; }
+    await sleep(400);
+  }
+  assert(agree2, '连转两步（含带撇）后两端仍然一致');
+
+  const wrong = pageOf(g0.players[1]);
+  const lb = await H.eval('PN.app.state.g.log.length');
+  await wrong.eval('PN.app.send({ t: "move", m: "D" }); 1');
+  await sleep(900);
+  assert(await H.eval('PN.app.state.g.log.length') === lb, '不是你的回合发转动会被房主拒绝');
+
+  const cur = pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
+  await cur.eval('PN.app.send({ t: "solved" }); 1');
+  await H.waitFor(`PN.app.state.g.phase === 'over'`, '复原后结算', 25000);
+  assert(await H.eval('PN.app.state.g.played') === 1, '复原一次即完成本局');
+  let sc = false;
+  for (let i = 0; i < 20; i++) { if (await H.eval('document.body.innerText.indexOf("总积分") >= 0')) { sc = true; break; } await sleep(400); }
+  assert(sc, '结算界面出现总积分');
+  assert(await H.eval('PN.app.state.players.every(function(p){return p.score>=2;})') === true, '双方各得 2 分');
+
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
+  await A.dispose(); await B.dispose();
+};
+
 /* ============ 15. 围棋：复用原作整包 + 双人对局（关掉 AI / 轮流落子 / 停一手终局） ============ */
 S.go = async (cdp) => {
   const A = await createRoom(cdp, '小桃');
@@ -1468,7 +1541,7 @@ async function btnHostClick(H, O, tag) {
 const name = process.argv[2];
 // 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
 // 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
-const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'mine', 'soko', 'domino', 'hop', 'fullgame'];
+const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'mine', 'soko', 'domino', 'cube', 'hop', 'fullgame'];
 const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);

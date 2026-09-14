@@ -569,7 +569,9 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'tile2048') {
+    if (mode === 'cube') {
+      rows.push(seg('局数', 'rounds', [[1, '1 个'], [2, '2 个'], [3, '3 个']]));
+    } else     if (mode === 'tile2048') {
       rows.push(seg('局数', 'rounds', [[1, '1 局'], [2, '2 局'], [3, '3 局']]));
     } else if (mode === 'domino') {
       rows.push(seg('局数', 'rounds', [[1, '1 局'], [3, '3 局'], [5, '5 局']]));

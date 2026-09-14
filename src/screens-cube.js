@@ -125,7 +125,7 @@
     name: 'cube',
     debug: function () { return { applied: S.applied, solved: S.solved, busy: S.busy, key: String(S.key).slice(0, 30), err: S.err }; },
     patch: function (state) {
-      if (!S.frame || !state.g || state.phase === 'over' || state.mode !== 'cube') return false;
+      if (!S.frame || !state.g || state.g.phase === 'over' || state.mode !== 'cube') return false;
       syncTurn(); applyLog();
       return true;
     },
