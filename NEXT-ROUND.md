@@ -156,6 +156,23 @@
 
 
 
+
+## ① 已完成：联机游戏离线可用（v1.9.0）
+
+**真因**：three@0.180 的 \`three.module.js\` 里有 \`from './three.core.js'\` 的相对导入。
+我当初只下载了 three.module.js → 本地模块图**断裂** → 原作 boot 静默卡在「正在启动」，
+而且**不产生 console 报错**（所以前面几轮一直误判为「在等外部资源」）。
+**修法**：把 \`three.core.js\` 也放进 \`mini/plus-2265f7c6/vendor/\`（整包 2.0MB，含 three.module.js + three.core.js + RGBELoader/HDRLoader），
+importmap 指向本地。
+
+**证据**（CDN vs 本地对照，同一脚本）：
+\`CDN : {booted:true, cdn:2, n:30}\` / \`本地: {booted:true, vendor:2, cdn:0, n:30}\`
+→ 本地启动正常且 **jsdelivr 请求为 0**；真浏览器双人对局（推箱子）在本地 three 下**全部通过**；
+线上 v1.9.0 已确认生效。
+
+**教训**：\`three.module.js\` 不是自包含的单文件；换成本地/离线时，要把它的相对导入一起带上。
+另外：**没有 console 报错 ≠ 没有错误**——我的 console 捕获没看到这个模块加载失败，导致误判了好几轮。
+
 ## v1.8.1：修掉「结算界面永不渲染」的真 bug（影响 2 款已发布游戏）+ 一个重要的自我更正
 
 **更正**：我在第 20-21 轮说「同一个 patch 改法会破坏骨牌同步、机制未明」——**这是错的**。
