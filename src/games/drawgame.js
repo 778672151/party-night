@@ -221,7 +221,8 @@
     if (g.round >= rounds) {
       g.cur = null;
       g.done = true;
-      s.phase = 'over'; // 和另外三个游戏保持一致的 phase 契约（界面本来就读 g.done）
+      g.phase = 'over';   // 与其余 10 款统一：游戏级 phase 契约（此前只写 state.phase，导致离开收尾等通用逻辑无法按同一口径判断）
+      s.phase = 'over';   // 房间级 phase（保留）
       var players = host.state.players;
       var winner = null, maxScore = -1;
       for (var i = 0; i < players.length; i++) {
@@ -481,6 +482,17 @@
     onLeave: function (host, id) {
       var g = host.g();
       if (!g || !g.cur) return;
+      // 与其余 10 款游戏统一（阶段4 F2）：场上在线参战者不足 2 人就收尾，
+      // 否则一个人会对着无人猜的画空转到打满回合。复用 nextRound 的结束分支，
+      // 不复制收尾逻辑（gameover 事件与计分都在那里）。
+      var stillOnline = (host.state.players || []).filter(function (p) { return p.online; });
+      if (stillOnline.length < 2) {
+        var st0 = host.state.settings.drawgame || {};
+        g.round = st0.rounds || 6;          // 顶到上限，让 nextRound 直接走结束分支
+        host.toast('对方离开了，这局先到这儿～', 'info');
+        nextRound(host);
+        return;
+      }
       if (g.cur.painter === id) {
         host.clearTimer('drawgame_pick');
         host.clearTimer('drawgame_draw');
