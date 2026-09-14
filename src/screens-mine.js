@@ -97,6 +97,78 @@
         var html = '';
         for (var k = 0; k < g.rows * g.cols; k++) html += cellHtml(g, k, me);
         board.innerHTML = html;
+        // 三渲二棋盘：DOM 格子退化为「透明命中层」（点击/长按插旗/既有用例照旧），视觉由 canvas 提供
+        var cv3 = ui.el('canvas', 'mn-3d');
+        board.appendChild(cv3);
+        (function paintMine() {
+          var T = PN.Toon;
+          if (!T || !T.animate || !T.tone) return;
+          var cHid = T.tone('#9fdcb8'), cFlat = T.tone('#fff0f6'), cBoom = T.tone('#b98aa8'), cFlag = T.tone('#ffd86b');
+          var NUM = { 1: '#5b8cff', 2: '#3fae74', 3: '#ff7a90', 4: '#c9a7ff', 5: '#ffa64d', 6: '#4dc9c9', 7: '#ff8fb8', 8: '#a08cb8' };
+          T.animate(cv3, function (ctx, dt, t) {
+            var bw = board.clientWidth || 1, bh = board.clientHeight || 1;
+            ctx.clearRect(0, 0, bw, bh);
+            var cells = board.querySelectorAll('.mn-cell');
+            if (!cells.length) return;
+            var br = board.getBoundingClientRect();
+            for (var k = 0; k < cells.length; k++) {
+              var cell = cells[k];
+              var cr = cell.getBoundingClientRect();
+              var cx = cr.left - br.left + cr.width / 2;
+              var cy = cr.top - br.top + cr.height / 2;
+              var w = cr.width * 0.36;   // 略小于格子，避免被画布边缘裁掉
+              var hid = cell.classList.contains('mn-hid');
+              var boom = cell.classList.contains('mn-boom');
+              var flag = cell.classList.contains('mn-flag');
+              var isLast = cell.classList.contains('mn-last');
+              var mNum = /mn-n([1-8])/.exec(cell.className);
+              var col = boom ? cBoom : (hid ? cHid : (flag ? cFlag : cFlat));
+              var d = w * 0.32, h = w * 1.02;      // 等距厚度
+              var pop = 1;
+              if (isLast) { var ph = (t % 0.7) / 0.7; pop = 1 + T.spring(ph) * 0.16; }
+              h *= pop;
+              ctx.save();
+              ctx.translate(cx, cy - cr.height * 0.07);   // 整体上移，给下缘留出空间（最后一排不被裁）
+              ctx.lineJoin = 'round';
+              // 影
+              ctx.globalAlpha = 0.16; ctx.fillStyle = '#3a2b52';
+              ctx.beginPath(); ctx.ellipse(0, h / 2 + d * 1.1, w * 1.02, d * 0.55, 0, 0, 6.2832); ctx.fill();
+              ctx.globalAlpha = 1;
+              // 底面
+              ctx.fillStyle = col.left;
+              ctx.beginPath();
+              ctx.moveTo(-w, h / 2); ctx.lineTo(0, h / 2 + d); ctx.lineTo(w, h / 2); ctx.lineTo(0, h / 2 - d);
+              ctx.closePath(); ctx.fill();
+              // 顶面（受光）
+              ctx.fillStyle = hid ? col.top : col.base;
+              ctx.beginPath();
+              ctx.moveTo(-w, -h / 2); ctx.lineTo(0, -h / 2 + d); ctx.lineTo(w, -h / 2); ctx.lineTo(0, -h / 2 - d);
+              ctx.closePath(); ctx.fill();
+              // 左右侧
+              ctx.fillStyle = col.base;
+              ctx.beginPath();
+              ctx.moveTo(-w, -h / 2); ctx.lineTo(0, -h / 2 + d); ctx.lineTo(0, h / 2 + d); ctx.lineTo(-w, h / 2);
+              ctx.closePath(); ctx.fill();
+              ctx.fillStyle = col.right;
+              ctx.beginPath();
+              ctx.moveTo(w, -h / 2); ctx.lineTo(0, -h / 2 + d); ctx.lineTo(0, h / 2 + d); ctx.lineTo(w, h / 2);
+              ctx.closePath(); ctx.fill();
+              // 描边
+              ctx.strokeStyle = col.line; ctx.lineWidth = Math.max(1.2, w * 0.09);
+              ctx.beginPath();
+              ctx.moveTo(-w, -h / 2); ctx.lineTo(0, -h / 2 + d); ctx.lineTo(w, -h / 2);
+              ctx.lineTo(w, h / 2); ctx.lineTo(0, h / 2 + d); ctx.lineTo(-w, h / 2);
+              ctx.closePath(); ctx.stroke();
+              // 内容
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              var txt = hid ? '＊' : (boom ? '💥' : (flag ? '🚩' : (mNum ? mNum[1] : '')));
+              ctx.font = '900 ' + Math.round(w * 0.92) + 'px -apple-system,system-ui,"PingFang SC",sans-serif';
+              ctx.fillStyle = mNum ? (NUM[mNum[1]] || col.line) : col.line;
+              ctx.fillText(txt, 0, d * 0.15);
+              ctx.restore();
+            }
+          }, {});
+        })();
         body.appendChild(board);
         body.appendChild(ui.h('<div class="muted center mt8">手机端：长按格子也能插旗（当前模式：' + (local.mode === 'open' ? '翻开' : '插旗') + '）</div>'));
 
