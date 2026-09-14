@@ -1,0 +1,89 @@
+# 续作接力单（供下一轮/新会话直接接着干）
+
+> 目标（见 goal-7b5020aa）：①修本地 three ②复核 memory-test ③其余游戏按"整包复用+桥接+轮次/日志"改造
+> ④每款出双人对局+帧率证据 ⑤逐款升版本发布核对。完成度基准：`mini/plus-2265f7c6`（原作）。
+
+## 当前稳定状态（可用，勿破坏）
+
+- 线上/仓库：**v1.5.0**（`6343e30`），线上 md5 与本地一致；8 款联机 + 16 款小游戏
+- 鲸鱼推箱子 = **整包复用原作**：`src/screens-soko.js` 用 iframe 跑 `mini/plus-2265f7c6/`，
+  注入 61 行桥接；`src/games/soko.js` 只做轮流出手/移动日志/换关计分（**零行推箱子规则**）
+- 真浏览器双人对局通过：`node test/browser/regress.mjs soko`（用例已含"两端重放收敛""键盘接管"）
+- 单测：`node test/soko-test.mjs` 36/0；其余套件全绿
+
+## 已闭环
+
+- **② memory-test 计数**：稳定 29/0（声明 30 处，6 处挂在条件分支里 → 通过数会浮动）。
+  之前看到的 24 是并发压测下同一现象，**不是功能失败**。已结案。
+
+## 未闭环：① 本地 three（离线可用）
+
+**已证实的部分**
+- 把 importmap 的 `three` 与 `three/addons/` 指向本地后：three **确实从 `vendor/three.module.js` 加载**，
+  `performance` 里 **jsdelivr 请求降为 0**
+- 但原作**起不来**：`readyState:complete`、启动遮罩停在「正在启动」、**console/异常域零报错**
+
+**已排除**：路径写错、MIME 问题、addon 相对 import（`RGBELoader`→`HDRLoader` 图已闭合，共 2 文件 624KB）
+**未验证的可疑点**：boot 流程在 await 一个不返回的东西（最可能是外部 HDR：
+`dl.polyhaven.org/.../kloofendal_48d_partly_cloudy_puresky_1k.hdr`，1–2MB）。下一步应先看
+`src/gfx/sky.js` 的加载与兜底分支、以及 `src/main.js` 的 boot 步骤（`ui.setBoot`/`finishBoot`）**谁在 await**。
+
+**可靠诊断手法**（上次踩过坑：iframe 的 `load` 事件里挂 error 监听会竞态、抓不到东西）：
+- 用 CDP 的 console/异常域：`test/browser/diag-three2.mjs`（改 sleep 时长即可复测）
+- 参考：`test/browser/probe-vendor.mjs`（跑 `performance.getEntriesByType('resource')` 看真实来源）
+
+**现状**：importmap 已回退 CDN；`mini/plus-2265f7c6/vendor/`（624KB）留着未启用。**改它之前先备份 index.html**。
+
+## 下一轮主线：③ 其余游戏整包复用
+
+优先级建议（都要求：真浏览器双人对局 + `perf` 帧率数据 + 发布核对）：
+
+| 顺序 | 游戏 | 复用对象 | 备注 |
+| --- | --- | --- | --- |
+| 1 | 骨牌顶牛 | `mini/demo-c046ab75`（243 行、手写单文件） | 无全局 API，桥接要靠**模拟点击 + 读 DOM**；先读它代码确认状态形状 |
+| 2 | 2048 肉鸽版 | `mini/2048-roguelike-ed8cf859` | 键盘驱动 → 桥接转发按键 + 读盘面 |
+| 3 | 3D 重力迷宫 / 古戈尔增量 / 围棋 | 各自 mini 目录 | 同上，逐款评估桥接面 |
+| 4 | 五子棋 / 扫雷 / 翻牌 | 无可复用三渲二成品 | 才用 `PN.Toon`（`src/toon.js`）重绘 |
+
+### 第 1 款探明的接缝：骨牌顶牛（demo-c046ab75）
+
+**它不是手写单文件，是另一套成熟项目**：`game.js` 1979 行 + `ui.js` 3007 行 + `sw.js`/PWA，
+自带大厅、色子定庄、规则设置、多牌类（`dingniu` 可玩、`mahjong` 置灰）。
+
+- **可用的全局动作**（index.html 的 onclick 直接调，说明挂在 window 上）：
+  `enterGame('dingniu')` / `rollDice()` / `startGameWithDealer()` /
+  `playerPass()` / `confirmPlay()` / `confirmPlaySide('left'|'right')` / `handleNextRoundClick()`
+- **它自带"传递设备"双人**：`passDeviceBtn` → `localPlayerReady()` —— 说明"轮到谁"是它内部概念，
+  我们要做的是把这个"轮到谁"换成**我们的房主权威轮次**，动作仍调它自己的函数
+- 内部有 `PHASE { WAITING, DEALING, PLAYING }` 与完整牌谱（`TILE_TYPES`，含 ends/points/count/img）
+- **已定位（全部在 `ui.js`）**：
+  - 状态：**顶层 `let game = null`**（另有 `selectedTileId/selectedEnd/passTileId` 等 UI 选择态）。
+    注入的桥接是普通 script，和它共享全局词法环境，**直接写 `game` 即可**（不是 `window.game`）
+  - 动作：`rollDice():325` / `enterGame():375` / `startGameWithDealer():459` /
+    **`localPlayerReady():606`** / `confirmPlay():2351` / `confirmPlaySide():2406` / `playerPass():2461`
+  - **它自带两种双人**：`localMode/localReady`（同屏传递设备）与
+    `onlineMode/mySeat/roomCode/ws/onlineState`（自带 WebSocket 联机 —— 需要服务器，本项目零服务器用不了）
+- **路线（下一轮可照做）**：让它跑在 **localMode（传递设备）**，把这个"传给下一位"的交接点
+  `localPlayerReady()` 换成**我们的房主权威轮次**：某玩家动作 → 发 MQTT 给房主 → 房主追加日志并广播 →
+  两端按同一顺序调用同一动作。即：**它管牌局，我们管"谁在什么时候能动"**。
+  （注意：动作依赖 `selectedTileId/selectedEnd` 这类本地选择态，重放时要么把选择一起同步，
+  要么在桥接里先设置好选择再调 `confirmPlay` —— 这是这个游戏最需要小心的一处。）
+
+**桥接模式模板**（照抄推箱子，别再自己写游戏）：
+1. iframe 载入原作，父页面**每 300ms 主动补注入**桥接（不要只依赖 `load` 事件）
+2. 桥接只做：`postMessage` 出状态、进来指令 → 调原作自己的输入 API
+3. **捕获阶段拦截** iframe 内键盘/UI 按钮，输入只能由我们喂
+4. 房主侧只存**移动日志**；两端各自确定性重放；带**回执 + 未落地重发**（原作动画期间会拒收输入）
+5. 屏幕实现 `patch()` 恒返回真：**游玩期间绝不重建 DOM**（重排 iframe 会让原作重新加载）
+6. 注意嵌套引号：桥接字符串里的 `querySelector("[data-action=play]")` 不要用引号包属性值
+
+## 常用命令
+
+```bash
+python3 -m http.server 8080                     # 需要它跑着（browser 测试靠它）
+node test/browser/regress.mjs <lobby|mine|soko|hop|gomoku|...>   # 真浏览器对局
+node test/browser/regress.mjs perf [hop|mine|soko]               # 帧率体检
+node tools/release.mjs minor                    # 升版本 + 构建 + 校验 + 同步 index.html
+# 推送（需要 PAT，务必用后撤销）：
+git -c http.extraheader="Authorization: Basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push origin main --tags
+```

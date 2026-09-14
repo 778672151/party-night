@@ -12,7 +12,7 @@
 //     git log --oneline --grep='阶段' | head        # 找要回滚的提交
 //     git revert <sha> --no-edit && node build.mjs && cp dist/party-night.html index.html
 //     git add -A && git commit --amend --no-edit && git push
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,7 +36,9 @@ if (next) {
   console.log('版本不变：' + cur + '（用法：patch | minor | major | x.y.z | build）');
 }
 execFileSync(process.execPath, ['build.mjs'], { cwd: root, stdio: 'inherit' });
+// 先同步根目录 index.html 再校验：version-test 会断言"根 index.html 与产物逐字节一致"，
+// 顺序反了的话第一次必然失败（这个坑踩过一次）。
+copyFileSync(join(root, 'dist/party-night.html'), join(root, 'index.html'));
 execFileSync(process.execPath, ['test/version-test.mjs'], { cwd: root, stdio: 'inherit' });
-execFileSync('cp', ['dist/party-night.html', 'index.html'], { cwd: root });
 console.log('\n接下来：');
 console.log('  git add -A && git commit -m "发布 v' + (next || cur) + '" && git tag v' + (next || cur) + ' && git push origin main --tags');
