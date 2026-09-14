@@ -285,6 +285,9 @@
 
   Host.prototype.goLobby = function () {
     this.clearAll();
+    // 换游戏/回大厅：私密缓存必须失效。否则上一局缓存的秘密会在「秘密重发」
+    // （房主更替/玩家重连恢复）时被贴上当前 state.mode 的标签发出去。
+    this.secretCache = {};
     var self = this;
     var scores = {};
     this.state.players.forEach(function (p) { scores[p.id] = p.score; });
