@@ -1,10 +1,4 @@
-// ⚠️ 待设计：本用例当前【预期失败】，不计入套件门槛。
-// 背景：D12 的修法（在 Host.goLobby 里清空 secretCache）疑似回归了 codraw 的秘密流程——
-//   codraw.js:159 在“少于 2 人”时也会调用 goLobby()，而失败集中在秘密送达/一致性
-//   （“走完全部题目进入结算”“Cannot read properties of null (reading .total)”“两人拿到同一个题目”）。
-// 按纪律「失败即回退」，该修复已回退；此文件保留为复现，等设计出不影响 codraw 的修法再启用。
-// 断言未放宽：修法落地后应转为通过。
-// D12 最小验证：Host 的私密缓存 secretCache 在「回大厅」时是否失效
+// 第27轮受控 A/B 结论：本缺陷与 codraw 抖动无因果（回退修复后 codraw 仍 1 通过/2 失败、失败点各异），故修复已恢复，本用例转为门槛。
 //   node test/d12-secretcache-test.mjs
 // 不改产品代码，用真实 PN.Host.prototype（只覆写 emit/clearAll 等副作用）暴露问题。
 import { readFileSync } from 'node:fs';

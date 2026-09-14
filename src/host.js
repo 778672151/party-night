@@ -287,6 +287,9 @@
 
   Host.prototype.goLobby = function () {
     this.clearAll();
+    // 换游戏/回大厅：私密缓存必须失效，否则上一局缓存的秘密会在「秘密重发」时贴上当前 mode 标签。
+    // （第27轮受控 A/B：回退该行后 codraw 仍 1 通过/2 失败且失败点逐次不同 → 与本行无因果，故恢复。）
+    this.secretCache = {};
     var self = this;
     var scores = {};
     this.state.players.forEach(function (p) { scores[p.id] = p.score; });
