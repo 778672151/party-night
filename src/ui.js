@@ -132,6 +132,14 @@
         try { defer = !!this.screen.deferRender.call(this); } catch (e) {}
         if (defer) { this._renderPending = true; return; }
       }
+      // 屏幕可以用 patch 声明"这次状态变化不值得重建 DOM"（例如只变了蓄力进度）。
+      // 跳一跳卡顿的根因就是这个：蓄力时每秒广播 8 次进度 → 8 次整屏重建 → 画布每秒被拆掉重建 8 次，
+      // rAF 的目标节点不断失效（玩家看到的就是一顿一顿）。返回真表示屏幕已自行处理。
+      if (this.screen.patch) {
+        var patched = false;
+        try { patched = !!this.screen.patch.call(this, this.state); } catch (e) {}
+        if (patched) { this._renderPending = true; return; }
+      }
       if (imeFreeze()) { this._renderPending = true; return; } // 拼音上屏中：先别动 DOM
       lastUI = this;
       this.clear();

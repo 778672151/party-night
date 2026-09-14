@@ -492,3 +492,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .sk-hero{padding:24px 16px}
 .sk-result{font-size:26px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
   animation:qpop .5s var(--spring) both}
+/* 三渲二 canvas 场景（替换原来的扁平格子）*/
+.sk-board{max-width:clamp(240px,calc(100vh - 470px),520px);margin:0 auto}
+.sk-cv{display:block;width:100%;border-radius:22px;border:2.5px solid var(--stroke);
+  box-shadow:var(--soft);background:var(--bg);touch-action:manipulation}

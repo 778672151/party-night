@@ -253,9 +253,23 @@
   }
   if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(loop);
 
+  /** DOM 真正关心的字段签名：蓄力进度/飞行状态不进签名（那些由画布自己每帧画） */
+  function domSig(state) {
+    var g = state.g || {}, a = g.attempt || {};
+    return JSON.stringify([state.mode, state.phase, g.round, g.rounds, g.phase, g.turnIdx, g.totals,
+      a.pid, a.lives, a.score, a.combo, a.idx, a.ended]);
+  }
+
   PN.screens = PN.screens || {};
   PN.screens.hop = {
     name: 'hop',
+    /** 只变了蓄力进度 → 不重建 DOM（画布每帧自己重绘），彻底消掉蓄力时的整屏重建 */
+    patch: function (state) {
+      var sig = domSig(state);
+      if (this.__hopSig === sig) return true;
+      this.__hopSig = sig;
+      return false;
+    },
     render: function (state, secret) {
       var ui = this;
       var GC = PN.gameCommon;
@@ -301,7 +315,8 @@
         body.appendChild(hud);
 
         var stage = ui.el('div', 'hop-stage');
-        var cv = ui.el('canvas', 'hop-cv');
+        // 复用同一个 canvas 节点：整屏重建时把它挪过来，rAF 循环不会丢目标（配合 ui 的 patch 钩子）
+        var cv = local.cv || (local.cv = ui.el('canvas', 'hop-cv'));
         stage.appendChild(cv);
         body.appendChild(stage);
         body.appendChild(ui.h('<div class="muted center mt8">完美落在方块中心会连击：+2 → +4 → +6 → +8 → +10</div>'));

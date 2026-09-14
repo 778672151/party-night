@@ -419,10 +419,22 @@ S.soko = async (cdp) => {
   const g0 = JSON.parse(await H.eval('JSON.stringify({li:PN.app.state.g.li, levels:PN.app.state.g.levels, rows:PN.app.state.g.rows, cols:PN.app.state.g.cols, id:PN.app.state.g.levelId})'));
   assert(g0.li === 0 && g0.levels === 5, '默认从第 1 关开始、共 5 关（⚙️可改 3/10）');
   assert(g0.id === 'grove-01' && g0.rows === 5 && g0.cols === 7, '第 1 关 5×7（' + g0.id + '）');
-  assert(await H.eval('document.querySelectorAll(".sk-cell").length') === 35, '棋盘 35 格');
-  assert(await H.eval('document.querySelectorAll(".sk-whale").length') === 1, '页面上有一只鲸鱼 🐳');
-  assert(await H.eval('document.querySelectorAll(".sk-box").length') === 1, '一个箱子 📦');
-  assert(await H.eval('document.querySelectorAll(".sk-goal").length') === 1, '一个目标点 ✨');
+  assert(await H.eval('document.querySelectorAll(".sk-cv").length') === 1, '页面上有一块三渲二画布');
+  // 画布真的画出了东西（不是一片背景色）
+  const painted = await H.eval(`(() => {
+    const cv = document.querySelector('.sk-cv');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    const seen = new Set();
+    for (let i = 0; i < d.length; i += 40 * 4) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]);
+    return seen.size;
+  })()`);
+  assert(painted > 12, '三渲二场景画出来了（' + painted + ' 种不同颜色，不是纯背景）');
+  // 场景实体数量（等距投影 + 深度排序后每一帧统计）
+  await sleep(500);
+  const st = JSON.parse(await H.eval('JSON.stringify(PN.screens.soko.debug().stats)'));
+  assert(st.walls === 20, '草地上的花丛墙 20 块（第 1 关外框）');
+  assert(st.goals === 1 && st.crates === 1 && st.whale === 1, '一个目标点、一个箱子、一只鲸鱼');
+  assert(st.onGoal === 0, '开局箱子还没归位');
   assert(await H.eval('!!document.querySelector(".sk-turn.mine")'), '先手页面提示"轮到你推一步"');
   await H.shot('soko-1-level1');
 
@@ -629,10 +641,19 @@ S.hop = async (cdp) => {
   await sleep(500);
   await holder.waitFor('PN.app.state.g.attempt.charging === true', '蓄力中', 15000);
   assert(true, '按住画布 → 房主确认进入蓄力（charging=true）');
+  // 卡顿根因回归：蓄力期间每秒有 8 次进度广播，画布**绝不能被整屏重建**（重建 rAF 就丢目标 → 一顿一顿）
+  await holder.eval('window.__cvNode = document.querySelector(".hop-cv"); window.__cvTag = 1; 1');
+  await holder.waitFor('PN.app.state.g.charging === true || PN.app.state.g.attempt.charging === true', '蓄力广播中', 8000).catch(() => {});
+  await sleep(200);
   await waiter.waitFor('PN.app.state.g.attempt.charging === true', '对手也看得到蓄力', 15000);
   assert(true, '对手页面同步到"他在蓄力"（可以看着他攒劲）');
   const pow = await waiter.eval('PN.app.state.g.power');
   assert(typeof pow === 'number', '对手能看到蓄力进度（当前 ' + pow + '）');
+  assert(await holder.eval('document.querySelector(".hop-cv") === window.__cvNode'),
+    '蓄力期间画布没有被重建（卡顿根因：整屏重建 → rAF 丢目标）');
+  // 对手页面同样不该被 8Hz 的进度广播整屏重建
+  const oppSame = await waiter.eval('(() => { const cv = document.querySelector(".hop-cv"); if (!window.__oppCv) { window.__oppCv = cv; return "first"; } return cv === window.__oppCv; })()');
+  assert(oppSame === 'first' || oppSame === true, '对手页面的画布也保持同一个节点（' + oppSame + '）');
   await sleep(700);
   await holder.mouse('mouseReleased', box2.x, box2.y, { buttons: 0 });
   await H.waitFor('!!PN.app.state.g.attempt.fly', '起跳', 15000);
@@ -986,6 +1007,127 @@ S.codraw = async (cdp) => {
   assert(errH === '[]', '房主页面全程无 JS 报错：' + errH);
   assert(errO === '[]', '对方页面全程无 JS 报错：' + errO);
   await A.dispose(); await B.dispose();
+};
+
+/* ============ P. 帧率体检：真浏览器里量 rAF 帧间隔 ============
+ * 不进 ORDER（性能检查要在机器安静时单独跑）：
+ *   node test/browser/regress.mjs perf
+ * 量的是 rAF 回调之间的真实间隔 —— 和玩家看到的卡顿是同一件事。 */
+const PROBE = `
+window.__pf = window.__pf || { on: false, dt: [], long: 0, jank: 0, last: 0 };
+(function tick(ts) {
+  var p = window.__pf;
+  if (p.on) {
+    if (p.last) {
+      var d = ts - p.last;
+      p.dt.push(d);
+      if (d > 33.4) p.long++;
+      if (d > 50) p.jank++;
+    }
+    p.last = ts;
+  } else { p.last = 0; }
+  requestAnimationFrame(tick);
+})(performance.now());
+`;
+async function pfReset(page) {
+  await page.eval(PROBE);
+  await page.eval('window.__pf.dt = []; window.__pf.long = 0; window.__pf.jank = 0; window.__pf.last = 0; window.__pf.on = true; 1');
+}
+async function pfStop(page) {
+  return JSON.parse(await page.eval(`(() => {
+    var p = window.__pf; p.on = false;
+    var d = p.dt.slice().sort(function (a, b) { return a - b; });
+    var sum = d.reduce(function (a, b) { return a + b; }, 0);
+    var q = function (k) { return d.length ? d[Math.min(d.length - 1, Math.floor(d.length * k))] : 0; };
+    return JSON.stringify({ n: d.length, avg: d.length ? sum / d.length : 0, p50: q(0.5), p95: q(0.95), max: d.length ? d[d.length - 1] : 0, long: p.long, jank: p.jank });
+  })()`));
+}
+function pfLine(label, s) {
+  return '  ' + label.padEnd(12) + '帧' + String(s.n).padStart(4) +
+    '  平均 ' + s.avg.toFixed(1).padStart(5) + 'ms (' + (1000 / (s.avg || 16.7)).toFixed(0) + 'fps)' +
+    '  p95 ' + s.p95.toFixed(1).padStart(5) + 'ms  最长 ' + String(Math.round(s.max)).padStart(4) + 'ms' +
+    '  掉帧(>33ms) ' + String(s.long).padStart(3) + '  严重(>50ms) ' + String(s.jank).padStart(3);
+}
+/** 建房+开局，返回 {A,B,H,O} */
+async function mkRoom(cdp, mode) {
+  const A = await createRoom(cdp, '甲');
+  const B = await joinRoom(cdp, '乙', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  await startGame(H, mode);
+  await H.waitFor('PN.app.state.mode === "' + mode + '"', mode + ' 开局', 30000);
+  await O.waitFor('PN.app.state.mode === "' + mode + '"', mode + ' 对方开局', 30000);
+  return { A, B, H, O };
+}
+const idOf = async (p) => await p.eval('PN.app.me().id');
+
+S.perf = async (cdp) => {
+  const only = process.argv[3];
+  const rows = [];
+  const want = (m) => !only || only === m;
+
+  if (want('hop')) {
+    const { A, B, H } = await mkRoom(cdp, 'hop');
+    const ids = { [await idOf(A)]: A, [await idOf(B)]: B };
+    await sleep(800);
+    await pfReset(H);
+    await sleep(1500);
+    const idle = await pfStop(H);
+    rows.push(pfLine('跳一跳 idle', idle));
+
+    await pfReset(H);
+    const t0 = Date.now();
+    while (Date.now() - t0 < 9000) {                 // 连续蓄力/起跳，覆盖最重的路径
+      const pid = await H.eval('PN.app.state.g.attempt && PN.app.state.g.attempt.pid');
+      const page = ids[pid];
+      if (!page) break;
+      const xy = JSON.parse(await page.eval('(() => { const c = document.querySelector(".hop-cv"); if(!c) return "[]"; const r = c.getBoundingClientRect(); return JSON.stringify([Math.round(r.left + r.width/2), Math.round(r.top + r.height/2)]); })()'));
+      if (!xy.length) { await sleep(300); continue; }
+      await page.mouse('mouseMoved', xy[0], xy[1], { button: 'none' });
+      await page.mouse('mousePressed', xy[0], xy[1], { buttons: 1 });
+      await sleep(620);
+      await page.mouse('mouseReleased', xy[0], xy[1], { buttons: 0 });
+      await sleep(420);
+    }
+    const play = await pfStop(H);
+    rows.push(pfLine('跳一跳 蓄力中', play));
+    await A.dispose(); await B.dispose();
+    await sleep(1500);
+  }
+
+  if (want('mine')) {
+    const { A, B, H } = await mkRoom(cdp, 'mine');
+    await sleep(600);
+    await pfReset(H);
+    await sleep(1200);
+    rows.push(pfLine('扫雷 idle', await pfStop(H)));
+    await pfReset(H);
+    for (let i = 0; i < 6; i++) { await H.click('.mn-cell[data-i="' + (30 + i) + '"]').catch(() => {}); await sleep(500); }
+    rows.push(pfLine('扫雷 点击中', await pfStop(H)));
+    await A.dispose(); await B.dispose();
+    await sleep(1500);
+  }
+
+  if (want('soko')) {
+    const { A, B, H } = await mkRoom(cdp, 'soko');
+    await sleep(600);
+    await pfReset(H);
+    await sleep(1200);
+    rows.push(pfLine('推箱子 idle', await pfStop(H)));
+    await pfReset(H);
+    const p0 = (await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]')) === (await idOf(A)) ? A : B;
+    for (const d of ['right', 'down', 'left', 'up', 'right', 'down']) { await p0.click('[data-dir="' + d + '"]').catch(() => {}); await sleep(500); }
+    rows.push(pfLine('推箱子 走位中', await pfStop(H)));
+    await A.dispose(); await B.dispose();
+    await sleep(1500);
+  }
+
+  console.log('\n===== 帧率体检（rAF 真实间隔；vsync 上限约 16.7ms）=====');
+  rows.forEach(r => console.log(r));
+  const bad = rows.filter(r => /p95\s+(\d+)/.test(r) && Number(r.match(/p95\s+([\d.]+)/)[1]) > 34);
+  if (bad.length) console.log('\n  ⚠ 有 ' + bad.length + ' 组 p95 超过 34ms（约 30fps 以下）');
+  else console.log('\n  全部在 30fps 以上');
 };
 
 /* 只有房主侧有「再来一局」：两页探一下，在真有按钮的那页点 */

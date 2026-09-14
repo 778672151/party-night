@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#fff4f9">
-<meta name="pn-version" content="1.3.0">
+<meta name="pn-version" content="1.4.0">
 <title>两个人的游戏厅</title>
 <style id="pncss">/* ===== 两个人的游戏厅：二次元 Q 弹可爱风 =====
    设计要点：马卡龙奶油底 + 白色圆角卡片 + 二次元粗描边 +「实体按钮」按压回弹（Q 弹）+ 轻微光泽。 */
@@ -500,6 +500,10 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .sk-hero{padding:24px 16px}
 .sk-result{font-size:26px;font-weight:900;color:var(--acc);text-shadow:0 4px 0 rgba(255,143,184,.22);
   animation:qpop .5s var(--spring) both}
+/* 三渲二 canvas 场景（替换原来的扁平格子）*/
+.sk-board{max-width:clamp(240px,calc(100vh - 470px),520px);margin:0 auto}
+.sk-cv{display:block;width:100%;border-radius:22px;border:2.5px solid var(--stroke);
+  box-shadow:var(--soft);background:var(--bg);touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -508,7 +512,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 </div>
 <script>
 window.__PN_BANKS__ = {"draw":{"version":1,"words":[{"w":"长颈鹿","level":1,"tag":"动物"},{"w":"大象","level":1,"tag":"动物"},{"w":"企鹅","level":1,"tag":"动物"},{"w":"熊猫","level":1,"tag":"动物"},{"w":"猫","level":1,"tag":"动物"},{"w":"狗","level":1,"tag":"动物"},{"w":"兔子","level":1,"tag":"动物"},{"w":"老虎","level":1,"tag":"动物"},{"w":"狮子","level":1,"tag":"动物"},{"w":"猴子","level":1,"tag":"动物"},{"w":"蛇","level":1,"tag":"动物"},{"w":"鱼","level":1,"tag":"动物"},{"w":"鸟","level":1,"tag":"动物"},{"w":"蝴蝶","level":1,"tag":"动物"},{"w":"蜗牛","level":1,"tag":"动物"},{"w":"鲨鱼","level":1,"tag":"动物"},{"w":"海豚","level":1,"tag":"动物"},{"w":"鲸鱼","level":1,"tag":"动物"},{"w":"螃蟹","level":1,"tag":"动物"},{"w":"乌龟","level":1,"tag":"动物"},{"w":"青蛙","level":1,"tag":"动物"},{"w":"孔雀","level":1,"tag":"动物"},{"w":"老鹰","level":1,"tag":"动物"},{"w":"鹦鹉","level":1,"tag":"动物"},{"w":"蜜蜂","level":1,"tag":"动物"},{"w":"蚂蚁","level":1,"tag":"动物"},{"w":"蜻蜓","level":1,"tag":"动物"},{"w":"瓢虫","level":1,"tag":"动物"},{"w":"蜘蛛","level":1,"tag":"动物"},{"w":"壁虎","level":1,"tag":"动物"},{"w":"考拉","level":1,"tag":"动物"},{"w":"北极熊","level":1,"tag":"动物"},{"w":"梅花鹿","level":1,"tag":"动物"},{"w":"松鼠","level":1,"tag":"动物"},{"w":"刺猬","level":1,"tag":"动物"},{"w":"河马","level":1,"tag":"动物"},{"w":"犀牛","level":1,"tag":"动物"},{"w":"骆驼","level":1,"tag":"动物"},{"w":"斑马","level":1,"tag":"动物"},{"w":"鳄鱼","level":1,"tag":"动物"},{"w":"苹果","level":1,"tag":"食物"},{"w":"西瓜","level":1,"tag":"食物"},{"w":"草莓","level":1,"tag":"食物"},{"w":"香蕉","level":1,"tag":"食物"},{"w":"葡萄","level":1,"tag":"食物"},{"w":"菠萝","level":1,"tag":"食物"},{"w":"樱桃","level":1,"tag":"食物"},{"w":"冰淇淋","level":1,"tag":"食物"},{"w":"蛋糕","level":1,"tag":"食物"},{"w":"汉堡","level":1,"tag":"食物"},{"w":"披萨","level":1,"tag":"食物"},{"w":"面条","level":1,"tag":"食物"},{"w":"饺子","level":1,"tag":"食物"},{"w":"包子","level":1,"tag":"食物"},{"w":"月饼","level":1,"tag":"食物"},{"w":"粽子","level":1,"tag":"食物"},{"w":"糖葫芦","level":1,"tag":"食物"},{"w":"火锅","level":1,"tag":"食物"},{"w":"寿司","level":1,"tag":"食物"},{"w":"热狗","level":1,"tag":"食物"},{"w":"鸡腿","level":1,"tag":"食物"},{"w":"薯条","level":1,"tag":"食物"},{"w":"爆米花","level":1,"tag":"食物"},{"w":"棉花糖","level":1,"tag":"食物"},{"w":"棒棒糖","level":1,"tag":"食物"},{"w":"鸡蛋","level":1,"tag":"食物"},{"w":"牛奶","level":1,"tag":"食物"},{"w":"面包","level":1,"tag":"食物"},{"w":"饼干","level":1,"tag":"食物"},{"w":"巧克力","level":1,"tag":"食物"},{"w":"雨伞","level":1,"tag":"物品"},{"w":"手机","level":1,"tag":"物品"},{"w":"电脑","level":1,"tag":"物品"},{"w":"眼镜","level":1,"tag":"物品"},{"w":"帽子","level":1,"tag":"物品"},{"w":"钥匙","level":1,"tag":"物品"},{"w":"剪刀","level":1,"tag":"物品"},{"w":"牙刷","level":1,"tag":"物品"},{"w":"闹钟","level":1,"tag":"物品"},{"w":"灯泡","level":1,"tag":"物品"},{"w":"镜子","level":1,"tag":"物品"},{"w":"椅子","level":1,"tag":"物品"},{"w":"桌子","level":1,"tag":"物品"},{"w":"书包","level":1,"tag":"物品"},{"w":"信封","level":1,"tag":"物品"},{"w":"蜡烛","level":1,"tag":"物品"},{"w":"气球","level":1,"tag":"物品"},{"w":"风筝","level":1,"tag":"物品"},{"w":"吉他","level":1,"tag":"物品"},{"w":"钢琴","level":1,"tag":"物品"},{"w":"相机","level":1,"tag":"物品"},{"w":"日历","level":1,"tag":"物品"},{"w":"地图","level":1,"tag":"物品"},{"w":"地球仪","level":1,"tag":"物品"},{"w":"自行车","level":1,"tag":"交通"},{"w":"汽车","level":1,"tag":"交通"},{"w":"飞机","level":1,"tag":"交通"},{"w":"火车","level":1,"tag":"交通"},{"w":"轮船","level":1,"tag":"交通"},{"w":"火箭","level":1,"tag":"交通"},{"w":"热气球","level":1,"tag":"交通"},{"w":"摩托车","level":1,"tag":"交通"},{"w":"公交车","level":1,"tag":"交通"},{"w":"直升机","level":1,"tag":"交通"},{"w":"地铁","level":1,"tag":"交通"},{"w":"电动车","level":1,"tag":"交通"},{"w":"太阳","level":1,"tag":"自然"},{"w":"月亮","level":1,"tag":"自然"},{"w":"星星","level":1,"tag":"自然"},{"w":"彩虹","level":1,"tag":"自然"},{"w":"雪花","level":1,"tag":"自然"},{"w":"山","level":1,"tag":"自然"},{"w":"眼睛","level":1,"tag":"身体"},{"w":"耳朵","level":1,"tag":"身体"},{"w":"手","level":1,"tag":"身体"},{"w":"脚","level":1,"tag":"身体"},{"w":"牙齿","level":1,"tag":"身体"},{"w":"头发","level":1,"tag":"身体"},{"w":"医生","level":1,"tag":"职业"},{"w":"警察","level":1,"tag":"职业"},{"w":"厨师","level":1,"tag":"职业"},{"w":"消防员","level":1,"tag":"职业"},{"w":"教师","level":1,"tag":"职业"},{"w":"宇航员","level":1,"tag":"职业"},{"w":"堵车","level":2,"tag":"场景"},{"w":"下雨","level":2,"tag":"场景"},{"w":"下雪","level":2,"tag":"场景"},{"w":"日出","level":2,"tag":"场景"},{"w":"日落","level":2,"tag":"场景"},{"w":"流星","level":2,"tag":"场景"},{"w":"火灾","level":2,"tag":"场景"},{"w":"雪人","level":2,"tag":"场景"},{"w":"沙滩","level":2,"tag":"场景"},{"w":"瀑布","level":2,"tag":"场景"},{"w":"火山爆发","level":2,"tag":"场景"},{"w":"海底世界","level":2,"tag":"场景"},{"w":"游乐园","level":2,"tag":"场景"},{"w":"动物园","level":2,"tag":"场景"},{"w":"演唱会","level":2,"tag":"场景"},{"w":"电影院","level":2,"tag":"场景"},{"w":"图书馆","level":2,"tag":"场景"},{"w":"超市","level":2,"tag":"场景"},{"w":"菜市场","level":2,"tag":"场景"},{"w":"地铁站","level":2,"tag":"场景"},{"w":"火车站","level":2,"tag":"场景"},{"w":"机场","level":2,"tag":"场景"},{"w":"医院","level":2,"tag":"场景"},{"w":"学校","level":2,"tag":"场景"},{"w":"公园","level":2,"tag":"场景"},{"w":"游泳池","level":2,"tag":"场景"},{"w":"篮球场","level":2,"tag":"场景"},{"w":"滑雪场","level":2,"tag":"场景"},{"w":"海边","level":2,"tag":"场景"},{"w":"露营","level":2,"tag":"场景"},{"w":"野餐","level":2,"tag":"场景"},{"w":"烧烤","level":2,"tag":"场景"},{"w":"咖啡店","level":2,"tag":"场景"},{"w":"健身房","level":2,"tag":"场景"},{"w":"电梯","level":2,"tag":"场景"},{"w":"楼梯","level":2,"tag":"场景"},{"w":"隧道","level":2,"tag":"场景"},{"w":"桥","level":2,"tag":"场景"},{"w":"摩天轮","level":2,"tag":"场景"},{"w":"旋转木马","level":2,"tag":"场景"},{"w":"过山车","level":2,"tag":"场景"},{"w":"刷牙","level":2,"tag":"动作"},{"w":"洗脸","level":2,"tag":"动作"},{"w":"洗澡","level":2,"tag":"动作"},{"w":"梳头","level":2,"tag":"动作"},{"w":"化妆","level":2,"tag":"动作"},{"w":"刮胡子","level":2,"tag":"动作"},{"w":"做饭","level":2,"tag":"动作"},{"w":"洗碗","level":2,"tag":"动作"},{"w":"扫地","level":2,"tag":"动作"},{"w":"拖地","level":2,"tag":"动作"},{"w":"洗衣服","level":2,"tag":"动作"},{"w":"晾衣服","level":2,"tag":"动作"},{"w":"叠被子","level":2,"tag":"动作"},{"w":"系鞋带","level":2,"tag":"动作"},{"w":"打伞","level":2,"tag":"动作"},{"w":"跳绳","level":2,"tag":"运动"},{"w":"踢毽子","level":2,"tag":"运动"},{"w":"打篮球","level":2,"tag":"运动"},{"w":"踢足球","level":2,"tag":"运动"},{"w":"打乒乓球","level":2,"tag":"运动"},{"w":"游泳","level":2,"tag":"运动"},{"w":"跑步","level":2,"tag":"运动"},{"w":"钓鱼","level":2,"tag":"动作"},{"w":"爬山","level":2,"tag":"运动"},{"w":"拍照","level":2,"tag":"动作"},{"w":"自拍","level":2,"tag":"动作"},{"w":"唱歌","level":2,"tag":"动作"},{"w":"跳舞","level":2,"tag":"动作"},{"w":"弹吉他","level":2,"tag":"动作"},{"w":"弹钢琴","level":2,"tag":"动作"},{"w":"打游戏","level":2,"tag":"动作"},{"w":"看手机","level":2,"tag":"动作"},{"w":"看书","level":2,"tag":"动作"},{"w":"写字","level":2,"tag":"动作"},{"w":"画画","level":2,"tag":"动作"},{"w":"打电话","level":2,"tag":"动作"},{"w":"遛狗","level":2,"tag":"动作"},{"w":"喂猫","level":2,"tag":"动作"},{"w":"种花","level":2,"tag":"动作"},{"w":"浇花","level":2,"tag":"动作"},{"w":"排队","level":2,"tag":"场景"},{"w":"考试","level":2,"tag":"场景"},{"w":"考试作弊","level":2,"tag":"动作"},{"w":"睡觉","level":2,"tag":"动作"},{"w":"做梦","level":2,"tag":"动作"},{"w":"起床","level":2,"tag":"动作"},{"w":"上班","level":2,"tag":"场景"},{"w":"下班","level":2,"tag":"场景"},{"w":"迟到","level":2,"tag":"场景"},{"w":"加班","level":2,"tag":"场景"},{"w":"熬夜","level":2,"tag":"动作"},{"w":"煮面","level":2,"tag":"动作"},{"w":"煎蛋","level":2,"tag":"动作"},{"w":"泡茶","level":2,"tag":"动作"},{"w":"喝咖啡","level":2,"tag":"动作"},{"w":"吃火锅","level":2,"tag":"动作"},{"w":"吃烧烤","level":2,"tag":"动作"},{"w":"旅游","level":2,"tag":"动作"},{"w":"购物","level":2,"tag":"场景"},{"w":"散步","level":2,"tag":"动作"},{"w":"打喷嚏","level":2,"tag":"动作"},{"w":"打哈欠","level":2,"tag":"动作"},{"w":"伸懒腰","level":2,"tag":"动作"},{"w":"滑雪","level":2,"tag":"运动"},{"w":"滑冰","level":2,"tag":"运动"},{"w":"冲浪","level":2,"tag":"运动"},{"w":"潜水","level":2,"tag":"运动"},{"w":"跳伞","level":2,"tag":"运动"},{"w":"蹦极","level":2,"tag":"运动"},{"w":"画蛇添足","level":3,"tag":"成语"},{"w":"守株待兔","level":3,"tag":"成语"},{"w":"掩耳盗铃","level":3,"tag":"成语"},{"w":"亡羊补牢","level":3,"tag":"成语"},{"w":"井底之蛙","level":3,"tag":"成语"},{"w":"对牛弹琴","level":3,"tag":"成语"},{"w":"杯弓蛇影","level":3,"tag":"成语"},{"w":"鹤立鸡群","level":3,"tag":"成语"},{"w":"鸡飞狗跳","level":3,"tag":"成语"},{"w":"虎头蛇尾","level":3,"tag":"成语"},{"w":"狼吞虎咽","level":3,"tag":"成语"},{"w":"龙飞凤舞","level":3,"tag":"成语"},{"w":"马到成功","level":3,"tag":"成语"},{"w":"鸟语花香","level":3,"tag":"成语"},{"w":"鱼目混珠","level":3,"tag":"成语"},{"w":"鼠目寸光","level":3,"tag":"成语"},{"w":"狐假虎威","level":3,"tag":"成语"},{"w":"叶公好龙","level":3,"tag":"成语"},{"w":"一箭双雕","level":3,"tag":"成语"},{"w":"三心二意","level":3,"tag":"成语"},{"w":"七上八下","level":3,"tag":"成语"},{"w":"九牛一毛","level":3,"tag":"成语"},{"w":"十全十美","level":3,"tag":"成语"},{"w":"百发百中","level":3,"tag":"成语"},{"w":"千军万马","level":3,"tag":"成语"},{"w":"鸡犬升天","level":3,"tag":"成语"},{"w":"画龙点睛","level":3,"tag":"成语"},{"w":"坐井观天","level":3,"tag":"成语"},{"w":"人山人海","level":3,"tag":"成语"},{"w":"惊天动地","level":3,"tag":"成语"},{"w":"emo了","level":3,"tag":"网络"},{"w":"破防了","level":3,"tag":"网络"},{"w":"躺平","level":3,"tag":"网络"},{"w":"内卷","level":3,"tag":"网络"},{"w":"摆烂","level":3,"tag":"网络"},{"w":"摸鱼","level":3,"tag":"网络"},{"w":"上头","level":3,"tag":"网络"},{"w":"无语","level":3,"tag":"网络"},{"w":"社死","level":3,"tag":"网络"},{"w":"社恐","level":3,"tag":"网络"},{"w":"吃瓜","level":3,"tag":"网络"},{"w":"自闭","level":3,"tag":"网络"},{"w":"凡尔赛","level":3,"tag":"网络"},{"w":"我酸了","level":3,"tag":"网络"},{"w":"划水","level":3,"tag":"网络"},{"w":"卷王","level":3,"tag":"网络"},{"w":"吐槽","level":3,"tag":"网络"},{"w":"点赞","level":3,"tag":"网络"},{"w":"关注","level":3,"tag":"网络"},{"w":"转发","level":3,"tag":"网络"},{"w":"加好友","level":3,"tag":"网络"},{"w":"发朋友圈","level":3,"tag":"网络"},{"w":"刷视频","level":3,"tag":"网络"},{"w":"弹幕","level":3,"tag":"网络"},{"w":"表情包","level":3,"tag":"网络"},{"w":"拍一拍","level":3,"tag":"网络"},{"w":"冒泡","level":3,"tag":"网络"},{"w":"告辞","level":3,"tag":"网络"},{"w":"厉害了","level":3,"tag":"网络"},{"w":"玩手机","level":2,"tag":"动作"},{"w":"戴耳机","level":2,"tag":"动作"},{"w":"晒太阳","level":2,"tag":"动作"},{"w":"吹蜡烛","level":2,"tag":"动作"},{"w":"放烟花","level":2,"tag":"场景"},{"w":"打雪仗","level":2,"tag":"运动"},{"w":"走马观花","level":3,"tag":"成语"}]},"tacit":{"version":1,"note":"默契大考验题库：type=who 的选项是两个玩家的名字（按参与者顺序）；type=pick 用自带的 options","questions":[{"q":"谁更可能先睡着？","type":"who"},{"q":"谁起床更磨蹭？","type":"who"},{"q":"谁更爱拍照？","type":"who"},{"q":"谁吃饭更慢？","type":"who"},{"q":"谁更怕冷？","type":"who"},{"q":"谁更容易迷路？","type":"who"},{"q":"谁更爱笑？","type":"who"},{"q":"谁更会安慰人？","type":"who"},{"q":"谁更爱收拾房间？","type":"who"},{"q":"谁更爱说「随便」？","type":"who"},{"q":"谁更容易被感动？","type":"who"},{"q":"谁更爱熬夜？","type":"who"},{"q":"谁更会挑餐厅？","type":"who"},{"q":"谁更爱撒娇？","type":"who"},{"q":"谁更像「小太阳」？","type":"who"},{"q":"谁更容易紧张？","type":"who"},{"q":"谁更爱看剧？","type":"who"},{"q":"谁更爱吃甜食？","type":"who"},{"q":"谁更爱唱歌？","type":"who"},{"q":"谁更会哄人开心？","type":"who"},{"q":"谁更容易心软？","type":"who"},{"q":"谁更爱逛街？","type":"who"},{"q":"谁更爱待在家？","type":"who"},{"q":"谁更记得住纪念日？","type":"who"},{"q":"周末更想怎么过？","type":"pick","options":["在家躺着","出门走走","见朋友","去旅行"]},{"q":"今晚吃什么？","type":"pick","options":["火锅","烧烤","家常菜","点外卖"]},{"q":"更喜欢的季节？","type":"pick","options":["春天","夏天","秋天","冬天"]},{"q":"心情不好时更想要什么？","type":"pick","options":["抱抱","安静待着","出门散心","一起吃好吃的"]},{"q":"更喜欢的饮料？","type":"pick","options":["奶茶","咖啡","果汁","白开水"]},{"q":"理想的约会是什么样？","type":"pick","options":["看电影","散步","逛展","待在家"]},{"q":"更喜欢的天气？","type":"pick","options":["大晴天","小雨","下雪","阴天"]},{"q":"收到什么会更开心？","type":"pick","options":["小礼物","一句夸奖","一起吃饭","一次旅行"]},{"q":"更喜欢的宠物？","type":"pick","options":["猫","狗","仓鼠","先不养"]},{"q":"放假更想去哪？","type":"pick","options":["海边","山里","大城市","家里"]},{"q":"更喜欢哪样甜品？","type":"pick","options":["蛋糕","冰淇淋","布丁","不太甜"]},{"q":"更喜欢的电影类型？","type":"pick","options":["喜剧","悬疑","动画","爱情"]},{"q":"更喜欢的音乐？","type":"pick","options":["流行","民谣","摇滚","纯音乐"]},{"q":"更喜欢的早餐？","type":"pick","options":["豆浆油条","面包牛奶","小笼包","不吃"]},{"q":"更喜欢的运动？","type":"pick","options":["跑步","游泳","羽毛球","躺着不动"]},{"q":"最想去的地方？","type":"pick","options":["日本","欧洲","云南","川西"]},{"q":"什么最能让你放松？","type":"pick","options":["听音乐","睡一觉","散散步","找人聊天"]},{"q":"更喜欢怎么表达关心？","type":"pick","options":["说出口","做顿饭","默默陪着","发条消息"]},{"q":"更喜欢哪种花？","type":"pick","options":["玫瑰","向日葵","满天星","郁金香"]},{"q":"更喜欢哪个颜色？","type":"pick","options":["粉色","蓝色","绿色","黄色"]},{"q":"更喜欢什么样的礼物？","type":"pick","options":["实用的","好看的","手作的","惊喜的"]},{"q":"生日更想怎么过？","type":"pick","options":["热闹聚会","两个人过","收礼物","当普通一天"]},{"q":"更喜欢哪种相处方式？","type":"pick","options":["每天聊天","见面最要紧","各忙各的","一起做点事"]},{"q":"更喜欢的作息？","type":"pick","options":["早睡早起","晚睡晚起","看情况","完全不固定"]}]},"memory":{"version":1,"note":"合作翻牌的牌面池：每局从一套里随机取 8 对（16 张），牌堆由房主生成、只把已经翻开的牌广播出去","sets":{"动物园":["🐱","🐶","🐰","🐼","🦊","🐷","🐸","🐵","🐨","🐯","🦁","🐮","🐔","🐧"],"甜品店":["🍰","🍩","🍪","🍬","🍭","🧁","🍦","🍫","🍮","🥧","🍯","🍡","🍓","🥐"],"小花园":["🌸","🌻","🌷","🍀","🌵","🌿","🍄","🌴","🌺","🌼","🪴","🎋","🌾","🪷"]}},"codraw":{"version":1,"note":"心有灵犀题库：两人用同一个题目各画一张，看看想到的是不是一回事","prompts":[{"p":"家","h":"画你心里的那个家"},{"p":"你笑起来的样子","h":"画出你记得的笑"},{"p":"我们的第一次见面","h":"画出你印象最深的那一幕"},{"p":"一起看过的天空","h":"那天的天是什么颜色？"},{"p":"最喜欢的季节","h":"画出那个季节的一件小事"},{"p":"你的拿手菜","h":"画得好吃就行"},{"p":"一只属于我们的宠物","h":"猫猫狗狗都可以"},{"p":"未来的小家","h":"你想象里的样子"},{"p":"今天的天气","h":"用画说出你今天的天"},{"p":"我们的歌","h":"画出听到它时想到的画面"},{"p":"你最喜欢的水果","h":"切开的样子也行"},{"p":"周末的我们","h":"画一件最想一起做的事"},{"p":"想一起去的地方","h":"海边？山里？"},{"p":"一个抱抱","h":"画出你想给的抱抱"},{"p":"一朵特别的花","h":"不用是玫瑰"},{"p":"下雨天的我们","h":"在做什么呢"},{"p":"你睡着的样子","h":"偷偷画一张"},{"p":"我们一起养的植物","h":"想象它长什么样"},{"p":"最喜欢的甜点","h":"画出来就甜了"},{"p":"你戴帽子的样子","h":"或者别的配饰"},{"p":"我们的餐桌","h":"摆了什么菜"},{"p":"一起看过的一部电影","h":"画一个记得的镜头"},{"p":"夜里的星星","h":"那晚的星空"},{"p":"你最喜欢的颜色","h":"用它画点什么"},{"p":"一起去爬山","h":"山顶有什么"},{"p":"海边的我们","h":"脚印、浪花、太阳"},{"p":"小时候的你","h":"猜猜小时候的样子"},{"p":"我们的行李箱","h":"要带什么走"},{"p":"一杯给对方的饮料","h":"加冰还是加奶"},{"p":"我们的未来","h":"画一个你期待的画面"}]},"mini":{"note":"小游戏厅：从 deepdemos.top 下载的成品小游戏（多为单机/同屏双人），每个是 mini/\u003cid>/ 下的完整目录；来源与致谢见 README。","games":[{"id":"super-mario-bros-45c8c08f","title":"经典超级马里奥","emoji":"🍄","desc":"顶砖块、踩蘑菇，经典到不能再经典","cat":"动作","dir":"super-mario-bros-45c8c08f"},{"id":"demo-b46e4974","title":"双截龙","emoji":"🥊","desc":"同屏双打，两个人一台设备就能开打","cat":"同屏双人","dir":"demo-b46e4974"},{"id":"kof-fighter-6a3a5699","title":"拳皇格斗","emoji":"👊","desc":"同屏对打，连招和超必杀","cat":"同屏双人","dir":"kof-fighter-6a3a5699"},{"id":"plants-vs-zombies-web-f6819bdc","title":"植物大战僵尸","emoji":"🌻","desc":"摆植物挡僵尸，经典塔防","cat":"策略","dir":"plants-vs-zombies-web-f6819bdc"},{"id":"2048-roguelike-ed8cf859","title":"2048 肉鸽版","emoji":"🔢","desc":"会玩的 2048，还带 Roguelike 加成","cat":"益智","dir":"2048-roguelike-ed8cf859"},{"id":"rubik-anime-lab-0b0c6984","title":"魔方动画实验室","emoji":"🧩","desc":"三阶魔方，能转能看动画","cat":"益智","dir":"rubik-anime-lab-0b0c6984"},{"id":"plus-2265f7c6","title":"鲸鱼推箱子","emoji":"🐳","desc":"治愈系推箱子，画风很萌","cat":"治愈","dir":"plus-2265f7c6"},{"id":"demo-70c71aac","title":"幽灵诡计","emoji":"👻","desc":"四分钟扭转命运的推理小游戏","cat":"解谜","dir":"demo-70c71aac"},{"id":"demo-6fd4896a","title":"密码破译局","emoji":"🔐","desc":"推理 + 试错的破译玩法","cat":"解谜","dir":"demo-6fd4896a"},{"id":"demo-c046ab75","title":"骨牌顶牛","emoji":"🀄","desc":"接龙骨牌，你来我往","cat":"棋牌","dir":"demo-c046ab75"},{"id":"demo-29b78d69","title":"弈・棋道初启","emoji":"♟️","desc":"围棋：教学 + 习题 + 五档 AI 对战","cat":"棋牌","dir":"demo-29b78d69"},{"id":"3d-754ac5bb","title":"3D 重力迷宫","emoji":"🌀","desc":"把小球滚到终点，手机上能晃着玩","cat":"益智","dir":"3d-754ac5bb"},{"id":"glm5-3flash-b71c60b6","title":"三维弹球","emoji":"🪅","desc":"游戏厅里那台弹球机","cat":"休闲","dir":"glm5-3flash-b71c60b6"},{"id":"demo-2aa8ee29","title":"弹球英雄","emoji":"⚡","desc":"打砖块的爽快升级版","cat":"休闲","dir":"demo-2aa8ee29"},{"id":"demo-35017a55","title":"古戈尔增量","emoji":"📈","desc":"数字一路涨的放置小游戏","cat":"休闲","dir":"demo-35017a55"},{"id":"ak-47-svg-83ece2c6","title":"单文件靶场","emoji":"🎯","desc":"整个射击游戏塞进一个 SVG","cat":"休闲","dir":"ak-47-svg-83ece2c6"}]}};
-window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
+window.PN = window.PN || {}; window.PN.VERSION = '1.4.0';
 /* ===== src/data.js ===== */
 /* ===== 词库（构建时由 build.mjs 注入，测试可替换） ===== */
 (function (root) {
@@ -1247,6 +1251,265 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
   }
 
   PN.Ink = { create: create, denseLen: denseLen };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/toon.js ===== */
+/* ===== PN.Toon：三渲二渲染层（flat-isometric cel）=====
+ *
+ * 目标：用**零依赖 canvas 2D** 画出"三渲二"的立体可爱风 —— 平面等距投影 + 三段色阶
+ * （顶面最亮 / 右面中间 / 左面最暗）+ 深色描边 + 柔和投影 + 视差远景 + 弹性动画。
+ * 参考的是《纪念碑谷》那一类"平涂等距 + 柔光"的观感，而不是 WebGL：
+ *   - 不用 Three.js / 不联网，单文件离线可用（本项目核心约束）
+ *   - 手机上省电、不依赖 GPU 特性
+ * 所有画法都是"解析式"的（自己算多边形），所以纯数学部分可以在 node 里单测。
+ */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  /* ---------- 颜色：与 src/style.css 的 :root 对齐 ---------- */
+  var PAL = {
+    bg: '#fff4f9', bg2: '#ffe9f3', bg3: '#ffdfee',
+    ground: '#e7f7ee', ground2: '#d3f0e0', edge: '#bfe6d0',
+    water: '#cfeaff', water2: '#a9d8ff',
+    ink: '#4b3a63', ink2: '#a08cb8', line: '#ffd7e8', stroke: '#6b5588',
+    acc: '#ff8fb8', acc2: '#8ad7ff', good: '#5fd6a8', bad: '#ff8fa3',
+    yellow: '#ffd86b', purple: '#c9a7ff', blue: '#8ad7ff'
+  };
+
+  function hex2rgb(h) {
+    var s = String(h).replace('#', '');
+    if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+    var n = parseInt(s, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function clamp255(v) { return v < 0 ? 0 : v > 255 ? 255 : Math.round(v); }
+  function rgb2hex(r, g, b) {
+    return '#' + [r, g, b].map(function (v) { return ('0' + clamp255(v).toString(16)).slice(-2); }).join('');
+  }
+  /** 线性混色：k=0 取 a，k=1 取 b */
+  function mix(a, b, k) {
+    var A = hex2rgb(a), B = hex2rgb(b), t = k < 0 ? 0 : k > 1 ? 1 : k;
+    return rgb2hex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t);
+  }
+  var SHADOW = '#241d38';          // 冷调深影
+  function lighten(c, k) { return mix(c, '#ffffff', k); }
+  /* 压暗必须**单调**，否则三段色阶会糊成一档（踩过两次）：
+     ① 朝固定的 PAL.ink 混 → 基色本身就偏深紫时"压不动"
+     ② 只朝固定的 SHADOW 混 → 基色等于 SHADOW 时压不动
+     所以：先按比例整体压暗（一定更暗），再往冷影里混一点（保住全站色调统一）。 */
+  function darken(c, k) {
+    var A = hex2rgb(c);
+    var f = 1 - Math.min(0.94, k * 0.8);
+    var scaled = rgb2hex(A[0] * f, A[1] * f, A[2] * f);
+    return mix(scaled, SHADOW, Math.min(0.5, k * 0.35));
+  }
+
+  /** 一个基色的三段色阶 + 描边色（三渲二的核心） */
+  function tone(base) {
+    return {
+      base: base,
+      top: lighten(base, 0.30),      // 顶面：受光
+      left: darken(base, 0.30),      // 左面：背光
+      right: darken(base, 0.12),     // 右面：侧光
+      rim: lighten(base, 0.62),      // 顶边高光
+      line: darken(base, 0.62)       // 描边（偏 ink）
+    };
+  }
+
+  function alpha(c, a) { return c; }   // 颜色统一走 globalAlpha，这里留个语义化入口
+
+  /* ---------- 缓动 / 弹簧 ---------- */
+  function easeOutCubic(t) { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - Math.pow(1 - t, 3); }
+  function easeInOutSine(t) { return -(Math.cos(Math.PI * (t < 0 ? 0 : t > 1 ? 1 : t)) - 1) / 2; }
+  function easeOutBack(t) {
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    var c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+  /** 临界阻尼弹簧的一步积分（用于挤压/回弹） */
+  function spring(cur, target, vel, dt, k, d) {
+    k = k || 220; d = d || 22;
+    var a = (target - cur) * k - vel * d;
+    var v2 = vel + a * dt;
+    return { v: cur + v2 * dt, vel: v2 };
+  }
+
+  /* ---------- 等距投影 ---------- */
+  /** 世界(x,z 地面格，y 高度) → 屏幕。a/b 决定等距倾角，zoom 整体缩放 */
+  function project(x, y, z, cam) {
+    var c = cam || { ox: 0, oy: 0, zoom: 1, a: 0.866, b: 0.5, unit: 26 };
+    var u = c.unit * c.zoom;
+    return {
+      x: c.ox + (x - z) * c.a * u,
+      y: c.oy + (x + z) * c.b * u - (y || 0) * u
+    };
+  }
+  /** 等距深度（越大越靠近观察者，用于排序） */
+  function depth(x, z) { return x + z; }
+  function sortByDepth(list, get) {
+    var g = get || function (o) { return o; };
+    return list.slice().sort(function (p, q) { return depth(g(p).x, g(p).z) - depth(g(q).x, g(q).z); });
+  }
+
+  /* ---------- 绘图原语：三渲二 ---------- */
+  function poly(ctx, pts) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+  }
+  function fillStroke(ctx, fill, line, lw) {
+    ctx.fillStyle = fill; ctx.fill();
+    if (lw) { ctx.lineWidth = lw; ctx.strokeStyle = line; ctx.stroke(); }
+  }
+  /** 地面柔和投影（椭圆渐变，不要硬边） */
+  function shadow(ctx, p, rx, ry, a) {
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, Math.max(rx, ry));
+    g.addColorStop(0, 'rgba(75,58,99,' + (a == null ? 0.26 : a) + ')');
+    g.addColorStop(1, 'rgba(75,58,99,0)');
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.max(0.2, ry / Math.max(1, rx))); ctx.translate(-p.x, -p.y);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(rx, ry), 0, 6.2832); ctx.fill(); ctx.restore();
+  }
+  /** 等距板（方块）：top 面 + 右侧 + 左侧，三段色阶 + 描边 */
+  function plate(ctx, cam, x, z, w, d, h, base, opt) {
+    opt = opt || {};
+    var t = tone(base);
+    var x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
+    var y1 = h || 0, y0 = opt.base || 0;
+    // 顶面四角（逆时针：近左 → 近右 → 远右 → 远左）
+    var tA = project(x0, y1, z1, cam), tB = project(x1, y1, z1, cam);
+    var tC = project(x1, y1, z0, cam), tD = project(x0, y1, z0, cam);
+    // 底面（用于侧面）
+    var bA = project(x0, y0, z1, cam), bB = project(x1, y0, z1, cam), bC = project(x1, y0, z0, cam);
+    var lw = opt.lw == null ? 2.4 : opt.lw;
+    if (y1 > y0) {
+      // 左面（+z 侧，背光）
+      poly(ctx, [bA, bB, tB, tA]); fillStroke(ctx, t.left, t.line, lw);
+      // 右面（+x 侧，侧光）
+      poly(ctx, [bB, bC, tC, tB]); fillStroke(ctx, t.right, t.line, lw);
+    }
+    poly(ctx, [tA, tB, tC, tD]); fillStroke(ctx, t.top, t.line, lw);
+    // 顶边高光（三渲二的"亮边"）
+    if (opt.rim !== false) {
+      ctx.save(); ctx.globalAlpha = 0.75; ctx.strokeStyle = t.rim; ctx.lineWidth = Math.max(1.2, lw * 0.6);
+      ctx.beginPath(); ctx.moveTo(tD.x, tD.y); ctx.lineTo(tA.x, tA.y); ctx.lineTo(tB.x, tB.y); ctx.stroke(); ctx.restore();
+    }
+    return { top: [tA, tB, tC, tD], center: project(x, y1, z, cam) };
+  }
+  /** 平铺在地面的色块（草地/水面/目标点） */
+  function tile(ctx, cam, x, z, w, d, base, opt) {
+    opt = opt || {};
+    var t = tone(base);
+    var A = project(x - w / 2, opt.y || 0, z + d / 2, cam), B = project(x + w / 2, opt.y || 0, z + d / 2, cam);
+    var C = project(x + w / 2, opt.y || 0, z - d / 2, cam), D = project(x - w / 2, opt.y || 0, z - d / 2, cam);
+    poly(ctx, [A, B, C, D]);
+    fillStroke(ctx, opt.color || t.top, t.line, opt.lw == null ? 1.6 : opt.lw);
+    return { pts: [A, B, C, D], center: project(x, opt.y || 0, z, cam) };
+  }
+  /** 圆润的"生物"身体：三段色阶的椭圆 + 高光 + 描边（鲸鱼、丸子怪都靠它） */
+  function blob(ctx, p, rx, ry, base, opt) {
+    opt = opt || {};
+    var t = tone(base);
+    shadow(ctx, { x: p.x, y: p.y }, rx * 0.9, ry * 0.34, opt.shadow == null ? 0.22 : opt.shadow);
+    var g = ctx.createLinearGradient(p.x, p.y - ry, p.x, p.y + ry);
+    g.addColorStop(0, t.top); g.addColorStop(0.55, t.base); g.addColorStop(1, t.left);
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, opt.rot || 0, 0, 6.2832);
+    fillStroke(ctx, g, t.line, opt.lw == null ? 2.4 : opt.lw);
+    if (opt.hi !== false) {   // 左上高光
+      ctx.save(); ctx.globalAlpha = 0.75; ctx.fillStyle = t.rim;
+      ctx.beginPath(); ctx.ellipse(p.x - rx * 0.32, p.y - ry * 0.42, rx * 0.26, ry * 0.2, -0.5, 0, 6.2832); ctx.fill(); ctx.restore();
+    }
+    return t;
+  }
+  /** 地面光环（目标点脉冲、落地涟漪） */
+  function ring(ctx, p, r, color, a, lw) {
+    ctx.save(); ctx.globalAlpha = a == null ? 0.8 : a; ctx.strokeStyle = color; ctx.lineWidth = lw || 3;
+    ctx.beginPath(); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, 0.5);
+    ctx.arc(0, 0, r, 0, 6.2832); ctx.restore(); ctx.stroke(); ctx.restore();
+  }
+  /** 星尘/水花粒子（自己管生命周期，调用方只给位置与数量） */
+  function burst(list, p, n, color, opt) {
+    opt = opt || {};
+    for (var i = 0; i < n; i++) {
+      var ang = (opt.dir == null ? Math.random() * 6.2832 : opt.dir + (Math.random() - 0.5) * 1.4);
+      var sp = (opt.speed || 60) * (0.5 + Math.random());
+      list.push({
+        x: p.x, y: p.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - (opt.lift || 40),
+        life: 0, max: (opt.life || 700) * (0.7 + Math.random() * 0.6),
+        r: (opt.r || 3) * (0.6 + Math.random() * 0.8), color: color, grav: opt.grav == null ? 180 : opt.grav
+      });
+    }
+    return list;
+  }
+  function stepParticles(list, dt, floorY) {
+    for (var i = list.length - 1; i >= 0; i--) {
+      var p = list[i];
+      p.life += dt * 1000;
+      if (p.life >= p.max) { list.splice(i, 1); continue; }
+      p.vy += p.grav * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (floorY != null && p.y > floorY) { p.y = floorY; p.vy *= -0.35; p.vx *= 0.7; }
+    }
+    return list;
+  }
+  function drawParticles(ctx, list) {
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i], k = 1 - p.life / p.max;
+      ctx.save(); ctx.globalAlpha = Math.max(0, k);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.5 + k * 0.8), 0, 6.2832); ctx.fill(); ctx.restore();
+    }
+  }
+  /** 漂浮文字（+2、完美、过关） */
+  function floatText(ctx, x, y, text, color, k, size) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - k);
+    ctx.font = '900 ' + (size || 20) + 'px -apple-system,system-ui,"PingFang SC",sans-serif';
+    ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(75,58,99,.55)';
+    ctx.strokeText(text, x, y - k * 40);
+    ctx.fillStyle = color || '#fff'; ctx.fillText(text, x, y - k * 40);
+    ctx.restore();
+  }
+
+  /* ---------- 动画循环 ---------- */
+  /** 统一的 rAF 驱动：自动处理 DPR 上限、尺寸变化、canvas 被移除时自动停 */
+  function animate(canvas, draw, opt) {
+    opt = opt || {};
+    var raf = root.requestAnimationFrame;
+    if (typeof raf !== 'function') return function () {};
+    var alive = true, last = 0, frames = 0;
+    function tick(ts) {
+      if (!alive) return;
+      if (!canvas || !canvas.isConnected || !canvas.getContext) { alive = false; return; }
+      var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0.016;
+      last = ts; frames++;
+      var r = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 320 };
+      if (r.width > 20) {
+        var dpr = Math.min(root.devicePixelRatio || 1, 2);
+        var W = Math.floor(r.width), H = Math.floor(r.width * (opt.ratio || 0.72));
+        if (canvas.width !== Math.floor(W * dpr) || canvas.height !== Math.floor(H * dpr)) {
+          canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr);
+        }
+        if (canvas.style && opt.ratio) canvas.style.height = H + 'px';
+        var ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw(ctx, W, H, dt, ts);
+      }
+      raf(tick);
+    }
+    raf(tick);
+    return function stop() { alive = false; };
+  }
+
+  PN.Toon = {
+    PAL: PAL, tone: tone, mix: mix, lighten: lighten, darken: darken, alpha: alpha,
+    easeOutCubic: easeOutCubic, easeInOutSine: easeInOutSine, easeOutBack: easeOutBack, spring: spring,
+    project: project, depth: depth, sortByDepth: sortByDepth,
+    plate: plate, tile: tile, blob: blob, shadow: shadow, ring: ring,
+    burst: burst, stepParticles: stepParticles, drawParticles: drawParticles, floatText: floatText,
+    poly: poly, fillStroke: fillStroke, animate: animate
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ===== src/room.js ===== */
@@ -5938,9 +6201,23 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
   }
   if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(loop);
 
+  /** DOM 真正关心的字段签名：蓄力进度/飞行状态不进签名（那些由画布自己每帧画） */
+  function domSig(state) {
+    var g = state.g || {}, a = g.attempt || {};
+    return JSON.stringify([state.mode, state.phase, g.round, g.rounds, g.phase, g.turnIdx, g.totals,
+      a.pid, a.lives, a.score, a.combo, a.idx, a.ended]);
+  }
+
   PN.screens = PN.screens || {};
   PN.screens.hop = {
     name: 'hop',
+    /** 只变了蓄力进度 → 不重建 DOM（画布每帧自己重绘），彻底消掉蓄力时的整屏重建 */
+    patch: function (state) {
+      var sig = domSig(state);
+      if (this.__hopSig === sig) return true;
+      this.__hopSig = sig;
+      return false;
+    },
     render: function (state, secret) {
       var ui = this;
       var GC = PN.gameCommon;
@@ -5986,7 +6263,8 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
         body.appendChild(hud);
 
         var stage = ui.el('div', 'hop-stage');
-        var cv = ui.el('canvas', 'hop-cv');
+        // 复用同一个 canvas 节点：整屏重建时把它挪过来，rAF 循环不会丢目标（配合 ui 的 patch 钩子）
+        var cv = local.cv || (local.cv = ui.el('canvas', 'hop-cv'));
         stage.appendChild(cv);
         body.appendChild(stage);
         body.appendChild(ui.h('<div class="muted center mt8">完美落在方块中心会连击：+2 → +4 → +6 → +8 → +10</div>'));
@@ -6158,36 +6436,306 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ===== src/screens-soko.js ===== */
-/* ===== 鲸鱼推箱子 屏幕 =====
- * CSS grid 排格子；墙用厚实的糖果块、地板奶油色、目标点是粉色小花、箱子是贝壳/木箱。
- * 操作：方向键 / WASD / 屏幕上的十字键；轮流走一步。 */
+/* ===== 鲸鱼推箱子 屏幕（三渲二 / flat-isometric cel）=====
+ *
+ * 用 PN.Toon 画：等距立体草地 + 三段色阶的积木（花丛墙）、木箱/贝壳、会呼吸眨眼的鲸鱼。
+ * 动画：走位补间 + 落地下压回弹 + 推动水花 + 目标点脉冲 + 过关礼花 + 镜头跟随/开场拉近。
+ * 动画状态全部是**本地推导**的（对比 state 变化），所以 wire 上不多传一个字节。
+ * DOM 部分（HUD/十字键/回合横幅）仍是 CSS 马卡龙风，canvas 只负责场景。 */
 (function (root) {
   'use strict';
   var PN = root.PN = root.PN || {};
+  var T = PN.Toon;
   var esc = PN.esc;
-  var local = { down: false };
 
-  function boardHtml(g, me) {
-    var out = '';
-    var next1 = g.last ? g.last.i : -1;
-    for (var i = 0; i < g.rows * g.cols; i++) {
-      var cls = 'sk-cell', inner = '';
-      if (g.walls[i]) { cls += ' sk-wall'; }
-      else {
-        cls += ' sk-floor';
-        if (g.goals[i]) cls += ' sk-goal';
-        if (g.boxes[i]) { cls += g.goals[i] ? ' sk-box ok' : ' sk-box'; inner = g.goals[i] ? '🐚' : '📦'; }
-        if (g.whale === i) { cls += ' sk-whale'; inner = '🐳'; }
-      }
-      if (i === next1) cls += ' sk-last';
-      out += '<div class="' + cls + '" data-i="' + i + '">' + inner + '</div>';
-    }
+  /* 场景的本地动画状态（每局一份，跟随 state.g 的重置而重置） */
+  var S = {
+    ready: false, t: 0,
+    whale: { x: 0, z: 0, tx: 0, tz: 0, t0: 0, from: null, dur: 0.17, hop: 0, squash: 0, vel: 0, blink: 0, nextBlink: 2.4 },
+    pushAt: 0, pushCell: -1, pop: {},
+    fx: [], texts: [], clearAt: 0, intro: 0, camX: 0, camZ: 0, shake: 0,
+    prev: null, stats: { walls: 0, floors: 0, goals: 0, crates: 0, onGoal: 0, whale: 0 },
+    clouds: null, sawClear: -1
+  };
+
+  function cellOf(g, i) { return { x: i % g.cols, z: Math.floor(i / g.cols) }; }
+  function idxOf(g, x, z) { return z * g.cols + x; }
+  function seedClouds() {
+    var out = [];
+    for (var i = 0; i < 6; i++) out.push({ x: Math.random(), y: 0.08 + Math.random() * 0.3, s: 0.6 + Math.random() * 0.9, v: 0.004 + Math.random() * 0.008 });
     return out;
   }
 
+  /* 把 state 的变化翻译成动画（不做多余的网络消息） */
+  function syncAnim(g, dt) {
+    if (!S.prev || S.prev.gid !== g.levelId) {          // 换关：重置场景 + 开场拉近
+      S.prev = { gid: g.levelId, whale: g.whale, boxes: g.boxes.slice(), last: g.last };
+      var w = cellOf(g, g.whale);
+      S.whale.x = w.x; S.whale.z = w.z; S.whale.tx = w.x; S.whale.tz = w.z; S.whale.from = null;
+      S.intro = 1; S.pop = {}; S.fx.length = 0; S.texts.length = 0;
+      S.camX = w.x; S.camZ = w.z;
+      return;
+    }
+    var p = S.prev;
+    if (p.whale !== g.whale) {                          // 走位：补间 + 弹一下
+      var a = cellOf(g, p.whale), b = cellOf(g, g.whale);
+      S.whale.from = { x: a.x, z: a.z };
+      S.whale.tx = b.x; S.whale.tz = b.z; S.whale.t0 = S.t; S.whale.hop = 1;
+      var c = T.project(b.x, 0, b.z, camOf(g));
+      if (g.last && g.last.kind === 'push') {
+        S.shake = 0.5;
+        T.burst(S.fx, c, 10, T.PAL.water2 || '#a9d8ff', { speed: 70, lift: 60, r: 3.2, life: 620 });
+        T.ring(c, 10, '#9fd4ff', 0.9, 3);
+      } else {
+        T.burst(S.fx, c, 4, '#ffffff', { speed: 42, lift: 30, r: 2.4, life: 420, grav: 120 });
+      }
+    }
+    for (var i = 0; i < g.boxes.length; i++) {          // 箱子被推动 / 归位
+      if (p.boxes[i] !== g.boxes[i] && g.boxes[i]) S.pop[i] = S.t;
+    }
+    if (g.last && g.last.kind === 'push' && g.last.i >= 0 && p.last !== g.last) {
+      var ci = g.last.i;
+      S.pop[ci] = S.t;
+      var cc = T.project(ci % g.cols, 0.5, Math.floor(ci / g.cols), camOf(g));
+      T.burst(S.fx, cc, 8, '#ffe6a8', { speed: 60, lift: 70, r: 2.6, life: 520 });
+    }
+    if (g.cleared !== p.cleared && g.cleared > p.cleared) {   // 过关庆祝
+      S.clearAt = S.t;
+      for (var k = 0; k < 3; k++) {
+        T.burst(S.fx, { x: 0, y: 0 }, 0, '#fff');            // 占位，真正的礼花在 draw 里按屏幕坐标放
+      }
+      S.texts.push({ x: 0.5, y: 0.5, text: '+2', color: T.PAL.good, t: S.t, size: 30 });
+    }
+    if (g.li !== p.li) S.sawClear = S.t;
+    S.prev = { gid: g.levelId, whale: g.whale, boxes: g.boxes.slice(), last: g.last, cleared: g.cleared, li: g.li };
+  }
+
+  function camOf(g, W, H) {
+    var a = 0.866, b = 0.5;
+    var unit = 30;
+    if (W && H) {
+      var ux = W / ((g.cols + g.rows) * a + 1.6);
+      var uy = H / ((g.cols + g.rows) * b + 2.6);
+      unit = Math.max(14, Math.min(38, Math.min(ux, uy)));
+    }
+    return { ox: 0, oy: 0, zoom: 1, a: a, b: b, unit: unit };
+  }
+
+  /* ---------- 场景绘制 ---------- */
+  function draw(ctx, W, H, dt, ts) {
+    var ui = S.ui, g = S.g;
+    if (!ui || !g || !g.rows) return;
+    S.t += dt;
+    if (!S.ready) { S.ready = true; S.clouds = seedClouds(); S.prev = null; }
+    syncAnim(g, dt);
+
+    var cam = camOf(g, W, H);
+    var a = cam.a, unit = cam.unit;
+    // 镜头：跟随鲸鱼 + 开场拉近 + 推动抖动
+    S.camX += (S.whale.tx - S.camX) * Math.min(1, dt * 6);
+    S.camZ += (S.whale.tz - S.camZ) * Math.min(1, dt * 6);
+    var followX = (S.camX - (g.cols - 1) / 2) * 0.55, followZ = (S.camZ - (g.rows - 1) / 2) * 0.55;
+    var zoom = 1;
+    if (S.intro > 0) { S.intro = Math.max(0, S.intro - dt * 0.9); zoom *= 0.72 + 0.28 * (1 - S.intro); }
+    if (S.clearAt && S.t - S.clearAt < 0.9) zoom *= 1 + 0.06 * Math.sin((S.t - S.clearAt) * 12) * (1 - (S.t - S.clearAt) / 0.9);
+    S.shake = Math.max(0, S.shake - dt * 3.2);
+    var shx = S.shake ? Math.sin(S.t * 70) * 3 * S.shake : 0;
+    var shy = S.shake ? Math.cos(S.t * 61) * 2.4 * S.shake : 0;
+    cam.unit = unit * zoom;
+    cam.ox = W / 2 - followX * a * cam.unit + shx;
+    cam.oy = H * 0.42 - followZ * cam.b * cam.unit + shy;
+
+    // 天空 + 太阳 + 云（视差）
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, T.PAL.bg); sky.addColorStop(0.6, T.PAL.bg2); sky.addColorStop(1, T.PAL.bg3);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    var sunX = W * 0.78, sunY = H * 0.16;
+    var sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, W * 0.34);
+    sg.addColorStop(0, 'rgba(255,236,180,.85)'); sg.addColorStop(1, 'rgba(255,236,180,0)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+    S.clouds.forEach(function (c) {
+      c.x += c.v * dt;
+      if (c.x > 1.2) c.x = -0.2;
+      var cx = (c.x - followX * 0.06) * W, cy = c.y * H, s = c.s * (unit / 26);
+      ctx.save(); ctx.globalAlpha = 0.75; ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(cx, cy, 30 * s, 15 * s, 0, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx - 18 * s, cy + 4 * s, 18 * s, 10 * s, 0, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx + 20 * s, cy + 3 * s, 20 * s, 11 * s, 0, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    });
+
+    // 草地底板（比棋盘大一圈，边缘厚度做出"浮空岛"）
+    var cx0 = (g.cols - 1) / 2, cz0 = (g.rows - 1) / 2;
+    T.plate(ctx, cam, cx0, cz0, g.cols + 0.9, g.rows + 0.9, 0.55, T.PAL.ground2, { y: 0, base: -0.55, lw: 2.6 });
+    // 棋盘格草地
+    for (var z = 0; z < g.rows; z++) {
+      for (var x = 0; x < g.cols; x++) {
+        if (g.walls[idxOf(g, x, z)]) continue;
+        var dark = (x + z) % 2 === 0;
+        T.tile(ctx, cam, x, 0, 0.98, 0.98, dark ? T.PAL.ground : '#eefaf3', { y: 0.001, color: dark ? T.PAL.ground : '#eefaf3', lw: 0 });
+      }
+    }
+    // 目标点：荷叶 + 脉冲光环
+    S.stats = { walls: 0, floors: 0, goals: 0, crates: 0, onGoal: 0, whale: 0 };
+    for (var gi = 0; gi < g.goals.length; gi++) {
+      if (!g.goals[gi]) continue;
+      S.stats.goals++;
+      var gc = cellOf(g, gi), gp = T.project(gc.x, 0, gc.z, cam);
+      var pulse = 0.5 + 0.5 * Math.sin(S.t * 2.2 + gi);
+      T.ring(ctx, gp, 9 + pulse * 4, T.PAL.acc, 0.35 + pulse * 0.35, 2.4);
+      T.tile(ctx, cam, gc.x, 0, 0.62, 0.62, '#ffd9e9', { y: 0.004, color: '#ffd9e9', lw: 1.2 });
+      T.ring(ctx, gp, 5.5, '#ffffff', 0.9, 2);
+    }
+
+    // 墙体 / 箱子 / 鲸鱼 一起做深度排序（等距必须按 x+z 从远到近画）
+    var ents = [];
+    for (var i = 0; i < g.walls.length; i++) {
+      if (g.walls[i]) ents.push({ k: 'wall', i: i, x: i % g.cols, z: Math.floor(i / g.cols) });
+    }
+    for (var bi = 0; bi < g.boxes.length; bi++) {
+      if (g.boxes[bi]) ents.push({ k: 'crate', i: bi, x: bi % g.cols, z: Math.floor(bi / g.cols) });
+    }
+    ents.push({ k: 'whale', i: g.whale, x: S.whale.x, z: S.whale.z });
+    ents = T.sortByDepth(ents, function (o) { return o; });
+
+    ents.forEach(function (e) {
+      if (e.k === 'wall') drawWall(ctx, cam, e.x, e.z, e.i);
+      else if (e.k === 'crate') drawCrate(ctx, cam, e.x, e.z, e.i, g);
+      else drawWhale(ctx, cam, dt, g);
+    });
+
+    // 粒子 / 漂浮文字
+    T.stepParticles(S.fx, dt, null);
+    T.drawParticles(ctx, S.fx);
+    for (var ti = S.texts.length - 1; ti >= 0; ti--) {
+      var tx = S.texts[ti], k = (S.t - tx.t) / 1.1;
+      if (k >= 1) { S.texts.splice(ti, 1); continue; }
+      T.floatText(ctx, tx.x * W, tx.y * H, tx.text, tx.color, k, tx.size);
+    }
+    // 过关礼花（屏幕坐标，斜着撒）
+    if (S.clearAt && S.t - S.clearAt < 0.6 && Math.random() < 0.5) {
+      T.burst(S.fx, { x: Math.random() * W, y: -10 }, 2, [T.PAL.acc, T.PAL.yellow, T.PAL.acc2, T.PAL.good][(Math.random() * 4) | 0],
+        { speed: 30, lift: -20, r: 3.4, life: 1500, grav: 60 });
+    }
+    // 暗角，收一点焦点
+    var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, 'rgba(75,58,99,0)'); vg.addColorStop(1, 'rgba(75,58,99,.14)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawWall(ctx, cam, x, z, i) {
+    S.stats.walls++;
+    var base = ['#a8e6c8', '#93dcb8', '#b6ecce'][i % 3];
+    var top = T.plate(ctx, cam, x, z, 0.94, 0.94, 0.62, base, { lw: 2.2 });
+    // 顶上几朵小花，做出"花丛墙"的可爱感
+    ctx.save();
+    [0.3, 0.62].forEach(function (f, k) {
+      var p = T.project(x - 0.22 + f * 0.5, 0.64, z - 0.2 + (k % 2) * 0.34, cam);
+      ctx.fillStyle = k ? T.PAL.acc : '#ffe9a8';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.3, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      ctx.beginPath(); ctx.arc(p.x - 0.6, p.y - 0.6, 0.9, 0, 6.2832); ctx.fill();
+    });
+    ctx.restore();
+    return top;
+  }
+  function drawCrate(ctx, cam, x, z, i, g) {
+    var onGoal = !!g.goals[i];
+    S.stats.crates++; if (onGoal) S.stats.onGoal++;
+    var pop = S.pop[i] != null ? Math.max(0, 1 - (S.t - S.pop[i]) / 0.32) : 0;
+    var h = 0.5 + pop * 0.14;
+    var base = onGoal ? '#ffd0e2' : '#f2c98b';
+    var p0 = T.project(x, 0, z, cam);
+    T.shadow(ctx, { x: p0.x, y: p0.y + 3 }, 15, 6, 0.2);
+    T.plate(ctx, cam, x, z, 0.74 * (1 + pop * 0.08), 0.74 * (1 + pop * 0.08), h, base, { lw: 2.4 });
+    var p = T.project(x, h, z, cam);
+    if (onGoal) {                                   // 归位：变成会闪的贝壳
+      ctx.save();
+      ctx.fillStyle = '#fff2fa';
+      ctx.beginPath(); ctx.ellipse(p.x, p.y - 2, 10, 7, 0, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = '#e5a3c4'; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y - 2, 3.2, 0, 6.2832); ctx.fillStyle = '#ffd0e2'; ctx.fill();
+      ctx.restore();
+      T.ring(ctx, { x: p0.x, y: p0.y }, 12 + pop * 8, T.PAL.acc, 0.5 + pop * 0.4, 2.6);
+    } else {                                        // 木箱：盖板 + 高光
+      ctx.save();
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = 'rgba(120,86,40,.5)'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      var A = T.project(x - 0.22, h + 0.002, z + 0.22, cam), B = T.project(x + 0.22, h + 0.002, z - 0.22, cam);
+      ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  function drawWhale(ctx, cam, dt, g) {
+    S.stats.whale++;
+    var w = S.whale;
+    if (w.from) {                                   // 补间 + 小跳
+      var k = Math.min(1, (S.t - w.t0) / w.dur);
+      var e = T.easeOutCubic(k);
+      w.x = w.from.x + (w.tx - w.from.x) * e;
+      w.z = w.from.z + (w.tz - w.from.z) * e;
+      w.hop = Math.sin(Math.PI * k) * 0.26;
+      if (k >= 1) { w.from = null; w.hop = 0; var st = T.spring(w.squash, 1, w.vel, dt); w.squash = st.v; w.vel = st.vel; }
+    } else {
+      var st2 = T.spring(w.squash, 1, w.vel, dt, 260, 20);
+      w.squash = st2.v; w.vel = st2.vel;
+      w.hop = 0;
+    }
+    var breathing = 1 + Math.sin(S.t * 1.9) * 0.022;
+    var sq = w.squash;
+    var p = T.project(w.x, 0.34 + w.hop, w.z, cam);
+    var onGoal = !!g.goals[g.whale];
+    var base = T.PAL.acc2;
+    T.shadow(ctx, { x: p.x, y: p.y + 16 }, 16, 6.5, 0.22);
+    // 尾鳍（在身后先画）
+    ctx.save();
+    ctx.translate(p.x - 15, p.y + 4);
+    ctx.rotate(-0.5 + Math.sin(S.t * 2.4) * 0.18);
+    ctx.fillStyle = T.tone(base).right;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-9, -7); ctx.lineTo(-6, 3); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = T.tone(base).line; ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.restore();
+    // 身体（三段色阶 + 高光 + 描边）
+    T.blob(ctx, p, 17 * breathing, 14 * (2 - sq) * breathing, base, { lw: 2.6, shadow: 0, hi: true });
+    // 肚子浅色
+    ctx.save();
+    ctx.globalAlpha = 0.9; ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(p.x + 1, p.y + 4, 9 * breathing, 6 * breathing, 0.1, 0, 6.2832); ctx.fill();
+    ctx.restore();
+    // 眼睛（会眨）+ 腮红 + 微笑
+    var bl = w.blink;
+    var eyeH = bl > 0 ? 0.7 : 3.1;
+    ctx.fillStyle = T.PAL.ink;
+    ctx.beginPath(); ctx.ellipse(p.x + 5, p.y - 3, 2.1, eyeH, 0, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(p.x - 4, p.y - 3, 1.7, eyeH * 0.9, 0, 0, 6.2832); ctx.fill();
+    ctx.save(); ctx.fillStyle = 'rgba(255,143,184,.5)';
+    ctx.beginPath(); ctx.arc(p.x + 10, p.y + 1, 2.6, 0, 6.2832); ctx.fill(); ctx.restore();
+    if (onGoal) {
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(p.x + 1, p.y + 2, 3.4, 0.2, Math.PI - 0.2); ctx.stroke(); ctx.restore();
+    }
+    // 眨眼计时 + 出水花
+    w.blink -= dt;
+    if (w.blink < -0.12) { w.blink = 2.2 + Math.random() * 2.6; }
+    if (Math.sin(S.t * 1.3 + 1) > 0.998) {
+      T.burst(S.fx, { x: p.x, y: p.y - 16 }, 3, '#cdeaff', { speed: 26, lift: 60, r: 2.2, life: 620 });
+    }
+  }
+
+  /* ---------- 屏幕 ---------- */
   PN.screens = PN.screens || {};
   PN.screens.soko = {
     name: 'soko',
+    debug: function () { return { stats: S.stats, t: S.t }; },
+    /** 只有"走位/推箱/换关/换人/结算"才值得重建 DOM；其余（比如互换动画帧）跳过 */
+    patch: function (state) {
+      var g = state.g || {};
+      var sig = JSON.stringify([state.mode, state.phase, g.li, g.levels, g.turnIdx, g.cleared,
+        g.phase, g.win, g.moves, g.pushes, g.whale, g.boxes, g.last && g.last.i, g.last && g.last.kind]);
+      if (this.__sokoSig === sig) return true;
+      this.__sokoSig = sig;
+      return false;
+    },
     render: function (state, secret) {
       var ui = this;
       var GC = PN.gameCommon;
@@ -6215,22 +6763,23 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
         var turn = ui.el('div', 'sk-turn' + (myTurn ? ' mine' : ''));
         turn.innerHTML = myTurn
           ? '<b>🙋 轮到你推一步</b><span>' + esc(g.levelName || '') + ' · 把箱子都推到花点上</span>'
-          : '<b>👀 等 ' + esc(oppP ? oppP.name : '对方') + ' 推</b><span>他走的那格会闪一下</span>';
+          : '<b>👀 等 ' + esc(oppP ? oppP.name : '对方') + ' 推</b><span>他推的箱子会晃一下</span>';
         body.appendChild(turn);
 
         var hud = ui.el('div', 'sk-hud');
         hud.innerHTML =
           '<span class="sk-stat"><i>🧭</i>' + (g.moves || 0) + ' 步</span>' +
           '<span class="sk-stat"><i>🫸</i>' + (g.pushes || 0) + ' 推</span>' +
-          '<span class="sk-stat"><i>🎯</i>' + (g.levels || 0) + ' 关</span>' +
-          '<span class="sk-stat"><i>✅</i>' + (g.cleared || 0) + '</span>';
+          '<span class="sk-stat"><i>🎯</i>参考 ' + (g.par || 0) + ' 步</span>' +
+          '<span class="sk-stat"><i>✅</i>' + (g.cleared || 0) + '/' + (g.levels || 0) + '</span>';
         body.appendChild(hud);
 
         var board = ui.el('div', 'sk-board');
-        board.style.setProperty('--cols', g.cols);
-        board.style.setProperty('--rows', g.rows);
-        board.innerHTML = boardHtml(g, me);
+        // 复用同一个 canvas 节点（理由同跳一跳：整屏重建时别把 rAF 的目标拆了）
+        var cv = S.cv || (S.cv = ui.el('canvas', 'sk-cv'));
+        board.appendChild(cv);
         body.appendChild(board);
+        body.appendChild(ui.h('<div class="muted center mt8">方向键 / WASD / 下面十字键 · 走不动不算一步</div>'));
 
         var pad = ui.el('div', 'sk-pad');
         var mk = function (dir, label, cls2) {
@@ -6252,9 +6801,12 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
         pad.appendChild(row3);
         pad.appendChild(mk('down', '⬇️', 'primary'));
         body.appendChild(pad);
-        body.appendChild(ui.h('<div class="muted center mt8">也可以用键盘方向键 / WASD · 走不动不算一步</div>'));
 
-        // 键盘：方向键 / WASD
+        // 动画状态与这次渲染的 state 绑好，rAF 自己驱动（canvas 被移除就自动停）
+        S.ui = ui; S.g = g; S.ready = false;
+        // 一个画布只挂一个动画循环（不然每次重建都会多注册一个 rAF，越玩越卡）
+        if (!cv.__toonLoop) cv.__toonLoop = T.animate(cv, draw, { ratio: 0.72 });
+
         if (!ui.__sokoKey) {
           ui.__sokoKey = true;
           document.addEventListener('keydown', function (e) {
@@ -6411,6 +6963,14 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.3.0';
         var defer = false;
         try { defer = !!this.screen.deferRender.call(this); } catch (e) {}
         if (defer) { this._renderPending = true; return; }
+      }
+      // 屏幕可以用 patch 声明"这次状态变化不值得重建 DOM"（例如只变了蓄力进度）。
+      // 跳一跳卡顿的根因就是这个：蓄力时每秒广播 8 次进度 → 8 次整屏重建 → 画布每秒被拆掉重建 8 次，
+      // rAF 的目标节点不断失效（玩家看到的就是一顿一顿）。返回真表示屏幕已自行处理。
+      if (this.screen.patch) {
+        var patched = false;
+        try { patched = !!this.screen.patch.call(this, this.state); } catch (e) {}
+        if (patched) { this._renderPending = true; return; }
       }
       if (imeFreeze()) { this._renderPending = true; return; } // 拼音上屏中：先别动 DOM
       lastUI = this;
