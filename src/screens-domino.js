@@ -199,7 +199,7 @@
     debug: function () { return { pollErr: S.pollErr || null, msg: S.msg || 0, lastMsg: S.lastMsg || null, ready: S.ready, applied: S.applied, seat: S.seat, seats: S.seats, injected: S.injected || 0, injectErr: S.injectErr || null }; },
     /** 恒真：游玩期间绝不重建 DOM（重排 iframe 会让原作重新加载，等于白玩） */
     patch: function (state) {
-      if (!S.frame || !state.g || state.phase === 'over' || state.mode !== 'domino') return false;
+      if (!S.frame || !state.g || state.g.phase === 'over' || state.mode !== 'domino') return false;
       if (state.g.seed == null) return true;
       syncTurn();
       applyLog();

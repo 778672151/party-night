@@ -1550,6 +1550,29 @@ S.perf = async (cdp) => {
     await sleep(1500);
   }
 
+  if (want('go')) {
+    const { A, B, H } = await mkRoom(cdp, 'go');
+    for (let i = 0; i < 80; i++) {
+      if (await H.eval('PN.screens.go.debug().ready === true')) break;
+      await sleep(500);
+    }
+    await sleep(800);
+    await pfReset(H);
+    await sleep(1200);
+    rows.push(pfLine('围棋 idle（原作三渲二棋盘）', await pfStop(H)));
+    await pfReset(H);
+    const idAG = await idOf(A);
+    for (const pt of [40, 30, 50, 22]) {
+      const pid = await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]');
+      const pg = (pid === idAG) ? A : B;
+      await pg.eval('PN.app.send({ t: "move", p: ' + pt + ' }); 1').catch(() => {});
+      await sleep(800);
+    }
+    rows.push(pfLine('围棋 落子往返中', await pfStop(H)));
+    await A.dispose(); await B.dispose();
+    await sleep(1500);
+  }
+
   console.log('\n===== 帧率体检（rAF 真实间隔；vsync 上限约 16.7ms）=====');
   rows.forEach(r => console.log(r));
   const bad = rows.filter(r => /p95\s+(\d+)/.test(r) && Number(r.match(/p95\s+([\d.]+)/)[1]) > 34);

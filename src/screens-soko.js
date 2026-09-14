@@ -182,7 +182,7 @@
     debug: function () { return { ready: S.ready, applied: S.applied, li: S.li, injected: S.injected || 0, injectErr: S.injectErr || null, rem: S.rem }; },
     /** 恒返回真：游玩期间绝不重建 DOM（重建会把 iframe 挪走 → 原作重新加载） */
     patch: function (state) {
-      if (!S.frame || !state.g || state.phase === 'over' || state.mode !== 'soko') return false;
+      if (!S.frame || !state.g || state.g.phase === 'over' || state.mode !== 'soko') return false;
       sync.call(this, state);
       return true;
     },
