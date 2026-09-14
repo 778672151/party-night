@@ -84,7 +84,8 @@
         host.emit();
         return;
       }
-      if (action.t === 'solved') {                         // 客户端报复原（房主按每局只认一次）
+      if (action.t === 'solved') {
+        if (!g.moves) return;   // 一步都没转 = 还没打乱，不算复原（原作初始就是复原状态）                         // 客户端报复原（房主按每局只认一次）
         g.played++;
         g.players.forEach(function (id) { host.addScore(id, 2); });
         host.toast('🎉 第 ' + g.played + ' 个魔方复原！用了 ' + g.moves + ' 步，双方各 +2', 'good');
