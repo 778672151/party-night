@@ -153,6 +153,25 @@
 但房主侧 \`state.g.log.length\` 始终 0。下一轮查两件事：① \`UI.prototype.send\` 有没有给动作带上 \`from\`（缺了会被 \`participants.indexOf(from) < 0\` 拦掉）；
 ② 房主自己发出的动作是否走同一条应用路径（骨牌那款用同一 API 是能记录的，可对比 \`S.domino\` 的写法差异）。
 
+
+## 魔方接力（rubik-anime-lab-0b0c6984）—— 产品代码已通，只差一个写对的用例（最有希望的一款）
+
+**原作 API（实测）**：\`window.__cubeAPI\` = \`applySeq(txt)\`（吃 "U R' F2" 这样的序列，自己排队+播动画）、
+\`stateKey()\`（状态字符串）、\`solved()\`、\`busyNow()\`、\`scramble()\`、\`reset()\`、\`pickAt()\`；\`window.__cubeApp\` 是内部对象。
+classic 脚本、非 module —— 正是能便宜复用的那一类。
+
+**已完成**（\`src/games/cube.js.wip\` 124 行 + \`src/screens-cube.js.wip\`，均未挂进构建）：
+轮流转动、权威日志、复原结算（每复原一个双方各 +2）、打乱种子两端一致、12 个转动按钮、捕获拦截拖拽、
+父页面轮询 \`stateKey/solved/busyNow\`。
+
+**实测证据（产品是通的）**：用例在 "进入对局" 那步超时时，诊断打出：
+\`{"mode":"cube","phase":"round","g":[..."phase"...],"players":2,"hasScreen":true,"hasGame":true}\`
+→ 游戏确实开起来了、屏幕也注册了；**卡的是我在用例里用 python 拼 SQL 似的引号，把 waitFor 表达式写坏了**。
+
+**下一轮（很小）**：把用例里 \`H.waitFor\` 的表达式用反引号模板写（不要用 python 拼引号），先跑通 "两端 stateKey 一致"，
+再做发布（这一步做成了就是第 3 款上线游戏）。注意：改 test/browser/regress.mjs 用 edit 工具或整文件重写，
+不要用 python 行替换（本轮两次把 try/catch 结构弄坏）。
+
 ## 围棋（mini/demo-29b78d69）—— 结构探明，**驱动方式要换，暂未上线**
 
 **决定性证据**（`test/browser/probe-go.mjs` 可复跑）：

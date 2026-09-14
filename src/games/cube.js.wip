@@ -1,0 +1,124 @@
+/* ===== 魔方接力（双人合作复原，复用原作）=====
+ *
+ * 整包复用原作 mini/rubik-anime-lab-0b0c6984（单文件、classic 脚本、三渲二风格魔方动画）。
+ * 它的对外 API 很干净（window.__cubeAPI）：
+ *   applySeq(seq) / stateKey() → 状态字符串 / solved() / busyNow() / scramble() / reset() / play(i)
+ * 转动记号是 U/D/L/R/F/B（带 ' 与 2）。
+ *
+ * 玩法：**接力合作复原** —— 一人一步轮流转同一个魔方，复原即本局完成，双方各 +2；
+ *       打满设定局数后结算。魔方的转动规则、动画、渲染全在原作者手里，这里一行都没有。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var ID = 'cube';
+  var NAME = '魔方接力';
+  var EMOJI = '🧊';
+  var MOVES = { U: 1, D: 1, L: 1, R: 1, F: 1, B: 1, "U'": 1, "D'": 1, "L'": 1, "R'": 1, "F'": 1, "B'": 1 };
+
+  function participants(host) {
+    var g = host.g();
+    return ((g && g.players) || []).filter(function (id) { return !!host.player(id); });
+  }
+  function nameOf(host, pid) { var p = host.player(pid); return p ? p.name : '?'; }
+  function settle(host) {
+    var g = host.g();
+    g.phase = 'over';
+    g.win = true;
+    host.toast('🧊 一起复原了 ' + g.played + ' 个魔方，共 ' + g.totalMoves + ' 步', 'good');
+    host.event({
+      t: 'gameover',
+      players: participants(host).map(function (id) {
+        var p = host.player(id);
+        return { id: id, name: p ? p.name : '?', score: p ? p.score : 0 };
+      })
+    });
+    host.emit();
+  }
+
+  var game = {
+    id: ID,
+    name: NAME,
+    emoji: EMOJI,
+    blurb: '原作整包复用（含三渲二魔方动画），两人接力一人一步把魔方复原 🧊',
+    minPlayers: 2,
+    maxPlayers: 2,
+    meta: { group: 'online', tags: ['合作', '益智'], origin: { site: 'deepdemos.top', slug: 'rubik-anime-lab-0b0c6984', reuse: 'whole-game' } },
+
+    init: function (host) {
+      var s = host.state;
+      var settings = s.settings.cube || (s.settings.cube = {});
+      s.phase = 'round';
+      var ps = host.onlinePlayers().slice(0, 2);
+      if (ps.length < 2) { host.toast('魔方接力要两个人一起玩哦', 'info'); host.goLobby(); return; }
+      var rounds = Number(settings.rounds) || 1;
+      if ([1, 2, 3].indexOf(rounds) < 0) rounds = 1;
+      s.g = {
+        seed: (Math.random() * 0x7fffffff) | 0,   // 打乱序列由房主生成并广播，两端用同一份
+        rounds: rounds, played: 0, totalMoves: 0,
+        players: ps.map(function (p) { return p.id; }),
+        log: [], turnIdx: 0, moves: 0,
+        phase: 'play', win: false, solvedKey: null
+      };
+      host.toast('🧊 ' + nameOf(host, ps[0]) + ' 先转 · 一人一步接力复原', 'good');
+      host.emit();
+      return true;
+    },
+
+    action: function (host, action, from) {
+      var g = host.g();
+      if (!g) return;
+      if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
+      if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
+      if (g.phase !== 'play') return;
+      if (participants(host).indexOf(from) < 0) return;
+      if (from !== g.players[g.turnIdx]) return;          // 不是你的回合
+
+      if (action.t === 'move') {
+        var m = String(action.m || '');
+        if (!MOVES[m]) return;
+        g.log = g.log.concat([m]);
+        g.moves = (g.moves || 0) + 1;
+        g.totalMoves = (g.totalMoves || 0) + 1;
+        g.turnIdx = 1 - g.turnIdx;
+        host.emit();
+        return;
+      }
+      if (action.t === 'solved') {                         // 客户端报复原（房主按每局只认一次）
+        g.played++;
+        g.players.forEach(function (id) { host.addScore(id, 2); });
+        host.toast('🎉 第 ' + g.played + ' 个魔方复原！用了 ' + g.moves + ' 步，双方各 +2', 'good');
+        if (g.played >= g.rounds) { settle(host); return; }
+        g.log = []; g.turnIdx = 0; g.moves = 0; g.solvedKey = null;
+        host.emit();
+        return;
+      }
+      if (action.t === 'reset') {                          // 卡住了：重打乱这一局
+        g.log = []; g.turnIdx = 0; g.moves = 0;
+        host.toast('🔄 ' + nameOf(host, from) + ' 重新打乱了魔方', 'info');
+        host.emit();
+        return;
+      }
+      if (action.t === 'key') {                            // 两端状态校验（房主只记录，用来发现分叉）
+        var k = String(action.key || '');
+        if (g.solvedKey == null) { g.solvedKey = k; host.emit(); }
+        else if (g.solvedKey !== k && action.check) { g.forked = true; host.emit(); }
+        return;
+      }
+    },
+
+    resume: function (host) { if (host.g()) host.emit(); },
+
+    onLeave: function (host, id) {
+      var g = host.g();
+      if (!g || g.phase === 'over') return;
+      if ((g.players || []).indexOf(id) < 0) return;
+      var still = (g.players || []).filter(function (pid) { var p = host.player(pid); return p && p.online; });
+      if (still.length < 2) { g.phase = 'over'; g.win = false; host.emit(); }
+    },
+
+    _rules: { MOVES: MOVES }
+  };
+
+  PN.games[ID] = game;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
