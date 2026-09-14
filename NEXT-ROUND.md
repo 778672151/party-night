@@ -154,7 +154,14 @@
 ② 房主自己发出的动作是否走同一条应用路径（骨牌那款用同一 API 是能记录的，可对比 \`S.domino\` 的写法差异）。
 
 
-## 魔方接力（rubik-anime-lab-0b0c6984）—— 产品代码已通，只差一个写对的用例（最有希望的一款）
+## 魔方接力（rubik-anime-lab-0b0c6984）
+
+**第 19 轮的补充**：改成独立用例 \`test/browser/test-cube.mjs\`（不走 regress 插入，避免再弄坏它）后，
+仍在 "进入对局" 超时 —— 但**上一轮在 regress 的 S.cube 里，同一个 \`startGame(H, 'cube')\` 是把游戏开起来了的**
+（诊断有 \`mode=cube / phase=play / players=2\`）。差别只可能在我这个独立文件自己的房间/主机判定与等待时序上。
+**下一轮建议**：直接用 regress 里的 S.cube 场景（把 waitFor 表达式改对即可），不要在独立文件里重造房间流程。
+
+—— 产品代码已通，只差一个写对的用例（最有希望的一款）
 
 **原作 API（实测）**：\`window.__cubeAPI\` = \`applySeq(txt)\`（吃 "U R' F2" 这样的序列，自己排队+播动画）、
 \`stateKey()\`（状态字符串）、\`solved()\`、\`busyNow()\`、\`scramble()\`、\`reset()\`、\`pickAt()\`；\`window.__cubeApp\` 是内部对象。
