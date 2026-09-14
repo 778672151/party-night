@@ -73,7 +73,9 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["codraw","domino","drawgame","gomoku","hop","memory","mine","soko","tacit"]', '大厅有九款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳 + 扫雷 + 鲸鱼推箱子 + 骨牌顶牛（' + modes + '）');
+  assert(modes === '["codraw","cube","domino","drawgame","go","gomoku","hop","memory","mine","soko","tacit"]', '大厅有十一款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳 + 扫雷 + 鲸鱼推箱子 + 骨牌顶牛 + 魔方接力 + 围棋（' + modes + '）');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'cube\']")'), '大厅有魔方接力的入口卡片');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'go\']")'), '大厅有围棋的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'gomoku\']")'), '大厅有五子棋的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'hop\']")'), '大厅有跳一跳的入口卡片');
@@ -507,7 +509,7 @@ S.go = async (cdp) => {
 
   // 该黑方落子：中间第 40 点（9 路正中）
   const actor = pageOf(g0.players[0]);
-  await actor.click('[data-go="pass"]');
+  await actor.eval('PN.app.send({ t: "move", p: 40 }); 1');
   try { await H.waitFor('PN.app.state.g.log.length === 1', '房主记录第一手', 12000); }
   catch (e) {
     console.log('  [诊断] H state=' + await H.eval('JSON.stringify({mode:PN.app.state.mode, log:PN.app.state.g.log.length, turn:PN.app.state.g.turnIdx, players:PN.app.state.g.players, me:PN.app.me().id, host:PN.app.isHost()})'));
@@ -515,7 +517,9 @@ S.go = async (cdp) => {
     console.log('  [诊断] go debug=' + await H.eval('JSON.stringify(PN.screens.go.debug())'));
     console.log('  [诊断] dispatch 取值=' + await H.eval('JSON.stringify({disp:PN.__disp||0, mode:PN.__mode||null, gameOk:PN.__gameOk})'));
     console.log('  [诊断] onAction 门=' + await H.eval('JSON.stringify({act:PN.__act||0, host:PN.__actHost, isHost:PN.__actIsHost, t:PN.__actT||null})'));
-    console.log('  [诊断] action 到达次数=' + await H.eval('JSON.stringify({dbg:PN.app.state.g.dbg||0, t:PN.app.state.g.lastT, from:PN.app.state.g.lastFrom, turn:PN.app.state.g.lastTurn})'));
+    console.log('  [诊断] 权威状态=' + await H.eval('JSON.stringify({dbg:PN.app.host.state.g.dbg||0, t:PN.app.host.state.g.lastT, from:PN.app.host.state.g.lastFrom, turn:PN.app.host.state.g.lastTurn, log:PN.app.host.state.g.log.length})'));
+    console.log('  [诊断] move 到达=' + await H.eval('JSON.stringify({seen:PN.app.host.state.g.mvSeen||0, from:PN.app.host.state.g.mvFrom, p:PN.app.host.state.g.mvP, turn:PN.app.host.state.g.mvTurn, whose:PN.app.host.state.g.mvWhose})'));
+    console.log('  [诊断] 权威 players=' + await H.eval('JSON.stringify(PN.app.host.state.g.players)') + ' 当前该走=' + await H.eval('JSON.stringify(PN.app.host.state.g.players[PN.app.host.state.g.turnIdx])'));
     throw e;
   }
   assert(true, '第一手被房主记录（权威日志 +1）');
@@ -537,13 +541,13 @@ S.go = async (cdp) => {
   // 越位
   const wrong = pageOf(g0.players[0]);
   const lb = await H.eval('PN.app.state.g.log.length');
-  await wrong.eval('PN.screens.go.send({ t: "move", p: 41 }); 1');
+  await wrong.eval('PN.app.send({ t: "move", p: 41 }); 1');
   await sleep(800);
   assert(await H.eval('PN.app.state.g.log.length') === lb, '不是你的回合发落子会被房主拒绝');
 
   // 白方也下一手，确认连续同步
   const act2 = pageOf(g0.players[1]);
-  await act2.eval('PN.screens.go.send({ t: "move", p: 30 }); 1');
+  await act2.eval('PN.app.send({ t: "move", p: 30 }); 1');
   await H.waitFor('PN.app.state.g.log.length === 2', '第二手', 20000);
   let agree2 = false;
   for (let i = 0; i < 40; i++) {
@@ -556,10 +560,12 @@ S.go = async (cdp) => {
   await H.shot('go-2-two-moves');
 
   // 连续两次停一手 → 终局结算
-  await act2.eval('PN.screens.go.send({ t: "move", p: -1 }); 1');
+  const cp1 = pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
+  await cp1.eval('PN.app.send({ t: "move", p: -1 }); 1');
   await H.waitFor('PN.app.state.g.log.length === 3', '白方停一手', 20000);
   const act3 = pageOf(g0.players[0]);
-  await act3.eval('PN.screens.go.send({ t: "move", p: -1 }); 1');
+  const cp2 = pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
+  await cp2.eval('PN.app.send({ t: "move", p: -1 }); 1');
   await H.waitFor('PN.app.state.g.phase === "over"', '两次停一手终局', 30000);
   assert(true, '连续两次停一手 → 终局结算');
   const over = JSON.parse(await H.eval('JSON.stringify({ phase:PN.app.state.g.phase, caps:PN.app.state.g.caps })'));
@@ -1517,6 +1523,29 @@ S.perf = async (cdp) => {
       await sleep(800);
     }
     rows.push(pfLine('骨牌顶牛 出牌往返中', await pfStop(H)));
+    await A.dispose(); await B.dispose();
+    await sleep(1500);
+  }
+
+  if (want('cube')) {
+    const { A, B, H } = await mkRoom(cdp, 'cube');
+    for (let i = 0; i < 80; i++) {
+      if (await H.eval('PN.screens.cube.debug().key.length > 10')) break;
+      await sleep(500);
+    }
+    await sleep(800);
+    await pfReset(H);
+    await sleep(1200);
+    rows.push(pfLine('魔方接力 idle（原作三渲二场景）', await pfStop(H)));
+    await pfReset(H);
+    const idAC = await idOf(A);
+    for (let i = 0; i < 4; i++) {
+      const pid = await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]');
+      const pg = (pid === idAC) ? A : B;
+      await pg.eval('PN.app.send({ t: "move", m: "R" }); 1').catch(() => {});
+      await sleep(800);
+    }
+    rows.push(pfLine('魔方接力 转动往返中', await pfStop(H)));
     await A.dispose(); await B.dispose();
     await sleep(1500);
   }

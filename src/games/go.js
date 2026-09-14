@@ -62,7 +62,8 @@
       if (ps.length < 2) { host.toast('围棋要两个人对局哦', 'info'); host.goLobby(); return; }
       var size = 9;   // 与原件默认一致（改棋盘要先驱动它的新局表单，暂不开放，免得设置与实际不符）
       s.g = {
-        size: size, players: ps.slice(), log: [], turnIdx: 0,
+        size: size, players: ps.map(function (q) { return q.id; }),   // 必须是 id 字符串：门禁要拿它跟 from 比
+        log: [], turnIdx: 0,
         passes: 0, caps: [0, 0], phase: 'play', win: false, resigned: false, resignBy: null, series: 0
       };
       host.toast('⚫ ' + nameOf(host, ps[0]) + ' 执黑先行 · 棋盘 ' + size + ' 路 · 连续两次停一手即终局', 'good');
@@ -73,7 +74,6 @@
     action: function (host, action, from) {
       var g = host.g();
       if (!g) return;
-      g.dbg = (g.dbg || 0) + 1; g.lastT = String(action && action.t); g.lastFrom = String(from); g.lastTurn = g.turnIdx;
       if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
       if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
       if (g.phase !== 'play') return;

@@ -91,7 +91,7 @@
     name: 'go',
     debug: function () { return { applied: S.applied, moves: S.moves, caps: S.caps, passes: S.passes, ready: S.ready, err: S.err }; },
     patch: function (state) {
-      if (!S.frame || !state.g || state.phase === 'over' || state.mode !== 'go') return false;
+      if (!S.frame || !state.g || state.g.phase === 'over' || state.mode !== 'go') return false;
       syncTurn(); applyLog();
       return true;
     },

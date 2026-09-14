@@ -28,6 +28,7 @@ const scripts = [
   'src/screens-mine.js',
   'src/screens-soko.js',
   'src/screens-domino.js',
+  'src/screens-go.js',
   'src/screens-cube.js',
   'src/ui.js',
   'src/app.js',
