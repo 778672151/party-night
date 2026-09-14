@@ -227,7 +227,9 @@
   };
   Host.prototype.emitSoon = function (ms) {
     var self = this;
-    setTimeout(function () { self.emit(); }, ms || 30);
+    // 走登记过的定时器：裸 setTimeout 不归 clearAll 管，会活着跨过 goLobby/换局，
+    // 之后补一次多余的整树重建（可能冲掉正在输入的草稿）。
+    this.after('__emitSoon_' + (this._emitSeq = (this._emitSeq || 0) + 1), ms || 30, function () { self.emit(); });
   };
 
   Host.prototype.addScore = function (id, delta) {
