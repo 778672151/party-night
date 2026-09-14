@@ -22,7 +22,7 @@
     S.applied = 0; S.moves = 0; S.overSent = false;
     try {
       // 原作把棋局存 localStorage；两个 iframe 同源，会一起载入同一盘旧棋 —— 先清掉并要求新局
-      var mv = ev(w, 'JSON.stringify((function(){ try { return { m: game.moves.length }; } catch (e) { return { m: -1 }; } })())');
+      var mv = ev(w, 'JSON.stringify((function(){ try { return { m: YiApp.game.moves.length }; } catch (e) { return { m: -1 }; } })())');
       var stale = false;
       try { stale = JSON.parse(mv).m > 0; } catch (e) {}
       if (stale) {
@@ -31,9 +31,9 @@
         try { w.location.reload(); } catch (e) {}
         return;
       }
-      if (typeof w.cancelAI === 'function') ev(w, 'cancelAI()');
+      if (typeof w.cancelAI === 'function') ev(w, 'YiApp.cancelAI()');
     } catch (e) {}
-    try { if (typeof w.cancelAI === 'function') ev(w, 'cancelAI()'); } catch (e) {}
+    try { if (typeof w.cancelAI === 'function') ev(w, 'YiApp.cancelAI()'); } catch (e) {}
     try {
       var cv = w.document.querySelector('canvas');
       var block = function (e) { if (w.__pnAllow) return; e.preventDefault(); e.stopPropagation(); };
@@ -55,8 +55,8 @@
     }
     for (var i = S.applied; i < g.log.length; i++) {
       var p = g.log[i].p;
-      try { ev(w, 'cancelAI()'); } catch (e) {}
-      var r = ev(w, 'playMove(' + p + ', true)');
+      try { ev(w, 'YiApp.cancelAI()'); } catch (e) {}
+      var r = ev(w, 'YiApp.playMove(' + p + ', true)');
       if (r === null) S.err = 'playMove 失败';
     }
     if (g.log.length > S.applied) S.applied = g.log.length;
@@ -158,7 +158,7 @@
           if (!w || !w.document || !w.document.body) return;
           if (w !== S.win) { S.win = w; S.wired = null; S.applied = 0; S.moves = 0; }
           setup(w);
-          var st = ev(w, 'JSON.stringify((function(){ try { var cur = C.current(game); return { n: game.n, moves: game.moves.length, caps: cur.captures, passes: cur.passes, ok: true }; } catch (e) { return { ok: false, err: String(e && e.message) }; } })())');
+          var st = ev(w, 'JSON.stringify((function(){ try { var g2 = YiApp.game; var sn = g2.snapshots[g2.snapshots.length - 1]; return { n: g2.n, moves: g2.moves.length, caps: sn.captures, passes: sn.passes, ok: true }; } catch (e) { return { ok: false, err: String(e && e.message) }; } })())');
           if (st) {
             try {
               var o = JSON.parse(st);

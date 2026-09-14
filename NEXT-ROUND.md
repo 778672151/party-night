@@ -60,6 +60,24 @@
 - 注意：**未验证的东西不要挂进构建**。这一款当前是 .wip，build.mjs 与 regress 的 ORDER 里都已移除。
 
 
+
+### 12 轮摸底结果（很有用，先看这张表再挑游戏）
+
+| 原作 | 是否 type=module | 全局 API | 复用难度 |
+| --- | --- | --- | --- |
+| plus-2265f7c6 推箱子 | module 但暴露 tallgrass | window.tallgrass | 已上线 v1.5.0 |
+| demo-c046ab75 骨牌 | classic | 全局词法 game / 一堆全局函数 | 已上线 v1.6.0 |
+| 2048-roguelike | **module** | 只有 gsap | **难：这就是 eval 驱动不动的根因** |
+| demo-29b78d69 围棋 | module | **window.YiApp**（game/playMove/onPoint/cancelAI/finishScore/render/action） | 可行（已按 YiApp 改写） |
+| rubik-anime-lab | classic | **window.__cubeAPI / __cubeApp** | 待做，天然回合制 |
+| 3d-754ac5bb | classic | **window.__MAZE__** | 待做 |
+| demo-70c71aac | classic | window.GT | 待看 |
+| 其余（马里奥/拳皇/植物/弹球等） | — | — | 实时动作，QoS0 同步不了，不做 |
+
+**围棋的未解矛盾（下一轮第一件事）**：\`PN.screens.go\` 确实在产物里（grep 计数 1）、index.html 也同步了，
+但运行时 \`PN.screens.go\` 是 undefined，且 *.go-frame* 不在 DOM。最直接：在浏览器 eval \`Object.keys(PN.screens)\`
+看实际注册了什么，再对齐 build.mjs 的屏幕清单位置（怀疑拼接位置与 ui.js 的 \`var PN\` 覆盖顺序有关）。
+
 ## 围棋（mini/demo-29b78d69）—— 结构探明，**驱动方式要换，暂未上线**
 
 **决定性证据**（`test/browser/probe-go.mjs` 可复跑）：
