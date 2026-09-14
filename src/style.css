@@ -563,3 +563,8 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 /* 阶段四B：弱化大厅存在感——移除纯装饰（用覆盖而非删原规则，便于回退） */
 .land:before,.land:after{content:none!important}
 .modecard:before{display:none!important}
+
+/* 阶段四B-2：把“大厅感”压到最低——只给落地页/等待页自身一层素色表面（作用域限定在 .land），
+   html,body 的全局背景与所有游戏内视觉一行不动，可随时删掉本段回退 */
+.land{background:linear-gradient(180deg,#fffdfe 0%,#fff6fa 100%);border-radius:var(--r2);
+  padding:26px 18px 30px;max-width:420px;margin:0 auto;box-shadow:0 6px 0 rgba(107,85,136,.10)}
