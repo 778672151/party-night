@@ -550,3 +550,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 /* 阶段3 第二批：联机卡片(.modecard)与小游戏卡片(.mini-card)统一到同一套三渲二语言 */
 .modecard{border:2.5px solid var(--stroke);box-shadow:0 5px 0 rgba(107,85,136,.16),var(--soft);}
 .modecard:active{transform:translateY(3px);box-shadow:0 0 0 var(--stroke);}
+
+/* 阶段3 第三批：房间号展示区（.roomcode）三渲二化——描边 + 硬边投影 + 平面色阶 */
+.roomcode{background:linear-gradient(180deg,#fffdfe 0%,#fffdfe 46%,#fff2f8 46%,#fff2f8 100%);border:2.5px solid var(--stroke);border-radius:var(--r2);box-shadow:0 4px 0 rgba(107,85,136,.18);}
+.roomcode .code{color:#e2679a;}
