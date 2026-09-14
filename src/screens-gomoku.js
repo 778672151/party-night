@@ -36,17 +36,25 @@
     var ctx = m.ctx, L = m.L, pad = m.pad, step = m.step, n = Number(cv.dataset.n);
     var px = function (i) { return pad + i * step; };
 
-    // 棋盘底：奶油渐变 + 圆角
+    // 棋盘底：三渲二三段色阶的木纹板（顶面受光、底边加深、深色描边）
+    var T = PN.Toon;
     var rad = Math.min(22, L * 0.06);
     ctx.clearRect(0, 0, L, L);
+    var wood = T && T.tone ? T.tone('#ffe9c9') : { base: '#ffe9c9', top: '#fff4e2', left: '#c8a97e', right: '#e0c39b', rim: '#fffaf0', line: '#8a6f52' };
     var bg = ctx.createLinearGradient(0, 0, L, L);
-    bg.addColorStop(0, '#fffaf2'); bg.addColorStop(0.5, '#fff3e3'); bg.addColorStop(1, '#ffe9d6');
+    bg.addColorStop(0, wood.top); bg.addColorStop(0.55, wood.base); bg.addColorStop(1, wood.right);
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(0, 0, L, L, rad); else ctx.rect(0, 0, L, L);
     ctx.fillStyle = bg; ctx.fill();
+    // 板边描边（三渲二的"外轮廓"）
+    ctx.lineWidth = Math.max(2, step * 0.075);
+    ctx.strokeStyle = wood.line;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(0, 0, L, L, rad); else ctx.rect(0, 0, L, L);
+    ctx.stroke();
 
     // 网格
-    ctx.strokeStyle = 'rgba(107,85,136,.42)';
+    ctx.strokeStyle = 'rgba(138,111,82,.42)';
     ctx.lineWidth = Math.max(1, step * 0.028);
     ctx.beginPath();
     for (var i = 0; i < n; i++) {
@@ -76,14 +84,27 @@
       var v = g.board[k];
       if (!v) continue;
       var cx = px(k % n), cy = px(Math.floor(k / n));
-      var gr = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.15, cx, cy, R);
-      if (v === 1) { gr.addColorStop(0, '#8d7bab'); gr.addColorStop(1, CB); }
-      else { gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#e9e3f2'); }
+      // 三渲二棋子：平面色块 + 一道月牙高光 + 深色描边 + 落地投影
+      var toneSt = T && T.tone ? (v === 1 ? T.tone('#4b3a63') : T.tone('#fdf7ff'))
+                               : (v === 1 ? { base: CB, top: '#8d7bab', rim: '#c9b9e0', line: '#3c2850' }
+                                          : { base: '#fffdfd', top: '#ffffff', rim: '#ffffff', line: '#a08cb8' });
+      ctx.beginPath(); ctx.ellipse(cx, cy + R * 0.30, R * 0.98, R * 0.52, 0, 0, 6.2832);
+      ctx.globalAlpha = 0.20; ctx.fillStyle = '#3a2b52'; ctx.fill(); ctx.globalAlpha = 1;
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832);
-      ctx.fillStyle = gr; ctx.fill();
-      ctx.lineWidth = Math.max(1, step * 0.03);
-      ctx.strokeStyle = v === 1 ? 'rgba(60,40,80,.55)' : 'rgba(107,85,136,.35)';
-      ctx.stroke();
+      ctx.fillStyle = toneSt.base; ctx.fill();
+      // 受光月牙（左上）
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.clip();
+      ctx.beginPath(); ctx.arc(cx - R * 0.30, cy - R * 0.34, R * 0.78, 0, 6.2832);
+      ctx.fillStyle = toneSt.top; ctx.fill();
+      ctx.restore();
+      // 高光点
+      ctx.beginPath(); ctx.arc(cx - R * 0.34, cy - R * 0.40, R * 0.18, 0, 6.2832);
+      ctx.fillStyle = toneSt.rim; ctx.fill();
+      // 描边
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832);
+      ctx.lineWidth = Math.max(1.4, step * 0.045);
+      ctx.strokeStyle = toneSt.line; ctx.stroke();
     }
 
     // 最后一手：粉色提示环
