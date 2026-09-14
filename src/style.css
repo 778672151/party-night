@@ -501,3 +501,9 @@ input[type=range]{width:120px;accent-color:var(--acc)}
   border:2.5px solid var(--stroke);box-shadow:var(--soft);background:#0d1420}
 .sk-frame{display:block;width:100%;height:clamp(300px,calc(100vh - 500px),460px);border:0;background:#0d1420}
 .sk-hud,.sk-turn{margin-bottom:10px}
+
+/* 三渲二牌桌（翻牌）：DOM 卡片退化为透明命中层，视觉由 .mem-3d 画布提供 */
+.mem-board { position: relative; }
+.mem-3d { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.mem-board .mem-card { position: relative; z-index: 1; background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+.mem-board .mem-card .inner { opacity: 0; }
