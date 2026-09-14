@@ -82,6 +82,22 @@
 
 
 
+
+#### 第 17 轮：结论收紧到「dispatch 手上的 game 不是我注册的那个」
+
+在 \`host.js:42\` 之后加探针，跑围棋用例得到：
+
+    [诊断] dispatch 取值={"disp":16, "mode":"go", "gameOk":true}
+    [诊断] action 到达次数={"dbg":0}
+
+\`disp=16\` 说明 \`host.dispatch\` 跑了 16 次；\`mode=go\`；\`gameOk=true\` 说明 \`PN.games['go'].action\` 存在。
+也就是说 \`game.action(this, action, from)\` 这句**执行了 16 次**，可我游戏里 action 入口的计数探针**始终是 0**。
+唯一自洽的解释：**dispatch 持有的 game 对象不是我注册的那一个**（重复注册 / 同名覆盖）。
+
+**收口只需一步**（下一轮若回来做围棋，就做这个）：在 dispatch 里加
+\`PN.__ft = (PN.games[this.state.mode].action + '').slice(0, 40);\`，与 \`PN.games.go.action + ''\` 对比，
+或直接 \`PN.__same = (PN.games[this.state.mode] === PN.games.go);\` —— 一眼看出是不是同一对象。
+
 #### 第 16 轮决定性证据（围棋的最后一格）
 
 在 \`ui.js:304\` 加计数探针后跑用例得到：

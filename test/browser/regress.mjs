@@ -440,6 +440,7 @@ S.go = async (cdp) => {
     console.log('  [诊断] H state=' + await H.eval('JSON.stringify({mode:PN.app.state.mode, log:PN.app.state.g.log.length, turn:PN.app.state.g.turnIdx, players:PN.app.state.g.players, me:PN.app.me().id, host:PN.app.isHost()})'));
     console.log('  [诊断] O state=' + await O.eval('JSON.stringify({mode:PN.app.state.mode, me:PN.app.me().id, host:PN.app.isHost()})'));
     console.log('  [诊断] go debug=' + await H.eval('JSON.stringify(PN.screens.go.debug())'));
+    console.log('  [诊断] dispatch 取值=' + await H.eval('JSON.stringify({disp:PN.__disp||0, mode:PN.__mode||null, gameOk:PN.__gameOk})'));
     console.log('  [诊断] onAction 门=' + await H.eval('JSON.stringify({act:PN.__act||0, host:PN.__actHost, isHost:PN.__actIsHost, t:PN.__actT||null})'));
     console.log('  [诊断] action 到达次数=' + await H.eval('JSON.stringify({dbg:PN.app.state.g.dbg||0, t:PN.app.state.g.lastT, from:PN.app.state.g.lastFrom, turn:PN.app.state.g.lastTurn})'));
     throw e;
