@@ -352,8 +352,11 @@
     } else {
       var gen = function (n) { for (var i = 0; i < n; i++) { var c = PN.randCode(4); if (c !== location.hash.slice(1).toUpperCase()) return c; } return PN.randCode(4); };
       var c = gen(8);
+      // 阶段二：去掉建房的阻塞式 probe。实测点击→room 对象要 2581/2816ms，几乎就是这句 2500ms；
+      // 而 probe 自己另开一条冷连接，公共 broker 冷连接 6~7 秒，2500ms 上限会在订阅建成前到期，
+      // 既防不住撞号也白等（join 路径早已因此改为直接进场）。4 位码撞号概率极低，且真撞上也只是同房。
       self.renderWaiting('正在建房…');
-      PN.Room.probe(c, brokerIndex, 2500).then(function (meta) { if (meta) build(gen(40)); else build(c); });
+      build(c);
     }
   };
 
