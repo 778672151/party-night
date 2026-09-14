@@ -546,3 +546,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .field input{border:2.5px solid var(--stroke);background:linear-gradient(180deg,#fffdfe 0%,#fffdfe 45%,#fff5fa 45%,#fff5fa 100%);box-shadow:0 3px 0 rgba(107,85,136,.16);}
 .emoji-row > *{border:2.5px solid var(--stroke);border-radius:14px;background:linear-gradient(180deg,#fffafd 0%,#fffafd 38%,#ffeff7 38%,#ffeff7 100%);box-shadow:0 3px 0 rgba(107,85,136,.22);}
 .emoji-row > *.sel{box-shadow:0 0 0 3px var(--acc),0 3px 0 rgba(107,85,136,.22);}
+
+/* 阶段3 第二批：联机卡片(.modecard)与小游戏卡片(.mini-card)统一到同一套三渲二语言 */
+.modecard{border:2.5px solid var(--stroke);box-shadow:0 5px 0 rgba(107,85,136,.16),var(--soft);}
+.modecard:active{transform:translateY(3px);box-shadow:0 0 0 var(--stroke);}
