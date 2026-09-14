@@ -235,9 +235,13 @@
     if (p) { p.score = (p.score || 0) + delta; }
   };
 
+  /** 房间日志 + 本机提示。
+   *  以前只 push 进 state.log，而 state.log 没有任何渲染者 —— 全 11 款游戏 75 处用户反馈
+   *  （连成五子、对方离开、还没落子…）从来没显示过。onLocalToast 由 ui.js 注入。 */
   Host.prototype.toast = function (text, kind) {
     this.state.log.push({ t: this.now(), kind: kind || 'info', text: text });
     if (this.state.log.length > 40) this.state.log.shift();
+    if (typeof this.onLocalToast === 'function') this.onLocalToast(text, kind || 'info');
   };
   Host.prototype.event = function (ev) { this.room.sendEvent(ev); };
 

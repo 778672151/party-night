@@ -115,7 +115,14 @@
       if (!g || g.phase === 'over') return;
       if ((g.players || []).indexOf(id) < 0) return;
       var still = (g.players || []).filter(function (pid) { var p = host.player(pid); return p && p.online; });
-      if (still.length < 2) { g.phase = 'over'; g.win = false; host.emit(); }
+      if (still.length < 2) {
+        // 与其余游戏统一（阶段4）：给明确提示，并广播同样形状的 gameover，保证结算画面一致
+        host.toast('对方离开了，这局先到这儿～', 'info');
+        g.phase = 'over';
+        g.win = false;
+        host.event({ t: 'gameover', players: participants(host).map(function (pid) { var p = host.player(pid); return { id: pid, name: p ? p.name : '?', score: p ? p.score : 0 }; }) });
+        host.emit();
+      }
     },
 
     _rules: { MOVES: MOVES }

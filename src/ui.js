@@ -291,6 +291,8 @@
         onHost: function (isHost) {
           if (isHost) {
             if (!self.host) self.host = new PN.Host(self.room, function (state) { self.state = state; self.render(); });
+            // 把房主的 toast 同步浮现到本机（否则只进 state.log，界面上永远看不到）
+            if (!self.host.onLocalToast) self.host.onLocalToast = function (text, kind) { self.toast(text, kind); };
             if (self.room.lastState && self.room.lastState.players) self.host.adopt(self.room.lastState);
             else self.host.fresh(id, name, emoji);
           }
