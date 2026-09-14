@@ -1,0 +1,192 @@
+/* ===== 围棋 屏幕（复用原作 + 双人兼容）=====
+ * 原作在 iframe 里原封跑。父页面用 contentWindow.eval 完成全部双人兼容：
+ *   ① cancelAI() 关掉原作 AI（双人版不需要它）
+ *   ② 捕获阶段拦掉 iframe 内的棋盘点击/键盘（输入只能由我们喂）
+ *   ③ 用 playMove(p, true) 落地（true = 走它"AI 落子"那条路，正好不会触发 AI 反击）
+ *   ④ 轮询读 game.moves / captures / passes，同步给房主；连续两次停一手即终局
+ * 不需要注入桥接脚本，所以 iframe 重载也不会把同步打断。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+  var esc = PN.esc;
+
+  var S = { frame: null, applied: 0, ui: null, mounted: false, poller: null, win: null,
+    moves: 0, caps: [0, 0], passes: 0, ready: false, overSent: false, lastSig: '', err: null };
+
+  function frameWin() { try { return S.frame && S.frame.contentWindow; } catch (e) { return null; } }
+  function ev(w, code) { try { return w.eval(code); } catch (e) { S.err = String(e && e.message); return null; } }
+
+  function setup(w) {
+    if (!w || !w.document || !w.document.body || S.wired === w) return;
+    S.wired = w;
+    S.applied = 0; S.moves = 0; S.overSent = false;
+    try {
+      // 原作把棋局存 localStorage；两个 iframe 同源，会一起载入同一盘旧棋 —— 先清掉并要求新局
+      var mv = ev(w, 'JSON.stringify((function(){ try { return { m: game.moves.length }; } catch (e) { return { m: -1 }; } })())');
+      var stale = false;
+      try { stale = JSON.parse(mv).m > 0; } catch (e) {}
+      if (stale) {
+        try { w.localStorage.removeItem('yi.current.v1'); } catch (e) {}
+        S.applied = 0; S.wired = null; S.win = null;
+        try { w.location.reload(); } catch (e) {}
+        return;
+      }
+      if (typeof w.cancelAI === 'function') ev(w, 'cancelAI()');
+    } catch (e) {}
+    try { if (typeof w.cancelAI === 'function') ev(w, 'cancelAI()'); } catch (e) {}
+    try {
+      var cv = w.document.querySelector('canvas');
+      var block = function (e) { if (w.__pnAllow) return; e.preventDefault(); e.stopPropagation(); };
+      if (cv) { cv.addEventListener('click', block, true); cv.addEventListener('pointerdown', block, true); cv.addEventListener('pointerup', block, true); }
+      w.document.addEventListener('click', block, true);
+      w.document.addEventListener('keydown', block, true);
+      S.wiredOk = true;
+    } catch (e) { S.err = String(e && e.message); }
+  }
+
+  function applyLog() {
+    var ui = S.ui, g = ui && ui.state && ui.state.g;
+    if (!ui || !g) return;
+    var w = frameWin();
+    if (!w || !S.wiredOk) return;
+    if (g.log.length < S.applied) {                     // 重开：重载 iframe 更干净
+      S.applied = 0;
+      try { if (typeof w.newGame === 'function') ev(w, 'newGame()'); else if (typeof w.resetGame === 'function') ev(w, 'resetGame()'); else w.location.reload(); } catch (e) {}
+    }
+    for (var i = S.applied; i < g.log.length; i++) {
+      var p = g.log[i].p;
+      try { ev(w, 'cancelAI()'); } catch (e) {}
+      var r = ev(w, 'playMove(' + p + ', true)');
+      if (r === null) S.err = 'playMove 失败';
+    }
+    if (g.log.length > S.applied) S.applied = g.log.length;
+  }
+
+  function syncTurn() {
+    var ui = S.ui, g = ui && ui.state && ui.state.g;
+    if (!g) return;
+    var me = ui.pid();
+    var mine = g.phase === 'play' && g.players[g.turnIdx] === me;
+    var opp = (g.players || []).filter(function (id) { return id !== me; })[0];
+    var myColor = g.players[0] === me ? '⚫ 黑' : '⚪ 白';
+    var turn = document.getElementById('go-turn');
+    if (turn) {
+      turn.className = 'sk-turn' + (mine ? ' mine' : '');
+      turn.innerHTML = mine
+        ? '<b>🙋 轮到你落子（' + myColor + '）</b><span>在下面原作棋盘上点一下；这一手会先交给房主确认，再同时落到两边</span>'
+        : '<b>👀 等 ' + esc(ui.p(opp) ? ui.p(opp).name : '对方') + ' 落子</b><span>他执' + (g.players[0] === opp ? '黑' : '白') + '</span>';
+    }
+    var hud = document.getElementById('go-hud');
+    if (hud) {
+      hud.innerHTML = '<span class="sk-stat"><i>🔢</i>' + (g.size || 9) + ' 路</span>' +
+        '<span class="sk-stat"><i>👣</i>第 ' + ((S.moves || 0) + 1) + ' 手</span>' +
+        '<span class="sk-stat"><i>💥</i>吃子 ' + (S.caps[0] || 0) + ':' + (S.caps[1] || 0) + '</span>' +
+        '<span class="sk-stat"><i>⏸️</i>停一手 ' + (S.passes || 0) + '/2</span>';
+    }
+    document.querySelectorAll('[data-go]').forEach(function (b) { if (b.getAttribute('data-go') === 'pass') b.disabled = !mine; });
+  }
+
+  PN.screens = PN.screens || {};
+  PN.screens.go = {
+    name: 'go',
+    debug: function () { return { applied: S.applied, moves: S.moves, caps: S.caps, passes: S.passes, ready: S.ready, err: S.err }; },
+    patch: function (state) {
+      if (!S.frame || !state.g || state.phase === 'over' || state.mode !== 'go') return false;
+      syncTurn(); applyLog();
+      return true;
+    },
+    render: function (state, secret) {
+      var ui = this;
+      var GC = PN.gameCommon;
+      var g = state.g || {};
+      var me = ui.pid();
+      var mine = g.phase === 'play' && g.players && g.players[g.turnIdx] === me;
+      var wrap = ui.el('div');
+      ui.renderTopbar(wrap);
+      wrap.appendChild(ui.h(GC.gameHeader(ui, state, '⚫ 围棋（对局）',
+        g.phase === 'over' ? '这盘结束' : (mine ? '轮到你' : '等对方'),
+        '<span class="pill">原作整包复用</span>')));
+
+      var body = ui.el('div');
+      if (g.phase === 'over') {
+        var a = g.players && g.players[0], b = g.players && g.players[1];
+        var title = g.resigned ? '有人认输了' : '终局 🎉';
+        body.appendChild(ui.h('<div class="card center sk-hero"><div class="sk-result">' + esc(title) + '</div>' +
+          '<div class="muted mt8">吃子 ' + (g.caps[0] || 0) + ':' + (g.caps[1] || 0) + ' · 黑 ' + esc(ui.p(a) ? ui.p(a).name : '?') + '，白 ' + esc(ui.p(b) ? ui.p(b).name : '?') + '</div></div>'));
+        body.appendChild(ui.h(GC.scoreboard(state, undefined, '🏆 总积分')));
+        var btns = ui.h(GC.overButtons(ui, 'go'));
+        body.appendChild(btns);
+        PN.wireOver(btns, ui);
+      } else {
+        body.appendChild(ui.h('<div class="sk-turn" id="go-turn"></div>'));
+        body.appendChild(ui.h('<div class="sk-hud" id="go-hud"></div>'));
+        var stage = ui.el('div', 'sk-stage go-stage');
+        var frame = S.frame || (S.frame = ui.el('iframe', 'sk-frame go-frame'));
+        frame.setAttribute('allow', 'autoplay');
+        frame.setAttribute('referrerpolicy', 'no-referrer');
+        stage.appendChild(frame);
+        body.appendChild(stage);
+        var pad = ui.el('div', 'sk-pad');
+        var mk = function (act, label, cls2) {
+          var b = ui.el('button', 'btn ' + (cls2 || 'ghost') + ' sk-key', label);
+          b.setAttribute('data-go', act);
+          if (act === 'pass') b.disabled = !mine;
+          b.addEventListener('click', function () {
+            if (act === 'pass') ui.send({ t: 'move', p: -1 });
+            else if (act === 'resign') ui.send({ t: 'resign' });
+            else ui.send({ t: 'reset' });
+          });
+          return b;
+        };
+        pad.appendChild(mk('pass', '⏸️ 停一手', 'primary'));
+        pad.appendChild(mk('resign', '🏳️ 认输'));
+        pad.appendChild(mk('reset', '🔄 重开'));
+        body.appendChild(pad);
+
+        S.ui = ui; S.applied = 0; S.overSent = false; S.lastSig = '';
+        var mount = function (base) {
+          if (!base) { ui.toast('原作文件没找到（要从仓库根目录打开，见 README）', 'info'); return; }
+          if (!frame.getAttribute('src')) frame.src = base + 'demo-29b78d69/index.html';
+        };
+        var base0 = ui.local('pn_gobase') || '';
+        if (base0) mount(base0);
+        else if (ui.miniBase) ui.miniBase(mount);
+        else mount('../mini/');
+
+        if (!S.poller) S.poller = setInterval(function () {
+          var w = frameWin();
+          if (!w || !w.document || !w.document.body) return;
+          if (w !== S.win) { S.win = w; S.wired = null; S.applied = 0; S.moves = 0; }
+          setup(w);
+          var st = ev(w, 'JSON.stringify((function(){ try { var cur = C.current(game); return { n: game.n, moves: game.moves.length, caps: cur.captures, passes: cur.passes, ok: true }; } catch (e) { return { ok: false, err: String(e && e.message) }; } })())');
+          if (st) {
+            try {
+              var o = JSON.parse(st);
+              S.ready = !!o.ok;
+              if (o.ok) {
+                S.moves = o.moves | 0; S.caps = o.caps || [0, 0]; S.passes = o.passes | 0;
+                var gg = S.ui && S.ui.state && S.ui.state.g;
+                if (gg && gg.phase === 'play') {
+                  var sig = S.moves + '|' + S.caps.join(',') + '|' + S.passes;
+                  if (sig !== S.lastSig) {
+                    S.lastSig = sig;
+                    S.ui.send({ t: 'caps', caps: [S.caps[0], S.caps[1]] });
+                    if (S.passes >= 2 && !S.overSent && S.applied >= (gg.log || []).length) {
+                      S.overSent = true;
+                      S.ui.send({ t: 'over', caps: [S.caps[0], S.caps[1]] });
+                    }
+                  }
+                }
+              }
+            } catch (e) { S.err = String(e && e.message); }
+          }
+          applyLog();
+        }, 300);
+        syncTurn();
+      }
+      wrap.appendChild(body);
+      if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
+      return wrap;
+    }
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);

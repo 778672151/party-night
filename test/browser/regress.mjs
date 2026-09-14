@@ -400,6 +400,96 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 15. 围棋：复用原作整包 + 双人对局（关掉 AI / 轮流落子 / 停一手终局） ============ */
+S.go = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  A.pidCache = await A.eval('PN.app.me().id');
+  B.pidCache = await B.eval('PN.app.me().id');
+  const pageOf = (pid) => (pid === A.pidCache ? A : B);
+
+  await startGame(H, 'go');
+  await H.waitFor('PN.app.state.mode === "go" && PN.app.state.g && PN.app.state.g.phase === "play"', '进入对局', 30000);
+  await O.waitFor('PN.app.state.mode === "go"', '对方进入对局', 30000);
+
+  const g0 = JSON.parse(await H.eval('JSON.stringify({size:PN.app.state.g.size, players:PN.app.state.g.players, turnIdx:PN.app.state.g.turnIdx})'));
+  assert(g0.size === 9, '9 路棋盘（与原作默认一致）');
+  assert(g0.turnIdx === 0, '黑先（先加入的执黑）');
+  assert(await H.eval('document.querySelectorAll(".go-frame").length') === 1, '原作整包跑在 iframe 里');
+
+  // 等两端都就绪，并且都是全新棋局（原作会写 localStorage，两个 iframe 同源要防载入旧棋）
+  let bothReady = false, fresh = false;
+  for (let i = 0; i < 80; i++) {
+    const a = JSON.parse(await H.eval('JSON.stringify(PN.screens.go.debug())'));
+    const b = JSON.parse(await O.eval('JSON.stringify(PN.screens.go.debug())'));
+    if (a.ready && b.ready && a.moves === 0 && b.moves === 0) { bothReady = true; fresh = true; break; }
+    await sleep(500);
+  }
+  assert(bothReady, '两端原作都就绪');
+  assert(fresh, '两端都是全新棋局（0 手，存档已清）');
+  await H.shot('go-1-start');
+
+  // 该黑方落子：中间第 40 点（9 路正中）
+  const actor = pageOf(g0.players[0]);
+  await actor.eval('PN.app.send({ t: "move", p: 40 }); 1');
+  await H.waitFor('PN.app.state.g.log.length === 1', '房主记录第一手', 20000);
+  assert(true, '第一手被房主记录（权威日志 +1）');
+  await H.waitFor('PN.app.state.g.turnIdx === 1', '换白方', 20000);
+  assert(true, '落子后换成白方');
+
+  // 两端各自把这一手落到原作 → 手数必须一致（围棋引擎本身确定，不需要种子）
+  let agree = false;
+  for (let i = 0; i < 40; i++) {
+    const a = JSON.parse(await H.eval('JSON.stringify(PN.screens.go.debug())'));
+    const b = JSON.parse(await O.eval('JSON.stringify(PN.screens.go.debug())'));
+    if (a.moves === 1 && b.moves === 1 && JSON.stringify(a.caps) === JSON.stringify(b.caps)) {
+      agree = true; assert(true, '两端落地后手数一致（1 手，吃子 ' + a.caps.join(':') + '）'); break;
+    }
+    await sleep(400);
+  }
+  assert(agree, '两端棋局没有分叉（这是双人兼容的核心）');
+
+  // 越位
+  const wrong = pageOf(g0.players[0]);
+  const lb = await H.eval('PN.app.state.g.log.length');
+  await wrong.eval('PN.app.send({ t: "move", p: 41 }); 1');
+  await sleep(800);
+  assert(await H.eval('PN.app.state.g.log.length') === lb, '不是你的回合发落子会被房主拒绝');
+
+  // 白方也下一手，确认连续同步
+  const act2 = pageOf(g0.players[1]);
+  await act2.eval('PN.app.send({ t: "move", p: 30 }); 1');
+  await H.waitFor('PN.app.state.g.log.length === 2', '第二手', 20000);
+  let agree2 = false;
+  for (let i = 0; i < 40; i++) {
+    const a = JSON.parse(await H.eval('JSON.stringify(PN.screens.go.debug())'));
+    const b = JSON.parse(await O.eval('JSON.stringify(PN.screens.go.debug())'));
+    if (a.moves === 2 && b.moves === 2) { agree2 = true; break; }
+    await sleep(400);
+  }
+  assert(agree2, '连下两手后两端仍然一致（2 手）');
+  await H.shot('go-2-two-moves');
+
+  // 连续两次停一手 → 终局结算
+  await act2.eval('PN.app.send({ t: "move", p: -1 }); 1');
+  await H.waitFor('PN.app.state.g.log.length === 3', '白方停一手', 20000);
+  const act3 = pageOf(g0.players[0]);
+  await act3.eval('PN.app.send({ t: "move", p: -1 }); 1');
+  await H.waitFor('PN.app.state.g.phase === "over"', '两次停一手终局', 30000);
+  assert(true, '连续两次停一手 → 终局结算');
+  const over = JSON.parse(await H.eval('JSON.stringify({ phase:PN.app.state.g.phase, caps:PN.app.state.g.caps })'));
+  assert(over.phase === 'over', '终局状态正确（吃子 ' + over.caps.join(':') + '）');
+  assert(await H.eval('document.body.innerText.indexOf("总积分") >= 0') === true, '结算界面出现总积分');
+
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
+  await A.dispose(); await B.dispose();
+};
+
 /* ============ 14. 2048 肉鸽版：复用原作整包 + 双人轮流走一步（同种子 / 两端一致） ============ */
 S.tile2048 = async (cdp) => {
   const A = await createRoom(cdp, '小桃');

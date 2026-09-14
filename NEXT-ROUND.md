@@ -59,6 +59,24 @@
   （可能 touchStart 记的是 e.touches[0]，所以要派发 **TouchEvent** 而不是 PointerEvent）。
 - 注意：**未验证的东西不要挂进构建**。这一款当前是 .wip，build.mjs 与 regress 的 ORDER 里都已移除。
 
+
+## 围棋（mini/demo-29b78d69）—— 结构探明，**驱动方式要换，暂未上线**
+
+**决定性证据**（`test/browser/probe-go.mjs` 可复跑）：
+在 iframe 外部 eval 时，`typeof C` / `typeof game` / `typeof playMove` **全是 undefined**，而 `canvas:1` 正常、
+`localStorage` 为空 —— 说明原作的引擎与状态是**模块作用域**，外部脚本碰不到（这与推箱子/骨牌那两款不同，
+那两款的状态是全局词法绑定，所以 `contentWindow.eval` 读得到）。
+
+**因此不能沿用"eval 直接调引擎"的路子，要改成"驱动 UI + 读 DOM"**（这条路原作是支持的）：
+- 落子：给它 canvas 发**键盘事件**（原作 523 行：方向键移动选中点、**回车确认**），
+  选中点会显示在 `#board-caption` 文本里（"键盘选择：D4 · 回车确认"）→ 可以据此确认选到了哪一点
+- 读进度：棋谱渲染成 DOM（`.move-chip` 的数量 = 手数，456 行），吃子/形势也在它的侧栏文本里
+- 它把棋局存 localStorage（键名待确认，探针里当前为空），两端同源必须防载入同一盘旧棋
+- 另外它自带 AI：`playMove(p, fromAI)` + `cancelAI()`（在模块作用域内，外部调不到 → 只能靠 UI 或注入脚本）
+
+**现状**：`src/games/go.js.wip` + `src/screens-go.js.wip` 保留（逻辑层已写完：轮流/停一手/认输/按吃子结算，
+130 行），`build.mjs` 与 regress ORDER 里已移除。
+
 ## 下一轮主线：③ 其余游戏整包复用
 
 优先级建议（都要求：真浏览器双人对局 + `perf` 帧率数据 + 发布核对）：
