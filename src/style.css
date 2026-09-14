@@ -496,3 +496,8 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .sk-board{max-width:clamp(240px,calc(100vh - 470px),520px);margin:0 auto}
 .sk-cv{display:block;width:100%;border-radius:22px;border:2.5px solid var(--stroke);
   box-shadow:var(--soft);background:var(--bg);touch-action:manipulation}
+/* 原作整包复用的舞台 */
+.sk-stage{max-width:clamp(280px,calc(100vh - 470px),560px);margin:0 auto;border-radius:22px;overflow:hidden;
+  border:2.5px solid var(--stroke);box-shadow:var(--soft);background:#0d1420}
+.sk-frame{display:block;width:100%;height:clamp(300px,calc(100vh - 500px),460px);border:0;background:#0d1420}
+.sk-hud,.sk-turn{margin-bottom:10px}

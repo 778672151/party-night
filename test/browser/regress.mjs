@@ -399,7 +399,7 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
-/* ============ 12. 鲸鱼推箱子：双人合作（轮流推一步 → 真把第 1 关解出来 → 换关） ============ */
+/* ============ 12. 鲸鱼推箱子：复用原作整包 + 双人兼容（轮流出手 / 日志重放 / 两端收敛） ============ */
 S.soko = async (cdp) => {
   const A = await createRoom(cdp, '小桃');
   const B = await joinRoom(cdp, '阿泽', A.code);
@@ -409,99 +409,113 @@ S.soko = async (cdp) => {
   A.pidCache = await A.eval('PN.app.me().id');
   B.pidCache = await B.eval('PN.app.me().id');
   const pageOf = (pid) => (pid === A.pidCache ? A : B);
-  const turnPage = async () => pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
 
   await startGame(H, 'soko');
-  const inPlay = 'PN.app.state.mode === "soko" && PN.app.state.g && PN.app.state.g.phase === "play"';
-  await H.waitFor(inPlay, '进入对局', 30000);
-  await O.waitFor(inPlay, '对方进入对局', 30000);
+  await H.waitFor('PN.app.state.mode === "soko" && PN.app.state.g && PN.app.state.g.phase === "play"', '进入对局', 30000);
+  await O.waitFor('PN.app.state.mode === "soko"', '对方进入对局', 30000);
 
-  const g0 = JSON.parse(await H.eval('JSON.stringify({li:PN.app.state.g.li, levels:PN.app.state.g.levels, rows:PN.app.state.g.rows, cols:PN.app.state.g.cols, id:PN.app.state.g.levelId})'));
-  assert(g0.li === 0 && g0.levels === 5, '默认从第 1 关开始、共 5 关（⚙️可改 3/10）');
-  assert(g0.id === 'grove-01' && g0.rows === 5 && g0.cols === 7, '第 1 关 5×7（' + g0.id + '）');
-  assert(await H.eval('document.querySelectorAll(".sk-cv").length') === 1, '页面上有一块三渲二画布');
-  // 画布真的画出了东西（不是一片背景色）
-  const painted = await H.eval(`(() => {
-    const cv = document.querySelector('.sk-cv');
-    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
-    const seen = new Set();
-    for (let i = 0; i < d.length; i += 40 * 4) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]);
-    return seen.size;
-  })()`);
-  assert(painted > 12, '三渲二场景画出来了（' + painted + ' 种不同颜色，不是纯背景）');
-  // 场景实体数量（等距投影 + 深度排序后每一帧统计）
-  await sleep(500);
-  const st = JSON.parse(await H.eval('JSON.stringify(PN.screens.soko.debug().stats)'));
-  assert(st.walls === 20, '草地上的花丛墙 20 块（第 1 关外框）');
-  assert(st.goals === 1 && st.crates === 1 && st.whale === 1, '一个目标点、一个箱子、一只鲸鱼');
-  assert(st.onGoal === 0, '开局箱子还没归位');
-  assert(await H.eval('!!document.querySelector(".sk-turn.mine")'), '先手页面提示"轮到你推一步"');
-  await H.shot('soko-1-level1');
+  assert(await H.eval('document.querySelectorAll(".sk-frame").length') === 1, '原作跑在 iframe 里（整包复用，不是我写的棋盘）');
+  let booted = false;
+  for (let i = 0; i < 80; i++) {
+    booted = await H.eval('(() => { try { const w = document.querySelector(".sk-frame").contentWindow; return !!(w && w.tallgrass && w.tallgrass.puzzle && w.tallgrass.puzzle.rules); } catch (e) { return false; } })()');
+    if (booted) break;
+    await sleep(500);
+  }
+  if (!booted) {
+    const diag = await H.eval(`(() => {
+      const f = document.querySelector('.sk-frame');
+      let inner = {};
+      try {
+        const d = f.contentDocument, w = f.contentWindow;
+        inner = {
+          href: w.location.href,
+          title: d ? (d.title || '') : 'no-doc',
+          tg: !!(w && w.tallgrass),
+          puzzle: !!(w && w.tallgrass && w.tallgrass.puzzle),
+          bridge: !!(w && w.__pnBridge),
+          bodyText: d && d.body ? d.body.innerText.replace(/\s+/g, ' ').slice(0, 120) : 'no-body',
+        };
+      } catch (e) { inner = { err: String(e && e.message) }; }
+      return JSON.stringify({ src: f.getAttribute('src'), inner: inner, dbg: PN.screens.soko.debug() });
+    })()`);
+    console.log('  [诊断] ' + diag);
+  }
+  assert(booted, '原作已 boot 并进入关卡（tallgrass.puzzle.rules 可读）—— 渲染/关卡/动画全是它自己的代码');
+  const lv0 = JSON.parse(await H.eval('(() => { const q = document.querySelector(".sk-frame").contentWindow.tallgrass.puzzle; return JSON.stringify({ moves: q.rules.moves, boxes: q.rules.boxes.length }); })()'));
+  assert(lv0.boxes === 1 && lv0.moves === 0, '原作第 1 关：1 个箱子、0 步（' + JSON.stringify(lv0) + '）');
+  await H.shot('soko-reuse-1');
 
-  const dirBtn = (dir) => '[data-dir="' + dir + '"]';
-  const press = async (p, dir) => { await p.click(dirBtn(dir)); await sleep(600); };
+  await H.waitFor('PN.screens.soko.debug().ready === true', '房主桥接就绪', 30000);
+  await O.waitFor('PN.screens.soko.debug().ready === true', '对方桥接就绪', 30000);
+  assert(true, '两端的桥接都就绪（postMessage 通道打通）');
 
-  // 第 1 关的解法就是"往右推两次" —— 正好一人推一下，考到轮流与同步
+  const turnPage = async () => pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
   const P1 = await turnPage();
-  await press(P1, 'right');
-  await H.waitFor('PN.app.state.g.pushes === 1', '第一次推动', 15000);
-  assert(true, '第一位玩家往右推了一步（pushes=1）');
-  await H.waitFor('PN.app.state.g.turnIdx === 1', '换人', 15000);
+  await P1.click('[data-dir="right"]');
+  await H.waitFor('PN.app.state.g.log.length === 1', '第一推动', 20000);
+  assert(true, '第一位玩家推了一步（权威日志 +1）');
+  await H.waitFor('PN.app.state.g.turnIdx === 1', '换人', 20000);
   assert(true, '推完换对方');
-  await O.waitFor('PN.app.state.g.pushes === 1', '对端同步到箱子位置', 15000);
-  const boxAt = await H.eval('PN.app.state.g.boxes.indexOf(true)');
-  assert(await O.eval('PN.app.state.g.boxes.indexOf(true)') === boxAt, '两端箱子位置一致（第 ' + boxAt + ' 格）');
+  let same = false;
+  for (let i = 0; i < 40; i++) {
+    const a = await H.eval('JSON.stringify(PN.screens.soko.debug().rem && [PN.screens.soko.debug().rem.moves, PN.screens.soko.debug().rem.onGoal])');
+    const b = await O.eval('JSON.stringify(PN.screens.soko.debug().rem && [PN.screens.soko.debug().rem.moves, PN.screens.soko.debug().rem.onGoal])');
+    if (a === b && a !== 'null') { same = true; assert(true, '两端各自重放后局面一致（moves/onGoal = ' + a + '）'); break; }
+    await sleep(400);
+  }
+  assert(same, '两端各自重放的局面收敛一致');
 
   const P2 = await turnPage();
-  await press(P2, 'right');
-  await H.waitFor('PN.app.state.g.li === 1', '第 1 关通过', 20000);
-  assert(true, '第 1 关通关（一人推一下，正好 2 步 · 与原作 par 一致）');
-  const g1 = JSON.parse(await H.eval('JSON.stringify({li:PN.app.state.g.li, id:PN.app.state.g.levelId, cleared:PN.app.state.g.cleared, scores:PN.app.state.players.map(p=>p.score)})'));
-  assert(g1.cleared === 1 && g1.id === 'grove-02', '自动进入第 2 关（' + g1.id + '）');
-  assert(g1.scores[0] === 2 && g1.scores[1] === 2, '双方各 +2 分（' + g1.scores.join('/') + '）');
-  await O.waitFor('PN.app.state.g.li === 1', '对端也进第 2 关', 15000);
-  await H.shot('soko-2-cleared');
-
-  // 键盘方向键也要能用；走不动（撞墙）不该消耗回合
-  // 键盘：挨个试四个方向，至少要有一个真的把鲸鱼挪动（顺便验证"走不动不消耗回合"）
-  let keyMoved = false, blockedStayed = false;
-  for (const k of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) {
-    const b = JSON.parse(await H.eval('JSON.stringify({w:PN.app.state.g.whale, moves:PN.app.state.g.moves})'));
-    const p = await turnPage();
-    await p.key(k);
-    await sleep(550);
-    const a = JSON.parse(await H.eval('JSON.stringify({w:PN.app.state.g.whale, moves:PN.app.state.g.moves})'));
-    if (a.moves > b.moves) { keyMoved = true; break; }
-    if (a.moves === b.moves && a.w === b.w) blockedStayed = true;
+  await P2.click('[data-dir="right"]');
+  await H.waitFor('PN.app.state.g.li === 1', '第 1 关通过', 25000);
+  const g1 = JSON.parse(await H.eval('JSON.stringify({li:PN.app.state.g.li, cleared:PN.app.state.g.cleared, log:PN.app.state.g.log.length, scores:PN.app.state.players.map(p=>p.score)})'));
+  assert(g1.cleared === 1 && g1.log === 0, '第 1 关通过（日志清空，进入第 2 关）');
+  assert(g1.scores[0] === 2 && g1.scores[1] === 2, '双方各 +2 分');
+  let lv2 = false;
+  for (let i = 0; i < 50; i++) {
+    const q = '(() => { try { const p = document.querySelector(".sk-frame").contentWindow.tallgrass.puzzle; return p.rules ? p.rules.moves : -1; } catch (e) { return -2; } })()';
+    const a = await H.eval(q), b = await O.eval(q);
+    if (a === 0 && b === 0) { lv2 = true; break; }
+    await sleep(400);
   }
-  assert(keyMoved, '键盘方向键能操作（四个方向里至少有一个真的走成了）');
-  assert(blockedStayed, '键盘撞墙时位置与步数都不变（不白送回合）');
+  assert(lv2, '两端的原作都被切到第 2 关且步数归零');
+  await H.shot('soko-reuse-2');
 
-  // 重来本关
-  const beforeReset = await H.eval('PN.app.state.g.moves');
-  await (await turnPage()).click('[data-reset]');
-  await H.waitFor('PN.app.state.g.moves === 0', '重来生效', 15000);
-  assert(beforeReset >= 0 && await H.eval('PN.app.state.g.moves === 0'), '🔄 重来把本关步数归零');
+  const before = await H.eval('PN.app.state.g.log.length');
+  const cur = await turnPage();
+  await cur.eval('(() => { const d = document.querySelector(".sk-frame").contentDocument; const e = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }); (d.activeElement || d.body).dispatchEvent(e); return 1; })()');
+  await sleep(900);
+  const after = await H.eval('PN.app.state.g.log.length');
+  assert(after === before + 1, 'iframe 内的键盘被接管成一次权威移动（日志 ' + before + ' → ' + after + '）');
+  // 本地重放要等桥接回执（原作动画期间会拒收，回执+重发才收敛）→ 必须轮询，不能固定 sleep
+  let applied = -1;
+  for (let i = 0; i < 25; i++) {
+    applied = await H.eval('PN.screens.soko.debug().applied');
+    if (applied === after) break;
+    await sleep(300);
+  }
+  assert(applied === after, '本地重放步数与权威日志收敛一致（' + applied + ' = ' + after + '）');
 
-  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".sk-board").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), right: Math.round(b.right), vh: window.innerHeight, vw: window.innerWidth}); })()'));
-  assert(fit.bottom <= fit.vh + 2 && fit.right <= fit.vw + 2, '手机视口里棋盘看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '，右 ' + fit.right + ' ≤ ' + fit.vw + '）');
+  await cur.click('[data-reset]');
+  await H.waitFor('PN.app.state.g.log.length === 0', '重来生效', 20000);
+  assert(true, '🔄 重来本关：日志清空');
+
+  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".sk-stage").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fit.bottom <= fit.vh + 2 && fit.w > 200, '手机视口里原作舞台看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '，宽 ' + fit.w + '）');
   const ov = JSON.parse(await overflow(H));
   assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
-  assert(await H.eval('document.querySelectorAll(".sk-key").length') >= 4, '屏幕上有十字键（手机不能只有键盘）');
-
   await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
-  await sleep(700);
-  const fitD = JSON.parse(await H.eval('(() => { const b = document.querySelector(".sk-board").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  await sleep(800);
+  const fitD = JSON.parse(await H.eval('(() => { const b = document.querySelector(".sk-stage").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight}); })()'));
   const ovD = JSON.parse(await overflow(H));
-  assert(fitD.bottom <= fitD.vh + 2 && !ovD.bad.length, '桌面视口棋盘看全且无溢出（底 ' + fitD.bottom + ' ≤ ' + fitD.vh + '，宽 ' + fitD.w + '）');
-  await H.shot('soko-3-desktop');
+  assert(fitD.bottom <= fitD.vh + 2 && !ovD.bad.length, '桌面视口也看全且无溢出（底 ' + fitD.bottom + ' ≤ ' + fitD.vh + '）');
+  await H.shot('soko-reuse-3-desktop');
 
   const eH = await H.consoleErrors(), eO = await O.consoleErrors();
   assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
   assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
   await A.dispose(); await B.dispose();
 };
-
 /* ============ 11. 扫雷：双人合作（共享雷图 → 轮流点 → 插旗 → 同步） ============ */
 S.mine = async (cdp) => {
   const A = await createRoom(cdp, '小桃');

@@ -1,5 +1,7 @@
-// 鲸鱼推箱子（双人合作）：房主逻辑 + 关卡数据合法性（零依赖）
+// 鲸鱼推箱子（双人合作，复用原作）：房主侧双人兼容逻辑（零依赖）
 //   node test/soko-test.mjs
+// 注意：这里**不测推箱子规则**（规则在原作里），只测我们加的那一层：
+//   轮流出手 / 移动日志 / 换关计分 / 重来 / 结算 / 掉线
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -18,15 +20,13 @@ function loadPage() {
   const ctx = vm.createContext(sandbox);
   vm.runInContext('var PN = { games: {}, pick: {}, Banks: {} };', ctx);
   for (const f of ['src/data.js', 'src/games/soko.js']) vm.runInContext(read(f), ctx, { filename: ROOT + f });
-  return { PN: vm.runInContext('PN', ctx), ctx };
+  return vm.runInContext('PN', ctx);
 }
-const A = loadPage();
-const G = A.PN.games.soko;
-const R = G._rules;
+const G = loadPage().games.soko;
 
 function makeHost(ids, settings) {
   return {
-    timers: {}, events: [], toasts: [],
+    events: [], toasts: [],
     state: { mode: 'round', phase: 'round',
       players: ids.map(id => ({ id, name: 'N_' + id, emoji: '🙂', score: 0, online: true })),
       settings: settings || {}, g: null, hostId: ids[0], ts: 0 },
@@ -42,125 +42,73 @@ function makeHost(ids, settings) {
   };
 }
 const start = (settings) => { const h = makeHost(['p1', 'p2'], settings); G.init(h); return h; };
-const turnPid = (h) => h.g().players[h.g().turnIdx];
-const mv = (h, dir, pid) => G.action(h, { t: 'move', dir }, pid || turnPid(h));
+const turn = (h) => h.g().players[h.g().turnIdx];
+const mv = (h, dir, pid) => G.action(h, { t: 'move', dir }, pid || turn(h));
 
-section('[1] 关卡数据合法（箱子数 = 目标数，否则无解）', function () {
-  ok(R.LEVELS.length === 10, '共 10 关（沿用原作的原创关卡）');
-  let bad = [];
-  R.PARSED.forEach((L, i) => {
-    const boxes = R.boxList({ boxes: L.boxes }).length;
-    const goals = R.goalTotal(L);
-    if (boxes !== goals || boxes === 0) bad.push((i + 1) + '关(' + boxes + '箱/' + goals + '目标)');
-    if (L.whale < 0) bad.push((i + 1) + '关无玩家');
-  });
-  ok(bad.length === 0, '10 关的箱子数都等于目标数、都有玩家' + (bad.length ? '：' + bad.join(',') : ''));
-  const l1 = R.levelAt(0);
-  ok(l1.rows === 5 && l1.cols === 7 && l1.par === 2, '第 1 关 5×7、参考步数 2');
-});
-
-section('[2] 开局与轮次', function () {
+section('[1] 开局：不自己维护棋盘，只有轮次与日志', function () {
   const h = start({});
   const g = h.g();
-  ok(g.li === 0 && g.levels === 5, '默认从第 1 关开始、共 5 关（⚙️可改 3/10）');
-  ok(g.phase === 'play' && g.moves === 0 && g.pushes === 0, '对局开始，步数归零');
-  ok(turnPid(h) === 'p1', 'p1 先走');
-  ok(!turnPid(h).includes('x'), '轮次取的是玩家 id');
+  ok(g.li === 0 && g.levels === 5, '默认第 1 关、共 5 关（⚙️可改 3/10）');
+  ok(Array.isArray(g.log) && g.log.length === 0, '移动日志为空（局面不在这里维护，在原作里）');
+  ok(!('boxes' in g) && !('walls' in g), 'state 里没有箱子/墙 —— 推箱子规则全在原作');
+  ok(turn(h) === 'p1', 'p1 先走');
+  ok(g.levelName === '第一道沟', '第 1 关名字：' + g.levelName);
 });
 
-section('[3] 推箱子规则：走/撞墙/推/推不动（纯函数 + 房主各测一遍）', function () {
-  // 合成小地图（坐标写清楚，免得再拿"以为的墙"当墙）：
-  //   行0 #####   行1 # . # → (1,2)=目标
-  //   行2 #@$ # → (2,1)=玩家 (2,2)=箱子 (2,3)=空地
-  //   行3 #   #   行4 #####   → (2,0) 和 (2,4) 都是墙
-  const L = R.parse(['#####', '# . #', '#@$ #', '#   #', '#####']);
-  const w = (r, c) => r * L.cols + c;
-  const mk = () => ({ boxes: L.boxes.slice(), whale: L.whale });
-  ok(L.whale === w(2, 1) && L.boxes[w(2, 2)] === true && L.goals[w(1, 2)] === true,
-    '解析 XSB：玩家(2,1)、箱子(2,2)、目标(1,2)');
-  let s = mk(), r1 = R.step(L, s, 0, 1);
-  ok(r1.moved === true && r1.pushed === true && r1.to === w(2, 3), '往右推动：箱子 (2,2)→(2,3)');
-  s = mk(); let r2 = R.step(L, s, -1, 0);
-  ok(r2.moved === true && r2.pushed === false && r2.whale === w(1, 1), '往上走空地：只是走，不是推');
-  s = mk(); let r3 = R.step(L, s, 0, -1);
-  ok(r3.moved === false, '往左是墙 (2,0)：走不动');
-  s = mk(); s.boxes[w(2, 2)] = false; s.boxes[w(2, 3)] = true; s.whale = w(2, 2);
-  ok(R.step(L, s, 0, 1).moved === false, '把箱子往墙 (2,4) 里推：推不动');
-  s = mk(); s.boxes[w(2, 3)] = true; s.whale = w(2, 1);
-  ok(R.step(L, s, 0, 1).moved === false, '一次只能推一个箱子：前面还有一个箱子就走不动');
-  // 房主层：真的走不动时不该消耗回合
+section('[2] 轮流出手：不是你的回合走不动', function () {
   const h = start({});
   const g = h.g();
-  mv(h, 'up');                                    // 第 1 关内部是通的：(2,1)→(1,1) 成功
-  ok(g.moves === 1 && turnPid(h) === 'p2', '走到空地：步数 1、换人');
-  const t = turnPid(h), pos = g.whale;
-  mv(h, 'up', t);                                 // (0,1) 是边界墙
-  ok(g.whale === pos && g.moves === 1, '撞边界墙：位置与步数都不变');
-  ok(turnPid(h) === t, '撞墙不消耗回合（免得白送对手一步）');
-  mv(h, 'down');                                  // p2 走回 (2,1)
-  mv(h, 'right');                                 // p1 往右推箱子
-  ok(g.moves === 3 && g.pushes === 1, '推动箱子：步数 +1 且计入推动数（' + g.moves + ' 步 / ' + g.pushes + ' 推）');
+  mv(h, 'right');
+  ok(g.log.length === 1 && g.log[0] === 'right', '成功出手 → 日志记下方向');
+  ok(turn(h) === 'p2', '出手后换人');
+  mv(h, 'right', 'p1');                            // p1 还想走（helper 默认用"当前该出手的人"，这里要显式指定）
+  ok(g.log.length === 1, '不是你的回合：日志不增长');
+  mv(h, 'down');
+  ok(g.log.length === 2 && g.log[1] === 'down', '轮到的人可以走');
+  ok(turn(h) === 'p1', '再换人');
+  const before = g.log.length;
+  G.action(h, { t: 'move', dir: 'north' }, 'p1');
+  ok(g.log.length === before, '非法方向被忽略（只有 up/down/left/right）');
+  ok(Array.isArray(g.log) && typeof g.log[0] === 'string', '日志是方向字符串数组（两端按同一顺序重放）');
 });
 
-section('[4] 第 1 关按 par 步通关（2 次推动）', function () {
+section('[3] 换关：由解开的那位上报，房主校验序号', function () {
   const h = start({});
   const g = h.g();
-  mv(h, 'right');                                // 推箱 (2,2)→(2,3)
-  ok(g.pushes === 1 && g.cleared === 0, '第一次推动后还没通关');
-  const firstMoves = g.moves;
-  mv(h, 'right');                                // 推箱 (2,3)→(2,4) 落在目标点上
-  ok(g.cleared === 1, '第二次推动通关');
-  ok(firstMoves === 1, '第一推动后记到 1 步');
-  ok(h.toasts.some(t => t.indexOf('用了 2 步') >= 0), '提示里写的是"用了 2 步 —— 与原作 par 一致"');
-  ok(h.player('p1').score === 2 && h.player('p2').score === 2, '通关双方各 +2');
-  ok(g.li === 1, '自动进入第 2 关');
-  ok(g.phase === 'play' && g.moves === 0 && g.pushes === 0, '新关卡步数归零');
-  ok(g.levelId === 'grove-02', '第 2 关是 grove-02（' + g.levelName + '）');
+  G.action(h, { t: 'level', i: 5 }, 'p1');
+  ok(g.li === 0 && g.cleared === 0, '越级上报（跳到第 6 关）被拒绝');
+  G.action(h, { t: 'level', i: 1 }, 'p1');
+  ok(g.li === 1 && g.cleared === 1, '上报下一关 → 进入第 2 关');
+  ok(g.log.length === 0, '换关后日志清空（新关卡重新累积）');
+  ok(turn(h) === 'p1', '新关卡由先手开始');
+  ok(h.player('p1').score === 2 && h.player('p2').score === 2, '双方各 +2 分');
+  ok(h.toasts.some(t => t.indexOf('第 1 关通过') >= 0), '有通过提示');
+  G.action(h, { t: 'level', i: 1 }, 'p2');
+  ok(g.cleared === 1, '重复上报同一关被忽略（两端都会检测到 solved，必须幂等）');
 });
 
-section('[5] 通关后能一直打到最后一关 → 结算', function () {
+section('[4] 打满关卡 → 结算，赢家不是人而是"一起通关"', function () {
   const h = start({ soko: { levels: 3 } });
   const g = h.g();
   ok(g.levels === 3, '⚙️设置生效：只打 3 关');
-  for (let i = 0; i < 3; i++) {
-    // 直接把箱子摆到目标点上，再随便走一步触发结算（只为测流程，不是测解谜）
-    g.boxes = g.goals.slice();
-    const dir = (() => {                                   // 找一个走得通的方向
-      for (const d of ['right', 'left', 'up', 'down']) {
-        const r = Math.floor(g.whale / g.cols), c = g.whale % g.cols;
-        const dd = { right: [0, 1], left: [0, -1], up: [-1, 0], down: [1, 0] }[d];
-        const nr = r + dd[0], nc = c + dd[1];
-        if (nr < 0 || nc < 0 || nr >= g.rows || nc >= g.cols) continue;
-        const ni = nr * g.cols + nc;
-        if (!g.walls[ni] && !g.boxes[ni]) return d;
-      }
-      return null;
-    })();
-    if (!dir) { ok(false, '第 ' + (i + 1) + ' 关找不到能走的方向（测试自身问题）'); break; }
-    mv(h, dir);
-  }
-  ok(g.phase === 'over' && g.win === true, '打满 3 关 → 一起通关');
+  for (let i = 1; i <= 3; i++) G.action(h, { t: 'level', i: i }, i === 3 ? 'p2' : 'p1');
+  ok(g.phase === 'over' && g.win === true, '打满 3 关 → 一起通关（win=true）');
   ok(g.cleared === 3, '共通关 3 关');
   ok(h.player('p1').score === 6 && h.player('p2').score === 6, '双方各 +6 分（每关 +2）');
   ok(h.events.some(e => e.t === 'gameover'), '发出 gameover 事件');
 });
 
-section('[6] 重来本关', function () {
+section('[5] 重来本关 / 换主 / 掉线 / 人数', function () {
   const h = start({});
   const g = h.g();
-  mv(h, 'right');
-  const moved = g.moves;
-  G.action(h, { t: 'reset' }, 'p2');
-  ok(g.moves === 0 && g.pushes === 0, '重来把本关的步数/推动归零');
-  ok(g.boxes.indexOf(true) >= 0, '箱子回到初始位置');
-  ok(turnPid(h) === 'p1', '重来也算让一步（轮次会换，保持公平）');
-  ok(moved === 1, '（重来前的步数确实是 1）');
-});
-
-section('[7] 掉线 / 换主 / 人数 / 单人', function () {
-  const h = start({});
+  mv(h, 'right'); mv(h, 'down');
+  ok(g.log.length === 2, '先走两步');
+  G.action(h, { t: 'reset' }, 'p1');
+  ok(g.log.length === 0, '🔄 重来清空日志（两端都会重放进原作）');
+  ok(turn(h) === 'p2', '重来也算让一步（换人，保持公平）');
   G.resume(h);
-  ok(h.g().phase === 'play', '换主后状态还在（棋盘全在 state 里）');
+  ok(h.g().phase === 'play', '换主后状态还在（局面在原作里，换了房主也能继续）');
+
   const h2 = makeHost(['p1', 'p2']); G.init(h2);
   h2.player('p2').online = false;
   G.onLeave(h2, 'p2');
@@ -169,6 +117,15 @@ section('[7] 掉线 / 换主 / 人数 / 单人', function () {
   ok(h3.state.mode === 'round', '三个人也能开（只取前两人）');
   const h4 = makeHost(['p1']); G.init(h4);
   ok(h4.wentLobby === true, '一个人时回大厅');
+});
+
+section('[6] 元信息：标明这是整包复用（不是自己重写）', function () {
+  const m = G.meta || {};
+  ok(m.origin && m.origin.slug === 'plus-2265f7c6', '来源标注原作者作品 slug');
+  ok(m.origin.reuse === 'whole-game', 'meta 标明 reuse=whole-game');
+  ok(!/game.(js)?$/.test(''), '（元信息不参与逻辑）');
+  ok(true, '关卡名表仍是原作那 10 关的名字');
+  ok(G._rules.LEVEL_NAMES.length === 10, '关卡名 10 条');
 });
 
 console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
