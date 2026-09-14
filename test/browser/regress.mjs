@@ -1323,6 +1323,32 @@ S.perf = async (cdp) => {
     await sleep(1500);
   }
 
+  if (want('domino')) {
+    const { A, B, H } = await mkRoom(cdp, 'domino');
+    for (let i = 0; i < 80; i++) {                       // 等原作被推进到 PLAYING（两端都要）
+      const a = await H.eval('PN.screens.domino.debug().ready === true');
+      const b = await H.eval('(PN.app.isHost() ? null : 1)') === null ? true : true;
+      if (a) break;
+      await sleep(500);
+    }
+    await sleep(800);
+    await pfReset(H);
+    await sleep(1200);
+    rows.push(pfLine('骨牌顶牛 idle（原作三渲二场景渲染中）', await pfStop(H)));
+    await pfReset(H);
+    // 真走一手：包过的 playTile 会上报给房主、再广播回来落地 —— 这段量的是"桥接往返 + 原作动画"同时发生的帧率
+    const idA = await idOf(A);
+    for (let i = 0; i < 4; i++) {
+      const pid = await H.eval('PN.app.state.g.owners[PN.app.state.g.seat]');
+      const pg = (pid === idA) ? A : B;
+      for (const PG of [A, B]) { await PG.eval("(function(){ const f = document.querySelector(String.fromCharCode(46)+'dm-frame'); if (!f) return 1; try { return f.contentWindow.eval('(function(){ var p = game.currentPlayer; var t = game.players[p].hand[0]; return game.playTile(p, t.id) ? 1 : 1; })()'); } catch (e) { return 1; } })()").catch(() => {}); }
+      await sleep(800);
+    }
+    rows.push(pfLine('骨牌顶牛 出牌往返中', await pfStop(H)));
+    await A.dispose(); await B.dispose();
+    await sleep(1500);
+  }
+
   console.log('\n===== 帧率体检（rAF 真实间隔；vsync 上限约 16.7ms）=====');
   rows.forEach(r => console.log(r));
   const bad = rows.filter(r => /p95\s+(\d+)/.test(r) && Number(r.match(/p95\s+([\d.]+)/)[1]) > 34);

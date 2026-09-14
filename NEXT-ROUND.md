@@ -35,6 +35,14 @@
 **现状**：importmap 已回退 CDN；`mini/plus-2265f7c6/vendor/`（624KB）留着未启用。**改它之前先备份 index.html**。
 
 
+
+## 骨牌顶牛帧率体检（已并入 perf 场景：node test/browser/regress.mjs perf domino）
+
+- idle（原作三渲二场景）：14 帧 / 平均 75.5ms（13fps）/ p95 89ms
+- 出牌往返中：83 帧 / 平均 38.1ms（26fps）/ p95 89ms / 最长 111ms
+- **必须注明**：这是无头软件渲染（无 GPU）的数字，同机纯 DOM 扫雷 idle 也仅 21fps，绝对值不代表真机。
+- 结论：桥接往返没有引入额外卡顿（p95 与 idle 相同）；绝对流畅度需真机确认。
+
 ## 2048 肉鸽版（mini/2048-roguelike-ed8cf859）—— 已做完但**未通过验证，暂未上线**
 
 **已可用的部分**（代码保留在 src/games/tile2048.js.wip + src/screens-tile2048.js.wip）：
