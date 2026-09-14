@@ -732,13 +732,16 @@ S.domino = async (cdp) => {
   assert(true, '房主权威日志记录了这一手（座位 ' + act.seat + '）');
 
   // 两端各自落地 → 牌链必须一致
-  let agree = false;
-  for (let i = 0; i < 40; i++) {
+  // 公共 broker 偶发慢，给足 30s；真分叉时把两端状态打出来便于定位
+  let agree = false, lastA = '', lastB = '';
+  for (let i = 0; i < 60; i++) {
     const a = await H.eval(readState), b = await O.eval(readState);
+    lastA = a; lastB = b;
     const ja = JSON.parse(a), jb = JSON.parse(b);
     if (ja.chain === jb.chain && ja.chain >= 0 && (await H.eval('PN.screens.domino.debug().applied')) > 0) { agree = true; assert(true, '两端落地后牌链一致（chain=' + ja.chain + '）'); break; }
-    await sleep(400);
+    await sleep(500);
   }
+  if (!agree) console.log('  [诊断] 未收敛 房主=' + lastA + ' 对手=' + lastB + ' dbgH=' + JSON.stringify(await H.eval('PN.screens.domino.debug()')) + ' dbgO=' + JSON.stringify(await O.eval('PN.screens.domino.debug()')));
   assert(agree, '两端的牌局没有分叉（这是双人兼容的核心）');
 
   // 混出手：不是他家的座位发动作，房主必须拒绝
@@ -1237,12 +1240,25 @@ S.gomoku = async (cdp) => {
     const st = JSON.parse(await H.eval('JSON.stringify({turn:PN.app.state.g.turn,players:PN.app.state.g.players})'));
     const cur = st.players[st.turn - 1];
     const p = pageOf(cur);
+    // 点一格并确认真的落上了再推进计数：公共 broker + 动画时序下，一次点击可能没生效，
+    // 若照样推进计数就会把连五的关键子跳过去，表现为「连五结束」超时。
+    const clickAndConfirm = async (pg, cx, cy) => {
+      const n = await H.eval('PN.app.state.g.n');
+      const idx = cy * n + cx;
+      for (let tries = 0; tries < 4; tries++) {
+        if (await H.eval('PN.app.state.g.phase') !== 'play') return true;
+        await tapCell(pg, cx, cy);
+        await sleep(500);
+        if (await H.eval('PN.app.state.g.board[' + idx + ']') !== 0) return true;
+      }
+      return false;
+    };
     if (cur === blackId) {
       if (bi >= blackWants.length) break;
-      await tapCell(p, blackWants[bi][0], blackWants[bi][1]); bi++;
+      await clickAndConfirm(p, blackWants[bi][0], blackWants[bi][1]); bi++;
     } else {
       if (wi >= whiteFill.length) break;
-      await tapCell(p, whiteFill[wi][0], whiteFill[wi][1]); wi++;
+      await clickAndConfirm(p, whiteFill[wi][0], whiteFill[wi][1]); wi++;
     }
   }
   await H.waitFor('PN.app.state.g.phase === "over"', '连五结束', 20000);
