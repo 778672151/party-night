@@ -554,3 +554,8 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 /* 阶段3 第三批：房间号展示区（.roomcode）三渲二化——描边 + 硬边投影 + 平面色阶 */
 .roomcode{background:linear-gradient(180deg,#fffdfe 0%,#fffdfe 46%,#fff2f8 46%,#fff2f8 100%);border:2.5px solid var(--stroke);border-radius:var(--r2);box-shadow:0 4px 0 rgba(107,85,136,.18);}
 .roomcode .code{color:#e2679a;}
+
+/* 阶段3 第四批：房间内玩家卡 .player 与大厅卡片统一（深色描边 + 硬边偏移投影） */
+.player{border:2.5px solid var(--stroke);box-shadow:0 4px 0 rgba(107,85,136,.16);}
+.player.me{box-shadow:0 4px 0 rgba(255,143,184,.42);}
+.players-grid .pickable{border:2.5px solid var(--stroke);box-shadow:0 4px 0 rgba(107,85,136,.16);}
