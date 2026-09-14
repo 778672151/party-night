@@ -108,6 +108,31 @@ node test/style-check.mjs             # 全部通过
 - **回归**：受影响套件零回归 —— codraw 34/0、memory 29/0、tacit 31/0、gomoku 35/0、regress-fixes 24/0。
 - **复现命令**：`node test/d12-secretcache-test.mjs`
 
+
+### D14 详情（发现 → 复现 → 修复 → 验证）
+
+- **缺陷**：`emitSoon`（`host.js:230`）用的是**裸 `setTimeout`**，不登记进 `this.timers`；而 `clearAll()`（`:261-264`）只遍历 `this.timers` →
+  `goLobby()`/换局时 pending 的 `emitSoon` **取消不掉**，之后会补一次多余的 `emit()`（含整树重建，可能冲掉正在输入的草稿）。
+  调用方：`hop.js:128 emitSoon(10)`、`hop.js:204 emitSoon(40)`。
+- **最小复现**：`test/d14-emitsoon-test.mjs` —— 真实 `PN.Host.prototype` + 真实定时器，`emitSoon(30)` 后立刻 `goLobby()`，等 80ms 断言不应再冒出 emit。
+  **修复前：1 通过 / 1 失败（退出码 1）**；**修复后：2 通过 / 0 失败**。
+  （写这个用例时我自己先栽了一次：`Object.assign` **不会拷贝 getter**，`get emits()` 被求值成快照，导致两条断言假通过；改成方法 `count()` 后才如实报错。教训已写进用例注释。）
+- **修复**：`emitSoon` 改走 `this.after('__emitSoon_' + 递增序号, ms || 30, ...)` —— 保持「每次调用各自排一次」的原语义，同时纳入 `clearAll` 管辖。
+- **回归**：hop-test 51/0（两个调用方所在游戏）、d12 3/0、regress-fixes 24/0、wire-test 16/0；发布 v1.14.4，version-test 17/0。
+- **复现命令**：`node test/d14-emitsoon-test.mjs`
+
+### 后续又证伪的怀疑（均为「经代码证据确认无缺陷」，未改代码）
+
+| 编号 | 怀疑点 | 结论与证据 |
+| --- | --- | --- |
+| D15 | 掉线宽限定时器在玩家回来时没取消，25s 后仍会 `onLeave` 掉已回来的人 | ✅ 无缺陷。`markOffline` 排 `drop_<id>`（`host.js:198-199`），而 `upsertPlayer` **清掉它**（`host.js:167`：`clearTimer('drop_'+id) // 人回来了`）、`removePlayer` 也清（`:207`）。护栏 `test/d15-dropgrace-test.mjs`：**3 通过 / 0 失败**（用例完全同步、无 await，定时器不可能自行触发，故「被清除」是确定结论） |
+| D16 | `leave()` 后 `_pending` / `_seen` 残留 | ✅ 无缺陷。`_pending` 逐条 `clearTimeout` 后置空；`_seen` 虽未清，但该对象随 `exitToLand()` 的整页 reload 一并丢弃，无影响 |
+| D17 | `every()`（`setInterval`）回调抛异常会导致停表 | ✅ 无缺陷。浏览器语义下间隔不会被抛出中断，风险仅为错误刷屏（低） |
+| — | `leave()` 里那个 250ms 裸 `setTimeout` | ✅ **有意为之**：它的作用就是稍后 `mqtt.end()` 关 socket；取消它反而会留下未关闭的连接 |
+
+### 最终回归（第 23 轮）
+17 个 node 套件全绿（含 d12/d14/d15 三个新护栏）+ 真浏览器 `lobby` / `hop` 全部通过，**无新增失败**。
+
 ### D1（未修，等你确认）
 `wins` / `streak` 是「只写不读」的死状态：`host.js:160` 创建、`:120` 与 `:295` 重置，
 **全项目无读取点**；且 `goLobby` 保留 `score` 却清零 `wins`，两个累计统计处理不一致。
