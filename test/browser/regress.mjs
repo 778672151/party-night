@@ -757,6 +757,16 @@ S.domino = async (cdp) => {
   await sleep(800);
   await H.shot('domino-2-desktop');
 
+  // 打满设定的局数 → 必须出现结算界面（曾经因为 patch 用房间阶段判断结束而永不渲染）
+  const dr = await H.eval('PN.app.state.g.rounds');
+  for (let i = 0; i < dr; i++) {
+    await H.eval('PN.app.send({ t: "roundover", scores: {} }); 1');   // roundover 不校验回合，房主直接发
+    await sleep(700);
+  }
+  let dsc = false;
+  for (let i = 0; i < 20; i++) { if (await H.eval('document.body.innerText.indexOf("总积分") >= 0')) { dsc = true; break; } await sleep(400); }
+  assert(dsc, '打满 ' + dr + ' 局后出现结算界面（总积分）');
+
   const eH = await H.consoleErrors(), eO = await O.consoleErrors();
   assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
   assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
