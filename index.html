@@ -7666,7 +7666,9 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.6.0';
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'domino') {
+    if (mode === 'tile2048') {
+      rows.push(seg('局数', 'rounds', [[1, '1 局'], [2, '2 局'], [3, '3 局']]));
+    } else if (mode === 'domino') {
       rows.push(seg('局数', 'rounds', [[1, '1 局'], [3, '3 局'], [5, '5 局']]));
     } else if (mode === 'soko') {
       rows.push(seg('关卡数', 'levels', [[3, '3 关'], [5, '5 关'], [10, '10 关全通']]));

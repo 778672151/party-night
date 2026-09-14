@@ -400,6 +400,98 @@ S.memory = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 14. 2048 肉鸽版：复用原作整包 + 双人轮流走一步（同种子 / 两端一致） ============ */
+S.tile2048 = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  A.pidCache = await A.eval('PN.app.me().id');
+  B.pidCache = await B.eval('PN.app.me().id');
+  const pageOf = (pid) => (pid === A.pidCache ? A : B);
+
+  await startGame(H, 'tile2048');
+  await H.waitFor('PN.app.state.mode === "tile2048" && PN.app.state.g && PN.app.state.g.phase === "play"', '进入对局', 30000);
+  await O.waitFor('PN.app.state.mode === "tile2048"', '对方进入对局', 30000);
+
+  const g0 = JSON.parse(await H.eval('JSON.stringify({seed:PN.app.state.g.seed, rounds:PN.app.state.g.rounds})'));
+  assert(typeof g0.seed === 'number' && g0.seed !== 0, '房主生成固定种子：' + g0.seed + '（2048 出新方块要两端一致）');
+  assert(g0.rounds === 2, '默认 2 局（⚙️可改 1/3）');
+  assert(await H.eval('document.querySelectorAll(".t48-frame").length') === 1, '原作整包跑在 iframe 里');
+
+  // 等两端都自动开局（点 #startBtn）并读到盘面
+  let bothUp = false;
+  for (let i = 0; i < 80; i++) {
+    const a = JSON.parse(await H.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+    const b = JSON.parse(await O.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+    if (a.started && b.started && a.tiles > 0 && b.tiles > 0) { bothUp = true; assert(true, '两端原作都自动开局（画布已渲染，SCORE ' + a.score + ' / MOVES ' + a.moves + '）'); break; }
+    await sleep(500);
+  }
+  if (!bothUp) console.log('  [诊断] H=' + await H.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+  assert(bothUp, '两端原作都进入可玩状态（自动点开始）');
+  const d0 = JSON.parse(await H.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+  const d0b = JSON.parse(await O.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+  assert(d0.score === d0b.score && d0.moves === d0b.moves, '同种子生效：两端开局状态一致（' + d0.score + '分/' + d0.moves + '步）');
+  await H.shot('2048-1-start');
+
+  // 轮流走：该出手那页点十字键
+  const turnPage = async () => pageOf(await H.eval('PN.app.state.g.players[PN.app.state.g.turnIdx]'));
+  const P1 = await turnPage();
+  const before = await H.eval('PN.app.state.g.log.length');
+  await P1.click('[data-dir="left"]');
+  await H.waitFor('PN.app.state.g.log.length === ' + (before + 1), '房主记录一步', 20000);
+  assert(true, '第一步被房主记录（权威日志 +1）');
+  await H.waitFor('PN.app.state.g.turnIdx === 1', '换人', 20000);
+  assert(true, '走一步就交给对方');
+
+  // 两端各自把这一步 dispatch 进原作 → 盘面必须一致（这是双人兼容的核心）
+  let agree = false;
+  for (let i = 0; i < 40; i++) {
+    const a = JSON.parse(await H.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+    const b = JSON.parse(await O.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+    if (a.applied === 1 && b.applied === 1 && a.moves === b.moves && a.score === b.score) {
+      agree = true; assert(true, '两端落地后状态一致（' + a.score + '分/' + a.moves + '步）'); break;
+    }
+    await sleep(400);
+  }
+  assert(agree, '两端盘面没有分叉（这是双人兼容的核心）');
+
+  // 再走两步，确认持续一致
+  const P2 = await turnPage();
+  await P2.click('[data-dir="up"]');
+  await H.waitFor('PN.app.state.g.log.length === ' + (before + 2), '第二步', 20000);
+  let agree2 = false;
+  for (let i = 0; i < 40; i++) {
+    const a = JSON.parse(await H.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+    const b = JSON.parse(await O.eval('JSON.stringify(PN.screens.tile2048.debug())'));
+    if (a.applied === 2 && b.applied === 2 && a.moves === b.moves && a.score === b.score) { agree2 = true; break; }
+    await sleep(400);
+  }
+  assert(agree2, '连走两步后两端仍然一致（applied=2）');
+
+  // 越位：不是你的回合发动作要被拒
+  const wrong = await H.eval('PN.app.state.g.players[(PN.app.state.g.turnIdx + 1) % 2]');
+  const wrongPage = pageOf(wrong);
+  const lb = await H.eval('PN.app.state.g.log.length');
+  await wrongPage.eval('PN.app.send({ t: "move", dir: "down" }); 1');
+  await sleep(800);
+  assert(await H.eval('PN.app.state.g.log.length') === lb, '不是你的回合发动作会被房主拒绝');
+
+  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".t48-stage").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fit.bottom <= fit.vh + 2 && fit.w > 200, '手机视口里原作舞台看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '，宽 ' + fit.w + '）');
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(800);
+  await H.shot('2048-2-desktop');
+
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
+  await A.dispose(); await B.dispose();
+};
+
 /* ============ 13. 骨牌顶牛：复用原作整包 + 双人各带两家（同种子 / 只上报 / 两端一致） ============ */
 S.domino = async (cdp) => {
   const A = await createRoom(cdp, '小桃');

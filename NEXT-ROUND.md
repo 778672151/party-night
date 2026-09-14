@@ -34,6 +34,23 @@
 
 **现状**：importmap 已回退 CDN；`mini/plus-2265f7c6/vendor/`（624KB）留着未启用。**改它之前先备份 index.html**。
 
+
+## 2048 肉鸽版（mini/2048-roguelike-ed8cf859）—— 已做完但**未通过验证，暂未上线**
+
+**已可用的部分**（代码保留在 src/games/tile2048.js.wip + src/screens-tile2048.js.wip）：
+- 房主权威轮次层（轮流走一步、日志、每局计分、结算）→ 逻辑层没问题
+- 父页面 contentWindow.eval 完成：装固定种子（覆盖 w.Math.random，2048 出新方块是随机的）、
+  拦本地按键、轮询读进度 → 双人对局用例 16 项断言里 15 项通过（含"越位被拒""无 JS 报错""两端不分叉"）
+
+**卡住的地方（下次从这里接着查）**：
+- 它是 **canvas 渲染**（#tiles 是空容器、.tile 数为 0），进度只能从 body 文本里
+  正则取 SCORE n / MOVES n（这一招有效，已写进 .wip 代码）
+- **转发的输入驱动不动它**：试过 document/window 派发 keydown（带 key/code/keyCode/which）、
+  也试过在 #board 上模拟 pointer 滑动（pointerdown/move/up）——MOVES 始终 0。
+  下一步建议：直接读它 index.html 1780-1810 行的 pointer 处理，看它读哪些字段
+  （可能 touchStart 记的是 e.touches[0]，所以要派发 **TouchEvent** 而不是 PointerEvent）。
+- 注意：**未验证的东西不要挂进构建**。这一款当前是 .wip，build.mjs 与 regress 的 ORDER 里都已移除。
+
 ## 下一轮主线：③ 其余游戏整包复用
 
 优先级建议（都要求：真浏览器双人对局 + `perf` 帧率数据 + 发布核对）：

@@ -1,0 +1,122 @@
+/* ===== 2048 肉鸽版（双人合作：同一盘轮流走一步）=====
+ *
+ * 整包复用原作 mini/2048-roguelike-ed8cf859（单文件 1851 行，含 roguelike 加成与特效）。
+ * 它只有键盘输入（document 上的 keydown），盘面与分数都在 DOM 里（#tiles / #scoreVal）——
+ * 所以"双人兼容"只需要：转发方向键 + 拦截本地按键 + 读分数，**不用注入任何桥接脚本**。
+ *
+ * 本文件只做房主权威的那一层：轮流出手、移动日志、每局计分、打满局数结算。
+ * 2048 的规则/合成/特效一行都不在这里。 */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var ID = 'tile2048';
+  var NAME = '2048 肉鸽版';
+  var EMOJI = '🔢';
+  var DIRS = { up: 1, down: 1, left: 1, right: 1 };
+
+  function participants(host) {
+    var g = host.g();
+    return ((g && g.players) || []).filter(function (id) { return !!host.player(id); });
+  }
+  function nameOf(host, pid) { var p = host.player(pid); return p ? p.name : '?'; }
+  function settle(host) {
+    var g = host.g();
+    g.phase = 'over';
+    g.win = true;
+    host.toast('🔢 一起打了 ' + g.played + ' 局，最高 ' + (g.best || 0) + ' 分', 'good');
+    host.event({
+      t: 'gameover',
+      players: participants(host).map(function (id) {
+        var p = host.player(id);
+        return { id: id, name: p ? p.name : '?', score: p ? p.score : 0 };
+      })
+    });
+    host.emit();
+  }
+
+  var game = {
+    id: ID,
+    name: NAME,
+    emoji: EMOJI,
+    blurb: '原作整包复用（含肉鸽加成），两个人轮流走一步一起推分 🔢',
+    minPlayers: 2,
+    maxPlayers: 2,
+    meta: { group: 'online', tags: ['合作', '益智'], origin: { site: 'deepdemos.top', slug: '2048-roguelike-ed8cf859', reuse: 'whole-game' } },
+
+    init: function (host) {
+      var s = host.state;
+      var settings = s.settings.tile2048 || (s.settings.tile2048 = {});
+      s.phase = 'round';
+      var ps = host.onlinePlayers().slice(0, 2);
+      if (ps.length < 2) { host.toast('2048 要两个人一起玩哦', 'info'); host.goLobby(); return; }
+      var rounds = Number(settings.rounds) || 2;
+      if ([1, 2, 3].indexOf(rounds) < 0) rounds = 2;
+      s.g = {
+        // 固定种子：2048 出新方块用 Math.random，两端必须同种子，否则盘面必然分叉
+        seed: (Math.random() * 0x7fffffff) | 0,
+        rounds: rounds, played: 0, round: 1,
+        players: ps.map(function (p) { return p.id; }),
+        log: [], turnIdx: 0,
+        best: 0, score0: 0, phase: 'play', win: false
+      };
+      host.toast('🔢 ' + nameOf(host, s.g.players[0]) + ' 先走 · 轮流走一步，分数是一起攒的', 'good');
+      host.emit();
+      return true;
+    },
+
+    action: function (host, action, from) {
+      var g = host.g();
+      if (!g) return;
+      if (action.t === 'lobby') { if (host.amHost(from)) host.goLobby(); return; }
+      if (action.t === 'again') { if (host.amHost(from)) this.init(host); return; }
+      if (g.phase !== 'play') return;
+      if (participants(host).indexOf(from) < 0) return;
+
+      if (action.t === 'move') {
+        if (from !== g.players[g.turnIdx]) return;      // 不是你的回合
+        if (!DIRS[action.dir]) return;
+        g.log = g.log.concat([action.dir]);
+        g.turnIdx = 1 - g.turnIdx;
+        host.emit();
+        return;
+      }
+      if (action.t === 'reset') {                        // 卡住了重开这一局
+        g.log = []; g.turnIdx = 0;
+        host.toast('🔄 ' + nameOf(host, from) + ' 重开了这一局', 'info');
+        host.emit();
+        return;
+      }
+      if (action.t === 'score') {                        // 客户端上报盘面分数（房主取最大值当成绩）
+        var sc = Number(action.score) || 0;
+        if (sc > (g.score0 || 0)) { g.score0 = sc; host.emit(); }
+        return;
+      }
+      if (action.t === 'over') {                          // 这一局走死了
+        var fin = Math.max(Number(action.score) || 0, g.score0 || 0);
+        if (fin > (g.best || 0)) g.best = fin;
+        g.played++;
+        g.players.forEach(function (id) { host.addScore(id, 2); });
+        host.toast('🎉 第 ' + g.played + ' 局结束，本局 ' + fin + ' 分，双方各 +2', 'good');
+        if (g.played >= g.rounds) { settle(host); return; }
+        g.round++; g.log = []; g.turnIdx = 0; g.score0 = 0;
+        host.emit();
+        return;
+      }
+    },
+
+    resume: function (host) { if (host.g()) host.emit(); },
+
+    onLeave: function (host, id) {
+      var g = host.g();
+      if (!g || g.phase === 'over') return;
+      if ((g.players || []).indexOf(id) < 0) return;
+      var still = (g.players || []).filter(function (pid) { var p = host.player(pid); return p && p.online; });
+      if (still.length < 2) { g.phase = 'over'; g.win = false; host.emit(); }
+    },
+
+    _rules: { DIRS: DIRS }
+  };
+
+  PN.games[ID] = game;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
