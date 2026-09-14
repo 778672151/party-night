@@ -512,3 +512,23 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .mn-board { position: relative; }
 .mn-3d { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 .mn-board .mn-cell { position: relative; z-index: 1; background: transparent !important; border-color: transparent !important; color: transparent !important; box-shadow: none !important; }
+
+/* 三渲二选项卡片（默契大考验）：纯 CSS 实现（平面色块 + 硬边偏移投影 + 描边 + 顶部高光），不动布局 */
+.tac-opts .tac-opt{
+  border:2.5px solid #6b5588;
+  background:linear-gradient(180deg,#fff7fb 0%,#fff7fb 34%,#ffeaf4 34%,#ffeaf4 100%);
+  box-shadow:0 5px 0 #d9bfe0, 0 8px 14px rgba(75,58,99,.13);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.tac-opts .tac-opt .k{
+  background:#ffd7e8 !important;color:#c0578c !important;
+  border:2px solid #6b5588;box-shadow:0 2px 0 #e2aecb;
+}
+.tac-opts .tac-opt .t{color:#4b3a63 !important;font-weight:800}
+.tac-opts .tac-opt.chosen{
+  background:linear-gradient(180deg,#ffc2da 0%,#ffc2da 34%,#ff9dc3 34%,#ff9dc3 100%) !important;
+  border-color:#b8538a !important;box-shadow:0 5px 0 #d76a9f, 0 8px 14px rgba(184,83,138,.22) !important;
+}
+.tac-opts .tac-opt.chosen .k{background:#fff !important;color:#e2679a !important;box-shadow:0 2px 0 #e2aecb !important}
+.tac-opts .tac-opt.chosen .t{color:#fff !important}
+.tac-opts .tac-opt:active{transform:translateY(5px);box-shadow:0 0 0 #d9bfe0 !important}
