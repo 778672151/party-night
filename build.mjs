@@ -27,6 +27,7 @@ const scripts = [
   'src/screens-hop.js',
   'src/screens-mine.js',
   'src/screens-soko.js',
+  'src/screens-domino.js',
   'src/ui.js',
   'src/app.js',
 ];

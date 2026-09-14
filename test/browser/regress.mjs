@@ -73,12 +73,13 @@ S.lobby = async (cdp) => {
   assert(await A.eval('PN.app.state.players.length') === 2, '房主看到 2 个人');
   assert(await B.eval('PN.app.state.mode') === 'lobby', '乙直接进大厅（不会再弹「没找到房间」）');
   const modes = await A.eval('JSON.stringify(Object.keys(PN.games))');
-  assert(modes === '["codraw","drawgame","gomoku","hop","memory","mine","soko","tacit"]', '大厅有八款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳 + 扫雷 + 鲸鱼推箱子（' + modes + '）');
+  assert(modes === '["codraw","domino","drawgame","gomoku","hop","memory","mine","soko","tacit"]', '大厅有九款游戏：你画我猜 + 合作翻牌 + 默契大考验 + 心有灵犀 + 五子棋 + 跳一跳 + 扫雷 + 鲸鱼推箱子 + 骨牌顶牛（' + modes + '）');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'codraw\']")'), '大厅有心有灵犀的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'gomoku\']")'), '大厅有五子棋的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'hop\']")'), '大厅有跳一跳的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'mine\']")'), '大厅有扫雷的入口卡片');
   assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'soko\']")'), '大厅有鲸鱼推箱子的入口卡片');
+  assert(await A.eval('!!document.querySelector(".modecard[data-mode=\'domino\']")'), '大厅有骨牌顶牛的入口卡片');
   // 阶段三：入口系统升级后的分区与统一卡片
   assert(await A.eval('!!document.querySelector(".game-sec .game-head")'), '联机游戏有独立分区标题');
   assert(await A.eval('document.querySelectorAll(".gcard").length') >= 20, '两类游戏共用统一卡片（.gcard 共 ' + await A.eval('document.querySelectorAll(".gcard").length') + ' 张）');
@@ -396,6 +397,99 @@ S.memory = async (cdp) => {
   await H.shot('memory-4-desktop');
   assert((await H.consoleErrors()) === '[]', '房主页面全程无 JS 报错');
   assert((await O.consoleErrors()) === '[]', '对方页面全程无 JS 报错');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 13. 骨牌顶牛：复用原作整包 + 双人各带两家（同种子 / 只上报 / 两端一致） ============ */
+S.domino = async (cdp) => {
+  const A = await createRoom(cdp, '小桃');
+  const B = await joinRoom(cdp, '阿泽', A.code);
+  await waitPlayers(A, 2);
+  const H = (await A.eval('PN.app.isHost()')) ? A : B;
+  const O = H === A ? B : A;
+  A.pidCache = await A.eval('PN.app.me().id');
+  B.pidCache = await B.eval('PN.app.me().id');
+
+  await startGame(H, 'domino');
+  await H.waitFor('PN.app.state.mode === "domino" && PN.app.state.g && PN.app.state.g.phase === "play"', '进入对局', 30000);
+  await O.waitFor('PN.app.state.mode === "domino"', '对方进入对局', 30000);
+
+  const g0 = JSON.parse(await H.eval('JSON.stringify({seed:PN.app.state.g.seed, owners:PN.app.state.g.owners, players:PN.app.state.g.players})'));
+  assert(typeof g0.seed === 'number' && g0.seed !== 0, '房主生成固定种子：' + g0.seed + '（原作摇色子/洗牌要两端一致）');
+  assert(g0.owners[0] === g0.players[0] && g0.owners[2] === g0.owners[0], 'A 带 1、3 家（座位 0/2）');
+  assert(g0.owners[1] === g0.owners[3] && g0.owners[1] !== g0.owners[0], 'B 带 2、4 家（座位 1/3）—— 出牌顺序天然轮流');
+  assert(await H.eval('document.querySelectorAll(".dm-frame").length') === 1, '原作整包跑在 iframe 里');
+  const seedBoth = await O.eval('PN.app.state.g.seed');
+  assert(seedBoth === g0.seed, '两端拿到同一种子');
+
+  // 桥接把原作推进到 PLAYING（要用裸标识符 game 读它，顶层是 let 不在 window 上）
+  let bothReady = false;
+  for (let i = 0; i < 90; i++) {
+    const a = await H.eval('PN.screens.domino.debug().ready === true');
+    const b = await O.eval('PN.screens.domino.debug().ready === true');
+    if (a && b) { bothReady = true; break; }
+    await sleep(500);
+  }
+  if (!bothReady) {
+    console.log('  [诊断] H=' + await H.eval('JSON.stringify(PN.screens.domino.debug())') +
+      ' O=' + await O.eval('JSON.stringify(PN.screens.domino.debug())'));
+  }
+  assert(bothReady, '两端原作都被推进到 PLAYING（桥接自动走完 开始→摇色子→开始对局）');
+  const readState = `(() => {
+    const f = document.querySelector('.dm-frame');
+    try {
+      return f.contentWindow.eval('JSON.stringify({phase:String(game.phase), seat:game.currentPlayer|0, round:game.round|0, chain:game.chain.length, hands:game.players.map(function(p){return p.hand.length;})})');
+    } catch (e) { return JSON.stringify({ err: String(e && e.message) }); }
+  })()`;
+  const s1 = JSON.parse(await H.eval(readState));
+  const s2 = JSON.parse(await O.eval(readState));
+  assert(!s1.err && !s2.err, '两端都能读到原作牌局状态：' + JSON.stringify(s1));
+  assert(s1.phase === 'playing' && s1.hands && s1.hands.every(h => h > 0), '牌已发到手上（' + JSON.stringify(s1.hands) + '）');
+  assert(s1.seat === s2.seat && s1.round === s2.round && s1.chain === s2.chain,
+    '同种子生效：两端座位/局数/牌链完全一致（' + s1.seat + '/' + s1.round + '/' + s1.chain + '）');
+  await H.shot('domino-1-start');
+
+  // 让"该出手那家的主人"打一手：包过的 playTile 只上报，不本地落地
+  const ownerPid = await H.eval('PN.app.state.g.owners[PN.app.state.g.seat]');
+  const actor = (ownerPid === A.pidCache) ? A : B;
+  const before = await H.eval('PN.app.state.g.log.length');
+  const act = JSON.parse(await actor.eval(`(() => {
+    const f = document.querySelector('.dm-frame');
+    return f.contentWindow.eval('(function(){ var p = game.currentPlayer; var t = game.players[p].hand[0]; var res = game.playTile(p, t.id); return JSON.stringify({ seat: p, tileId: t.id, res: res }); })()');
+  })()`));
+  assert(act.res && act.res.success === true && act.res.msg === 'pending', '本地出牌被桥接接管（返回 pending，不本地落地）：' + JSON.stringify(act.res));
+  await H.waitFor('PN.app.state.g.log.length === ' + (before + 1), '房主收到动作', 20000);
+  assert(true, '房主权威日志记录了这一手（座位 ' + act.seat + '）');
+
+  // 两端各自落地 → 牌链必须一致
+  let agree = false;
+  for (let i = 0; i < 40; i++) {
+    const a = await H.eval(readState), b = await O.eval(readState);
+    const ja = JSON.parse(a), jb = JSON.parse(b);
+    if (ja.chain === jb.chain && ja.chain >= 0 && (await H.eval('PN.screens.domino.debug().applied')) > 0) { agree = true; assert(true, '两端落地后牌链一致（chain=' + ja.chain + '）'); break; }
+    await sleep(400);
+  }
+  assert(agree, '两端的牌局没有分叉（这是双人兼容的核心）');
+
+  // 混出手：不是他家的座位发动作，房主必须拒绝
+  const wrong = await H.eval('PN.app.state.g.owners[(PN.app.state.g.seat + 1) % 4]');
+  const wrongPage = (wrong === A.pidCache) ? A : B;
+  const logBefore = await H.eval('PN.app.state.g.log.length');
+  await wrongPage.eval('PN.app.send({ t: "act", kind: "play", seat: (PN.app.state.g.seat + 1) % 4, tileId: "x" }); 1');
+  await sleep(900);
+  assert(await H.eval('PN.app.state.g.log.length') === logBefore, '不属于自己家的座位发动作会被房主拒绝');
+
+  const fit = JSON.parse(await H.eval('(() => { const b = document.querySelector(".dm-stage").getBoundingClientRect(); return JSON.stringify({bottom: Math.round(b.bottom), vh: window.innerHeight, w: Math.round(b.width)}); })()'));
+  assert(fit.bottom <= fit.vh + 2 && fit.w > 200, '手机视口里原作舞台看全（底 ' + fit.bottom + ' ≤ ' + fit.vh + '，宽 ' + fit.w + '）');
+  const ov = JSON.parse(await overflow(H));
+  assert(!ov.bad.length && ov.scrollW <= ov.vw + 1, '手机视口无横向溢出（' + ov.vw + 'px）');
+  await H.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false }, H.sid);
+  await sleep(800);
+  await H.shot('domino-2-desktop');
+
+  const eH = await H.consoleErrors(), eO = await O.consoleErrors();
+  assert(eH === '[]', '房主页面全程无 JS 报错：' + eH);
+  assert(eO === '[]', '对方页面全程无 JS 报错：' + eO);
   await A.dispose(); await B.dispose();
 };
 
@@ -1157,7 +1251,7 @@ async function btnHostClick(H, O, tag) {
 const name = process.argv[2];
 // 场景顺序有讲究：画猜那条会打出大量墨迹消息，把公共 broker 压得很紧，
 // 排在它后面的"刷新重连"就容易撞上服务器兜底。所以把最重的放最后。
-const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'mine', 'soko', 'hop', 'fullgame'];
+const ORDER = ['lobby', 'mini', 'rejoin', 'migration', 'tacit', 'memory', 'codraw', 'gomoku', 'mine', 'soko', 'domino', 'hop', 'fullgame'];
 const list = name ? [name] : ORDER.filter(k => S[k]);
 const cdp = await connect();
 console.log('browser =', cdp.browser, '| app =', APP);

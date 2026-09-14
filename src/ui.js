@@ -569,7 +569,9 @@
         return '<button class="cfg ' + (String(o[0]) === cur ? 'on' : '') + '" data-key="' + key + '" data-val="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div></div>';
     };
-    if (mode === 'soko') {
+    if (mode === 'domino') {
+      rows.push(seg('局数', 'rounds', [[1, '1 局'], [3, '3 局'], [5, '5 局']]));
+    } else if (mode === 'soko') {
       rows.push(seg('关卡数', 'levels', [[3, '3 关'], [5, '5 关'], [10, '10 关全通']]));
     } else if (mode === 'mine') {
       rows.push(seg('难度', 'level', [[1, '9×9 · 10 雷'], [2, '12×12 · 24 雷'], [3, '15×15 · 40 雷']]));
