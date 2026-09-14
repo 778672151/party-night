@@ -80,6 +80,22 @@
 
 
 
+
+#### 第 15 轮：把分发门找到了（下一轮的最小探针写在这里）
+
+动作从发送到落地只有两跳，都已定位：
+
+1. \`src/room.js:291\`：\`if (this.isHost) { this.cb.onAction(action, this.me.id); return; }\`
+   —— **发送者本身就是房主时，动作直接本地回调，不走网络**（骨牌/围棋用例里发动作的都是房主，所以走的是这条）
+2. \`src/ui.js:304\`：\`onAction: function (action, from) { if (self.host && self.room.isHost) self.host.dispatch(action, from); }\`
+   —— 只有这一道门会进 \`host.dispatch\`，而 \`dispatch\` 里才是 \`PN.games[mode].action(...)\`
+
+按这两条，围棋用例的动作**应当**直达 dispatch，但探针显示 \`g.dbg === 0\`（游戏层从未被调用）。
+⇒ 矛盾点只可能在：\`self.host\` 为空、\`self.room.isHost\` 非真、或 **onAction 被后注册的回调覆盖**。
+
+**下一轮唯一要做的事**（很小）：在 \`ui.js:304\` 那行里加一次性计数 + 两个布尔值（\`PN.__act = (PN.__act||0)+1; PN.__actHost = !!self.host; PN.__actIsHost = !!(self.room && self.room.isHost);\`），
+跑一次围棋用例读这三个值 —— 立刻知道是没进这道门、还是进了门但 dispatch 里 mode/game 查不到。
+
 #### 第 14 轮：把范围缩小到「动作没到达游戏层」
 
 在围棋的 \`action\` 入口加了计数探针后，判别实验给出决定性结论：
