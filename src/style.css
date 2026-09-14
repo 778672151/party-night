@@ -559,3 +559,7 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .player{border:2.5px solid var(--stroke);box-shadow:0 4px 0 rgba(107,85,136,.16);}
 .player.me{box-shadow:0 4px 0 rgba(255,143,184,.42);}
 .players-grid .pickable{border:2.5px solid var(--stroke);box-shadow:0 4px 0 rgba(107,85,136,.16);}
+
+/* 阶段四B：弱化大厅存在感——移除纯装饰（用覆盖而非删原规则，便于回退） */
+.land:before,.land:after{content:none!important}
+.modecard:before{display:none!important}

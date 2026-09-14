@@ -217,6 +217,42 @@
   /* ===== 落地页 ===== */
   UI.prototype.renderLand = function () {
     var self = this;
+    // 阶段二A：记住身份后一步直达。带 #房号 的链接进来则零点击直接进场；
+    // 没有房号时只留一次点击（开房/加入），首访用户仍走完整表单。
+    var saved = this.local('name');
+    var savedEmo = this.local('emoji') || '😎';
+    var hashCode = (location.hash || '').replace('#', '').toUpperCase();
+    if (saved) {
+      if (hashCode) { this.begin(saved, savedEmo, true); return; }
+      this.clear();
+      this.root.appendChild(this.h(
+        '<div class="land">' +
+        '<div class="biglogo">🧸</div>' +
+        '<h1>两个人的游戏厅</h1>' +
+        '<div class="sub">' + PN.esc(saved) + ' ' + PN.esc(savedEmo) + ' · 一步进场</div>' +
+        '<div class="grid2" style="max-width:340px;margin:0 auto">' +
+        '<button class="btn primary block" id="pn-create">➕ 开个房</button>' +
+        '<button class="btn block" id="pn-join">🚪 加入房间</button>' +
+        '</div>' +
+        '<button class="btn ghost sm" id="pn-edit-land" style="margin-top:14px">✏️ 改昵称/换头像</button>' +
+        '</div>'
+      ));
+      var code = hashCode;
+      var go = function (join) { self.begin(saved, savedEmo, join || !!code); };
+      $('#pn-create').addEventListener('click', function () { go(false); });
+      $('#pn-join').addEventListener('click', function () { go(true); });
+      $('#pn-edit-land').addEventListener('click', function () {
+        var v = prompt('你的昵称', saved);
+        if (v !== null && v.trim()) { self.local('name', v.trim()); self.local('emoji', '😎'); }
+        self.renderLandFull();
+      });
+      return;
+    }
+    this.renderLandFull();
+  };
+
+  UI.prototype.renderLandFull = function () {
+    var self = this;
     this.clear();
     this.root.appendChild(this.h(
       '<div class="land">' +
