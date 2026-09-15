@@ -217,9 +217,12 @@ section('[9] 掉线 / 换主 / 人数上限', function () {
   const h3 = makeHost(['p1', 'p2', 'p3'], {});
   G.init(h3);
   ok(h3.state.mode === 'round', '三个人的房间也能开（只取前两人）');
+  // 需求变更（2024，用户确认）：扫雷单人可玩——原来一个人会被打发回大厅。
   const h4 = makeHost(['p1'], {});
   G.init(h4);
-  ok(h4.wentLobby === true, '只有一个人时回大厅（不空转）');
+  ok(!h4.wentLobby && h4.g() && h4.g().players.length === 1, '一个人也能开（单人可以玩）');
+  const h4b = makeHost(['p1'], {}); h4b.player('p1').online = false; G.init(h4b);
+  ok(h4b.wentLobby === true, '一个在线的都没有时才回大厅（保留原不变量）');
 });
 
 console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');

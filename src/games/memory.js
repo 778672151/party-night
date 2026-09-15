@@ -133,7 +133,7 @@
     emoji: EMOJI,
     blurb: '两个人轮流翻牌，一起把这副牌配完 🍀',
     meta: { group: 'online', tags: ['翻牌', '记忆'] },
-    minPlayers: 2,
+    minPlayers: 1,   // 单人可玩
     maxPlayers: 2,
 
     init: function (host) {
@@ -142,7 +142,8 @@
       s.phase = 'round';
 
       var ps = host.onlinePlayers().slice(0, 2);
-      if (ps.length < 2) { host.toast('合作翻牌要两个人才能玩哦', 'info'); host.goLobby(); return; }
+      // 单人可玩：合作翻牌一个人也能翻（other() 已能回落到自己）
+      if (!ps.length) { host.toast('还没连上房间，稍等一下再开', 'info'); host.goLobby(); return; }
 
       var total = Math.max(4, Math.min(8, Number(settings.pairs) || PAIRS));
       dealN(total);
@@ -160,7 +161,7 @@
         phase: 'play',
         over: null
       };
-      host.toast('🍀 ' + total + ' 对牌，两个人一起翻完它', 'good');
+      host.toast('🍀 ' + total + ' 对牌，一起翻完它', 'good');
       host.emit();
       armAfk(host);
     },

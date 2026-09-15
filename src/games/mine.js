@@ -111,7 +111,7 @@
   }
   function nextTurn(host) {
     var g = host.g();
-    g.turnIdx = 1 - g.turnIdx;
+    g.turnIdx = (g.turnIdx + 1) % g.players.length;   // 单人时不会指向不存在的第二名
     host.emit();
   }
 
@@ -120,7 +120,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '两个人轮流点，共享一张雷图，一起扫干净 🧹',
-    minPlayers: 2,
+    minPlayers: 1,   // 单人可玩
     maxPlayers: 2,
     meta: { group: 'online', tags: ['合作', '推理'], origin: { site: 'deepdemos.top', slug: 'demo-b9f6349a' } },
 
@@ -129,7 +129,8 @@
       var settings = s.settings.mine || (s.settings.mine = {});
       s.phase = 'round';
       var ps = host.onlinePlayers().slice(0, 2);
-      if (ps.length < 2) { host.toast('扫雷要两个人一起排哦', 'info'); host.goLobby(); return; }
+      // 单人可玩：共享雷图轮流点一格，一个人时回合永远轮到自己
+      if (!ps.length) { host.toast('还没连上房间，稍等一下再开', 'info'); host.goLobby(); return; }
       var level = Number(settings.level) || 1;
       var cfgs = { 1: [9, 9, 10], 2: [12, 12, 24], 3: [15, 15, 40] };
       var cfg = cfgs[level] || cfgs[1];
