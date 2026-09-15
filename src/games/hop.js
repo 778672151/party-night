@@ -133,11 +133,15 @@
       // 记下这一轮的分数，换另一位玩家用同一颗种子
       gg.attempts = gg.attempts || {};
       gg.attempts[at.pid] = { round: gg.round, score: at.score };
-      if (g.attempts[gg.players[0]] && g.attempts[gg.players[1]]) {
+      // 按“在场玩家”判定轮次：单人时也要能推进（原来写死 players[0] 与 players[1]，
+      // 一个人玩时 players[1] 是 undefined，attempts[undefined] 永远为假 -> 这局卡住）
+      var live = gg.players.filter(function (id) { var pp = host.player(id); return pp && pp.online; });
+      var next = live.filter(function (id) { return !gg.attempts[id]; })[0];
+      if (!next) {
         gg.attempts = {};
         settleRound(host);
       } else {
-        gg.turnIdx = otherIdx;
+        gg.turnIdx = gg.players.indexOf(next);
         startAttempt(host);
         host.emit();
       }
@@ -149,7 +153,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '按住蓄力、松手起跳，两个人轮流比总分 🐰',
-    minPlayers: 2,
+    minPlayers: 2,   // 单人版尚未跑通（见 NEXT-ROUND.md），暂不放开
     maxPlayers: 2,
     meta: { group: 'online', tags: ['休闲', '手感'], origin: { site: 'deepdemos.top', slug: '3d-b830652d' } },
 
