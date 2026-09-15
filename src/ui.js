@@ -206,6 +206,14 @@
   };
 
   /* ===== 过渡页：建房/进房时先给个反馈，别让人对着落地页干等 ===== */
+  /** 联机游戏 → 现成单机版（第3块切换版用；只列确实存在对应单机版的四款） */
+  var SOLO_FALLBACK = {
+    cube: 'rubik-anime-lab-0b0c6984',
+    soko: 'plus-2265f7c6',
+    domino: 'demo-c046ab75',
+    go: 'demo-29b78d69'
+  };
+
   UI.prototype.renderWaiting = function (text) {
     this.clear();
     this.root.appendChild(this.h(
@@ -593,6 +601,18 @@
         if (cfg) cfg.classList.toggle('open', self._cfgOpen[mode]);
       });
       card.querySelector('[data-act="start"]').addEventListener('click', function () {
+        // 切换版（第3块）：房里只有自己一个人时，有对应单机版的游戏直接开单机版（浮层），
+        // 而不是抛一句“人数不够”把人挡住。没有对应单机版的仍走原来的提示。
+        var online = (self.state && self.state.players ? self.state.players : []).filter(function (p) { return p.online; }).length;
+        var soloId = online < 2 ? SOLO_FALLBACK[mode] : null;
+        if (soloId) {
+          var hit = (PN.Banks.mini() || []).filter(function (x) { return x.id === soloId; })[0];
+          if (hit) {
+            self.toast('一个人也能玩：给你开了单机版「' + hit.title + '」', 'good');
+            self.openMini(hit);
+            return;
+          }
+        }
         self.send({ t: 'start', mode: mode });
       });
       card.querySelectorAll('.cfg').forEach(function (ctl) {
