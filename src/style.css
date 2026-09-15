@@ -594,3 +594,21 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .mini-sec .mini-head b:after{content:' ▾';font-size:11px;opacity:.7}
 .mini-sec:not(.collapsed) .mini-head b:after{content:' ▴'}
 .mini-sec.collapsed .mini-grid{display:none}
+
+/* ===== 大厅质感（按实测数字改，不靠肉眼）===== */
+/* 卡片原来 211px 高、桌面也只有两列 205px，又窄又高 -> 内容稀疏、留白巨大 */
+.modegrid{grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:10px;max-width:900px;margin:0 auto}
+.modecard{min-height:120px;padding:10px 12px 9px}
+.modecard .gc-ico{font-size:26px}
+.modecard .gc-nm{font-size:16.5px;margin-top:2px}
+.modecard .gc-desc{font-size:11px;margin-top:2px;-webkit-line-clamp:2}
+.modecard .gc-meta{margin-top:4px}
+.modecard .go{margin-top:auto;padding-top:6px}
+.modecard .go button,.modecard .go .btn{padding:5px 10px;font-size:12px;border-radius:10px}
+.game-sec,.mini-sec{max-width:900px;margin:0 auto}
+/* 卡片撑高的几个来源：描述两行、meta 行、折叠后仍占位的 settings 上边距 */
+.modecard .settings{margin-top:0}
+.modecard .settings:not(.open){padding-top:0}
+.modecard .gc-desc{-webkit-line-clamp:1}
+.modecard .gc-meta{min-height:0;line-height:1.15;margin-top:3px}
+.modecard .row.mt8{margin-top:5px}
