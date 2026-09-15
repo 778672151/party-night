@@ -665,3 +665,17 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .roster > .spacer + .btn{margin-left:auto}
 /* 全局：名册不再是横向滚动容器 */
 .players{overflow:visible}
+
+/* ===== 视觉引导 第三轮：超宽屏利用 + 卡片底行收边 ===== */
+@media (min-width:1700px){
+  #pn-root{max-width:1320px}
+  .modegrid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+}
+/* 卡片底行（设置齿轮 + 开始）左齿轮右按钮，别在中间留一大段空 */
+.modecard .row.mt8{display:flex;align-items:center;gap:8px}
+.modecard .row.mt8 .settings-toggle{margin-right:auto}
+.modecard .row.mt8 .btn{margin-left:auto;min-width:76px}
+/* 分区标题与网格对齐，标题右侧不再孤零零 */
+.game-head,.mini-head{display:flex;align-items:baseline;gap:8px}
+/* 顶栏房号 chip 更醒目一点（它就是唯一的房号位） */
+.chip.roomcode{font-weight:800;letter-spacing:1px}
