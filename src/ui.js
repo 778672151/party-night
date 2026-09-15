@@ -177,7 +177,8 @@
       '<span class="logo">🧸</span><span class="title">' + title + '</span>' +
       '<span class="spacer"></span>' +
       '<span class="chip"><span class="dot ' + dot + '"></span>' + (this.conn === 'connected' ? '在线' : '重连中…') + '</span>' +
-      (code ? '<button class="chip" id="pn-copycode"><b>' + code + '</b></button>' : '') +
+      // 房号同时带 roomcode/code 语义：顶栏这一处就是唯一的房号展示位（点它复制链接）
+      (code ? '<button class="chip roomcode" id="pn-copycode" title="点一下复制邀请链接"><span class="code">' + code + '</span></button>' : '') +
       '</div>'
     );
     into.appendChild(bar);
@@ -304,6 +305,8 @@
   };
 
   UI.prototype.begin = function (name, emoji, join) {
+    // 记录是不是「从别人的链接进来」的，用于大厅里的分服提示（自己开房不提示）
+    try { sessionStorage.setItem('pn_via_link', (join || !!location.hash) ? '1' : ''); } catch (e) {}
     var self = this;
     var id = this.local('id');
     if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10); this.local('id', id); }
@@ -516,7 +519,9 @@
     var sorted = (s.players || []).slice().sort(function (a, b) { return b.score - a.score; });
     // 点链接进来却一个人都没有、自己还成了房主：多半是网络把这位群友分到了另一台公共服务器
     // （客户端连不上主 broker 会自动换备用，而备用和主用的是两套话题空间）。给一句人话提示。
-    var lonely = !!location.hash && (s.players || []).length <= 1 && s.hostId === this.pid();
+    // 只在「点别人的链接进来」且房里只有自己时才提示（自己开房不该看到这句）
+    var cameByLink = !!sessionStorage.getItem('pn_via_link') && !!location.hash;
+    var lonely = cameByLink && (s.players || []).length <= 1;
     var playersHtml = sorted.map(function (p) {
       return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.online ? '' : ' off') + '">' +
         '<span class="em">' + (p.emoji || '🙂') + '</span>' +
@@ -554,15 +559,15 @@
     }).join('');
     wrap.appendChild(this.h(
       '<div>' + // 必须包一层：h() 只保留第一个顶层元素
-      '<div class="roomcode card row">' +
-      '<div><div class="muted" style="font-size:11px">房号（发给对方）</div><div class="code">' + this.room.code + '</div></div>' +
-      '<div style="flex:1"></div>' +
+      // 房号只在上方顶栏显示一次（点它即复制），这里不再重复一条通栏；
+      // 名册与「复制链接」并成一行，避免两条通栏横向全是空白。
+      '<div class="card roster">' +
+      '<div class="players">' + (playersHtml || '<span class="muted">还差一个人，把对方叫进来吧～</span>') + '</div>' +
+      '<span class="spacer"></span>' +
       '<button class="btn sm" id="pn-copy">📋 复制链接</button>' +
       '<button class="btn sm" id="pn-share">📤</button>' +
       '</div>' +
       (lonely ? '<div class="card center"><div class="muted">进房了却一个人都没有？公共服务器偶尔会因为网络限制把你分到另一台，<b>刷新一下</b>一般就能看到对方了。</div></div>' : '') +
-      '<div class="card"><div class="muted" style="margin-bottom:10px">在房里的人（' + (s.players || []).length + '）</div>' +
-      '<div class="players">' + (playersHtml || '<div class="muted">还差一个人，把对方叫进来吧～</div>') + '</div></div>' +
       sectionsHtml +
       '<div class="row mt16" style="justify-content:center;gap:8px">' +
       '<button class="btn ghost sm" id="pn-edit">✏️ 改昵称</button>' +

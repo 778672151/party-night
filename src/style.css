@@ -617,3 +617,51 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 .modecard .go{padding-top:4px}
 .modecard .go button,.modecard .go .btn{padding:4px 9px;font-size:11.5px}
 .modecard .gc-meta{font-size:10px}
+
+/* ===== 响应式：开始页与大厅在桌面/大屏不再是一条 640 窄带 ===== */
+/* 桌面：容器放宽，卡片网格自适应列数；手机保持单列窄容器 */
+@media (min-width:820px){
+  #pn-root{max-width:1040px}
+  .land{max-width:560px}
+  .modegrid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  .mini-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+}
+@media (min-width:1400px){
+  #pn-root{max-width:1200px}
+  .modegrid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+}
+/* 落地页：竖屏时上下留白收紧，避免内容孤零零飘在中间 */
+@media (min-height:900px){ .land{padding-top:6vh} }
+/* 名册卡片：一个人时不要撑成一整条空卡 */
+.players{min-height:0}
+.player.online-only{flex:0 0 auto}
+
+/* ===== 视觉引导：开始页在桌面上垂直居中，整体不再孤零零挂在上方 ===== */
+/* #pn-root 是 min-height:100% 的普通块；给落地页场景加一个居中容器 */
+@media (min-height:760px){
+  .land{margin:auto}
+  #pn-root:has(> .land){display:flex;flex-direction:column}
+}
+.roster{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px}
+.roster-label{flex:0 0 auto;font-size:12px}
+.roster .players{flex:1 1 auto;flex-wrap:wrap}
+/* 分区之间收一点，避免大段空白 */
+.game-sec,.mini-sec{margin-top:14px}
+.game-head,.mini-head{margin:0 0 8px 2px}
+
+/* 名册行：头像靠左、操作靠右，横向不再空 */
+.roster{padding:10px 12px;gap:8px}
+.roster .players{flex:0 1 auto;flex-wrap:wrap;min-width:0}
+.roster .btn.sm{padding:6px 10px}
+
+/* 顶栏房号 chip：等宽字、可点复制 */
+.chip.roomcode{cursor:pointer}
+.chip.roomcode .code{letter-spacing:2px;font-family:ui-monospace,Menlo,monospace}
+
+/* 名册行修形：一个人时不该出现横向滚动条；操作按钮真正靠右 */
+.roster{display:flex;align-items:center;flex-wrap:nowrap;gap:8px}
+.roster .players{flex:1 1 auto;overflow:visible;flex-wrap:wrap;min-width:0}
+.roster .spacer{flex:1 1 auto}
+.roster > .spacer + .btn{margin-left:auto}
+/* 全局：名册不再是横向滚动容器 */
+.players{overflow:visible}
