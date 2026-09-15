@@ -153,7 +153,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '按住蓄力、松手起跳，两个人轮流比总分 🐰',
-    minPlayers: 2,   // 单人版尚未跑通（见 NEXT-ROUND.md），暂不放开
+    minPlayers: 1,   // 单人可玩（原作即单机无限跑；2P 只是轮流跳同一段跑道）
     maxPlayers: 2,
     meta: { group: 'online', tags: ['休闲', '手感'], origin: { site: 'deepdemos.top', slug: '3d-b830652d' } },
 
@@ -161,8 +161,10 @@
       var s = host.state;
       var settings = s.settings.hop || (s.settings.hop = {});
       s.phase = 'round';
+      // 单人可玩：原作就是单机无限跑，本项目只是把两人排成轮流跳同一段跑道。
+      // 原来这里要求 ps.length >= 2，单人点开始会被打发回大厅（而且文案与 host 那道闸门不同，容易误判）。
       var ps = host.onlinePlayers().slice(0, 2);
-      if (ps.length < 2) { host.toast('跳一跳要两个人一起玩哦', 'info'); host.goLobby(); return; }
+      if (!ps.length) { host.toast('还没连上房间，稍等一下再开', 'info'); host.goLobby(); return; }
       var rounds = Number(settings.rounds) || 3;
       if ([1, 2, 3, 5].indexOf(rounds) < 0) rounds = 3;
       var lives = Number(settings.lives) || 3;
