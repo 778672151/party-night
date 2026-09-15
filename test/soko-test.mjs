@@ -115,8 +115,11 @@ section('[5] 重来本关 / 换主 / 掉线 / 人数', function () {
   ok(h2.g().phase === 'over', '对方离开 → 结束（不留死局）');
   const h3 = makeHost(['p1', 'p2', 'p3']); G.init(h3);
   ok(h3.state.mode === 'round', '三个人也能开（只取前两人）');
+  // 需求变更（2024，用户确认）：推箱子单人可玩——原来一个人会被打发回大厅。
   const h4 = makeHost(['p1']); G.init(h4);
-  ok(h4.wentLobby === true, '一个人时回大厅');
+  ok(!h4.wentLobby && h4.g() && h4.g().players.length === 1, '一个人也能开（单人可以玩）');
+  const h4b = makeHost(['p1']); h4b.player('p1').online = false; G.init(h4b);
+  ok(h4b.wentLobby === true, '一个在线的都没有时才回大厅（保留原不变量）');
 });
 
 section('[6] 元信息：标明这是整包复用（不是自己重写）', function () {

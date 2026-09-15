@@ -52,7 +52,7 @@
     name: NAME,
     emoji: EMOJI,
     blurb: '原作整包复用（Three.js 三渲二），两个人轮流推一步 🐳',
-    minPlayers: 2,
+    minPlayers: 1,   // 单人可玩（轮流推一步，一个人时回合永远轮到自己）
     maxPlayers: 2,
     meta: { group: 'online', tags: ['合作', '解谜'], origin: { site: 'deepdemos.top', slug: 'plus-2265f7c6', author: 'HWDyzzZ', reuse: 'whole-game' } },
 
@@ -61,7 +61,8 @@
       var settings = s.settings.soko || (s.settings.soko = {});
       s.phase = 'round';
       var ps = host.onlinePlayers().slice(0, 2);
-      if (ps.length < 2) { host.toast('推箱子要两个人一起玩哦', 'info'); host.goLobby(); return; }
+      // 单人可玩：轮流推一步，一个人时回合只是永远轮到自己
+      if (!ps.length) { host.toast('还没连上房间，稍等一下再开', 'info'); host.goLobby(); return; }
       var want = Number(settings.levels) || 5;
       var levels = want === 10 ? 10 : (want === 3 ? 3 : 5);
       s.g = {
@@ -87,13 +88,13 @@
         if (from !== g.players[g.turnIdx]) return;
         if (!DIRS[action.dir]) return;
         g.log = g.log.concat([action.dir]);           // 追加一步（两端按同一顺序重放）
-        g.turnIdx = 1 - g.turnIdx;
+        g.turnIdx = (g.turnIdx + 1) % g.players.length;   // 单人时不会指向不存在的第二名
         host.emit();
         return;
       }
       if (action.t === 'reset') {                     // 卡住了重来本关
         g.log = [];
-        g.turnIdx = 1 - g.turnIdx;
+        g.turnIdx = (g.turnIdx + 1) % g.players.length;   // 单人时不会指向不存在的第二名
         host.toast('🔄 ' + nameOf(host, from) + ' 把这一关重置了', 'info');
         host.emit();
         return;
