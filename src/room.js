@@ -48,6 +48,7 @@
     this._beat = null;
     this._elect = null;
     this._claimAt = 0;
+    this._claimSeen = 0;   // 抢主前的持续判死起点（见 _election）
     this._joinedAt = 0;
     this._pmSeq = 0;
     this._pending = {};     // mid -> {to,env,mid,tries,timer}  待确认的私密消息
@@ -250,6 +251,14 @@
     // 已知房主但还没收到它心跳（刚进房）→ 先观察一个心跳周期，别急着抢
     if (this.hostId && !hostAlive && (t - this._joinedAt) < BEAT_MS * 2) return;
     if (hostAlive && !metaDead) return;
+    // 心跳丢一两拍不等于房主死了（公共 broker QoS0 会丢包）。要求持续一个离线周期都判死才抢主，
+    // 否则一次抖动就会把对局抢过来并用 fresh() 重置成大厅（用户看到的就是“突然退回房间”）。
+    if (!hostAlive) {
+      if (!this._claimSeen) { this._claimSeen = now(); return; }
+      if (now() - this._claimSeen < OFFLINE_MS) return;
+    } else {
+      this._claimSeen = 0;
+    }
     if (alive[0] !== this.me.id) return;
     if (t - this._claimAt < 6000) return;
     this._claimAt = t;

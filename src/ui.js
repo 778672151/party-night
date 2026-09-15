@@ -340,7 +340,13 @@
             if (!self.host) self.host = new PN.Host(self.room, function (state) { self.state = state; self.render(); });
             // 把房主的 toast 同步浮现到本机（否则只进 state.log，界面上永远看不到）
             if (!self.host.onLocalToast) self.host.onLocalToast = function (text, kind) { self.toast(text, kind); };
+            // 修复「突然被弹回房间」：这个回调每次成为房主都会跑，而 room.lastState 是**异步**到达的
+            //（公共 broker 抖一下、retained 还没到就为空）。以前 lastState 一空就 fresh()，
+            // 而 fresh() 会把 state.mode 重置成 lobby —— 对局当场蒸发、所有人被弹回大厅。
+            // 现在：只要本机已经有对局状态，就绝不因为 lastState 暂时缺失而丢弃它。
+            var haveGame = self.state && self.state.mode && self.state.mode !== 'lobby' && self.state.players;
             if (self.room.lastState && self.room.lastState.players) self.host.adopt(self.room.lastState);
+            else if (haveGame) self.host.state = self.state;   // 保住当前对局，等 retained 状态到了再 adopt
             else self.host.fresh(id, name, emoji);
           }
           self.render();
