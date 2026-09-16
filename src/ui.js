@@ -374,9 +374,17 @@
           }
           self.render();
         },
+        // 房主的状态机是否还空着：room 用它决定「房主自己也要不要回灌这份 retained 状态」
+        hostNeedsState: function () { return !!(self.room && self.room.isHost && (!self.host || !self.host.state)); },
         onState: function (state) {
           self.state = state;
-          if (!self.room.isHost && state.hostId !== self.pid()) self.state = state;
+          // 自己就是房主、而状态机还空着（刷新后 onHost 先到、retained 的 state 后到）：
+          // 必须把这份权威状态**采纳**进来，否则 host.state 永远为空，等待兜底最终会 fresh()
+          // 把对局洗掉 —— 这正是「刷新后整局丢失」在被拉长的时序下再次出现的原因。
+          if (self.room.isHost && self.host && !self.host.state && state && state.players) {
+            self.host.state = JSON.parse(JSON.stringify(state));
+            self.host.state.hostId = self.room.me.id;
+          }
           self.render();
         },
         onAction: function (action, from) { if (self.host && self.room.isHost) self.host.dispatch(action, from); },

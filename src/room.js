@@ -173,7 +173,12 @@
         if (msg.players) for (var pi = 0; pi < msg.players.length; pi++) if (msg.players[pi].id === msg.hostId) hp = msg.players[pi];
         self._noteHost(msg.hostId, hp && hp.name, hp && hp.emoji);
       }
-      if (!self.isHost || (msg.hostId && msg.hostId !== self.me.id)) self.cb.onState && self.cb.onState(msg, retained);
+      // 房主自己默认不需要回灌（他就是状态的作者），**除非**他的状态机还空着 ——
+      // 刷新页面后正是这种情况：retained 的 state 已经到了，但 onHost 早于它触发、
+      // host.state 为空，若这里继续跳过，房主就永远拿不到那份权威状态，
+      // 只能等超时兜底 fresh()，于是「刷新后整局丢失」在丢包稍久时又出现。
+      var hostNeedsState = self.isHost && self.cb.hostNeedsState && self.cb.hostNeedsState();
+      if (!self.isHost || hostNeedsState || (msg.hostId && msg.hostId !== self.me.id)) self.cb.onState && self.cb.onState(msg, retained);
       return;
     }
     if (k === 'm') {

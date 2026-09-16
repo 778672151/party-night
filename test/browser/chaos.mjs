@@ -262,10 +262,13 @@ S.ghost = async (cdp) => {
   const [A, B] = await pair(cdp);
   await A.eval('PN.app.send({t:"start", mode:"gomoku"})');
   await sleep(1200);
-  // 让对手在房主眼里彻底失去心跳：模拟公共 broker 丢包 / 对方直接拔网线
   const bId = await B.eval('PN.app.room.me.id');
+  // 真正的失联：先把 B 的心跳停掉、连接断掉，否则它每 4 秒的 hi 会立刻把自己标回在线
+  //（只删 peer 是模拟不出来的 —— 这也说明「心跳超时」这条路径必须真的没人发心跳才会走到）
+  await B.eval('(()=>{ try { clearInterval(PN.app.room._beat); } catch(e){} try { PN.app.room.mqtt && PN.app.room.mqtt.close(); } catch(e){} return true; })()');
+  await sleep(400);
   await A.eval('(()=>{ delete PN.app.room.peers[' + JSON.stringify(bId) + ']; PN.app.host.syncOnline(); return true; })()');
-  await sleep(1200);
+  await sleep(600);
   const marked = await A.eval('PN.app.host.player(' + JSON.stringify(bId) + ').online');
   assert(marked === false, '失联者被标记为离线（online=' + marked + '）');
   // 关键：必须排了收尾定时器，否则对手永远等下去（卡死）
