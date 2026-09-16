@@ -39,6 +39,13 @@
     if (!this.state) return;
     // 「回大厅」是全局导航：游戏只在 over 阶段自己处理，进行中直接由大厅层接管
     if (action.t === 'lobby') return this._lobbyAction(action, from);
+    // 开新局 / 再来一局之前，先清掉上一局的定时器与私密缓存 —— 这是**游戏之间的隔离**。
+    // 以前换游戏不经过 goLobby 就直接 start（大厅里每张卡都能直接开始），上一局的倒计时
+    // 仍然活着并打到新局的 state 上：玩家看到的就是「抽搐」，或者一局莫名其妙就结束了。
+    if (action.t === 'start' || (action.t === 'again' && this.amHost(from))) {
+      this.clearAll();
+      this.secretCache = {};
+    }
     var game = this.state.mode && this.state.mode !== 'lobby' ? PN.games[this.state.mode] : null;
     if (game && game.action) {
       var r = game.action(this, action, from);
