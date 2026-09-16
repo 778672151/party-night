@@ -181,6 +181,7 @@
    *  于是「等人描述/等人投票」会把掉线的人一直算进去，整桌干等一分钟以上。 */
   Host.prototype.syncOnline = function () {
     if (!this.room.roster) return false;
+    var self = this;
     var list = this.room.roster(), map = {}, i, changed = false;
     for (i = 0; i < list.length; i++) map[list[i].id] = list[i].online;
     this.state.players.forEach(function (p) {
@@ -190,6 +191,11 @@
       if (p.online !== on) {
         p.online = on;
         changed = true;
+        // 掉线有两条来路：① 收到 broker 代发的遗嘱 bye(dropped) → markOffline 排了收尾定时器；
+        // ② 心跳超时（公共 broker QoS0 丢包时最常见的那条）。② 以前**不排任何定时器**，
+        // 于是「该他走」的人掉线后没人收尾，另一个人就永远等下去 —— 用户说的「卡死」。
+        // 这里补上同一条收尾路径，让两条来路的行为完全一致。
+        if (!on && self.state.mode && self.state.mode !== 'lobby') self.markOffline(p.id);
       }
     });
     return changed;
