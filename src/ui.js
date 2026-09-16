@@ -112,6 +112,12 @@
     if (lastUI && lastUI._renderPending) setTimeout(function () { lastUI.flushRender(); }, 0);
   }, true);
   UI.prototype.setScreen = function (name, screen) {
+    // 离开一个屏幕时先让它收摊：这个项目此前**没有任何卸载钩子**，于是带 setInterval 的屏幕
+    // （骨牌/推箱子/围棋/魔方）切换游戏后定时器仍在跑，去读新游戏根本不存在的字段
+    // （如围棋的 g 没有 log），当场抛 TypeError 并从此每款游戏都抛 —— 用户看到的「抽搐、莫名报错」。
+    if (this.screen && this.screen !== screen && typeof this.screen.stop === 'function') {
+      try { this.screen.stop.call(this); } catch (e) { console.error('screen.stop error', e); }
+    }
     this.screenName = name;
     this.screen = screen || null;
     this.render();

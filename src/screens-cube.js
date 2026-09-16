@@ -192,6 +192,14 @@
       wrap.appendChild(body);
       if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
       return wrap;
+    },
+
+    /** 离开屏幕时收摊：全局 poller 不清掉的话，它会继续去读**下一个游戏**的 state.g，
+     *  当场抛 TypeError（围棋的 g 没有 log 字段），而且此后每款游戏都抛。见 ui.js setScreen。 */
+    stop: function () {
+      if (S.poller) { clearInterval(S.poller); S.poller = null; }
+      S.ui = null; S.win = null;
+      S.wired = false; S.ready = false; S.applied = 0;
     }
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

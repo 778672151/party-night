@@ -95,7 +95,19 @@
   };
 
   Room.prototype._beacon = function () {
-    this.publishRaw('a', { t: 'hi', id: this.me.id, name: this.me.name, emoji: this.me.emoji, pub: this.me.pub, ts: now() });
+    // 心跳带上「房主当前状态版本」。玩家收到心跳后若发现自己落后，就会回一句 'sv' 要补发。
+    // 这是**挽救机制**：公共 broker 是 QoS0，state 只在变化时广播一次，丢了那一包
+    // 客户端就永远停在旧画面上（用户看到的「不同的步/卡住不动」）。以前完全没有补偿通道。
+    this.publishRaw('a', {
+      t: 'hi', id: this.me.id, name: this.me.name, emoji: this.me.emoji, pub: this.me.pub, ts: now(),
+      sv: this.isHost ? (this._stateSeq || 0) : undefined,
+    });
+  };
+
+  /** 房主把当前状态重播一遍（有人在 hi 里报了落后的版本号） */
+  Room.prototype._resendState = function () {
+    if (!this.isHost || !this.lastState) return;
+    this.publishState(this.lastState);
   };
 
   Room.prototype.publishRaw = function (k, obj, retain, queue) {
@@ -113,6 +125,16 @@
       if (msg.t === 'hi') {
         var was = self.peers[msg.id];
         self.peers[msg.id] = { id: msg.id, name: msg.name, emoji: msg.emoji, pub: msg.pub, lastSeen: now() };
+        // 挽救机制：心跳里带着房主的状态版本。若我是普通玩家却落后（或压根没收到过 state），
+        // 主动要一次补发 —— 否则 QoS0 丢掉的那一包 state 会让我永远停在旧画面。
+        if (!self.isHost && msg.id === self.hostId && typeof msg.sv === 'number') {
+          if (!self.lastState || (self.lastState.sv || 0) < msg.sv) {
+            if (!self._stateAskAt || now() - self._stateAskAt > 1200) {
+              self._stateAskAt = now();
+              self.publishRaw('a', { t: 'sv', id: self.me.id, want: msg.sv, ts: now() });
+            }
+          }
+        }
         if (!was && msg.id !== self.me.id) self.cb.onRoster && self.cb.onRoster(self.roster(), 'join', msg.id);
         else self.cb.onRoster && self.cb.onRoster(self.roster());
         if (self.isHost && !was && msg.id !== self.me.id) {
@@ -120,6 +142,11 @@
           self.publishRaw('a', { t: 'hi', id: self.me.id, name: self.me.name, emoji: self.me.emoji, pub: self.me.pub, ts: now() });
           self.cb.onAction && self.cb.onAction({ t: '_joined', id: msg.id }, msg.id);
         }
+        return;
+      }
+      if (msg.t === 'sv') {
+        // 玩家报告落后：房主把当前状态重播一遍（幂等，收到的人只是重绘一次）
+        if (self.isHost) self._resendState();
         return;
       }
       if (msg.t === 'bye') {
@@ -276,6 +303,9 @@
   Room.prototype.publishState = function (state) {
     state.hostId = this.me.id;
     state.ts = now();
+    // 每次广播状态递增版本号：心跳里会带上它，玩家据此发现自己漏收了哪一次
+    this._stateSeq = (this._stateSeq || 0) + 1;
+    state.sv = this._stateSeq;
     this.lastState = state;
     this.publishRaw('s', state, true);
   };
