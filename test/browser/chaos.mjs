@@ -155,6 +155,126 @@ S.spam = async (cdp) => {
   await A.dispose(); await B.dispose();
 };
 
+/* ============ 场景：对局中刷新页面（最常见的真实操作）============ */
+S.refresh = async (cdp) => {
+  const [A, B] = await pair(cdp);
+  await A.eval('PN.app.send({t:"start", mode:"gomoku"})');
+  await sleep(1200);
+  const before = await modeOf(A);
+  const url = await A.eval('location.href');
+  await A.reload();
+  await sleep(2500);
+  // 刷新后应当还在同一局（身份/房号都在 storage 里）
+  let back = '?';
+  for (let i = 0; i < 30; i++) {
+    back = await modeOf(A);
+    if (back === 'gomoku') break;
+    await sleep(500);
+  }
+  assert(back === before, '房主刷新后回到同一局（' + before + ' → ' + back + '）');
+  const bMode = await modeOf(B);
+  assert(bMode === 'gomoku', '对手不受影响（B=' + bMode + '）');
+  await noErrors([A, B], '刷新页面');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 场景：对局中双方同时刷新（冷启动竞态）============ */
+S.bothrefresh = async (cdp) => {
+  const [A, B] = await pair(cdp);
+  await A.eval('PN.app.send({t:"start", mode:"gomoku"})');
+  await sleep(1200);
+  await Promise.all([A.reload(), B.reload()]);
+  await sleep(3000);
+  let a = '?', b = '?';
+  for (let i = 0; i < 30; i++) {
+    a = await modeOf(A); b = await modeOf(B);
+    if (a === 'gomoku' && b === 'gomoku') break;
+    await sleep(600);
+  }
+  assert(a === 'gomoku' && b === 'gomoku', '双方同时刷新后都回到同一局（A=' + a + ' B=' + b + '）');
+  // 且必须只有一个人是房主
+  const ha = await A.eval('!!PN.app.room.isHost'), hb = await B.eval('!!PN.app.room.isHost');
+  assert(ha !== hb, '刷新后房主唯一（A=' + ha + ' B=' + hb + '）');
+  await noErrors([A, B], '双方同时刷新');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 场景：同一端连点「开始」并立刻点「回大厅」============ */
+S.flipflop = async (cdp) => {
+  const [A, B] = await pair(cdp);
+  // 交替狂点：开始→回大厅→开始→回大厅…，最容易留下半初始化状态
+  for (let i = 0; i < 6; i++) {
+    await A.eval('PN.app.send({t:"start", mode:"soko"})');
+    await sleep(120);
+    await A.eval('PN.app.send({t:"lobby"})');
+    await sleep(120);
+  }
+  await sleep(1500);
+  const a = await modeOf(A), b = await modeOf(B);
+  assert(a === 'lobby' && b === 'lobby', '快速来回切换后停在大厅（A=' + a + ' B=' + b + '）');
+  // 还能正常开一局
+  await A.eval('PN.app.send({t:"start", mode:"soko"})');
+  await sleep(1400);
+  const a2 = await modeOf(A), b2 = await modeOf(B);
+  assert(a2 === 'soko' && b2 === 'soko', '之后仍能正常开局（A=' + a2 + ' B=' + b2 + '）');
+  await noErrors([A, B], '开始/回大厅反复横跳');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 场景：非房主点开始 / 点回大厅（越权操作）============ */
+S.bypass = async (cdp) => {
+  const [A, B] = await pair(cdp);
+  // B 不是房主：他点开始不该影响房间状态
+  await B.eval('PN.app.send({t:"start", mode:"gomoku"})');
+  await sleep(1000);
+  const a = await modeOf(A), b = await modeOf(B);
+  assert(a === 'lobby' && b === 'lobby', '非房主无法开局（A=' + a + ' B=' + b + '）');
+  // 房主开一局后，B 试图替全房回大厅也不该生效
+  await A.eval('PN.app.send({t:"start", mode:"gomoku"})');
+  await sleep(1200);
+  await B.eval('PN.app.send({t:"lobby"})');
+  await sleep(1000);
+  const a2 = await modeOf(A);
+  assert(a2 === 'gomoku', '非房主无法把全房踢回大厅（A=' + a2 + '）');
+  await noErrors([A, B], '越权操作');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 场景：对局中把对手踢掉 / 房主踢人 ============ */
+S.kick = async (cdp) => {
+  const [A, B] = await pair(cdp);
+  await A.eval('PN.app.send({t:"start", mode:"gomoku"})');
+  await sleep(1200);
+  const bId = await B.eval('PN.app.room.me.id');
+  // 房主直接把对手移出房间：不能崩、状态要一致
+  await A.eval('PN.app.send({t:"kick", id:' + JSON.stringify(bId) + '})');
+  await sleep(1600);
+  const a = await modeOf(A);
+  assert(a === 'gomoku' || a === 'lobby', '踢人后房主模式合法（' + a + '）');
+  const n = await A.eval('(PN.app.state.players||[]).length');
+  assert(n === 1, '被踢的人已移出名单（剩 ' + n + ' 人）');
+  await noErrors([A, B], '踢人');
+  await A.dispose(); await B.dispose();
+};
+
+/* ============ 场景：对局中对手长时间失联（心跳超时路径）============ */
+S.ghost = async (cdp) => {
+  const [A, B] = await pair(cdp);
+  await A.eval('PN.app.send({t:"start", mode:"gomoku"})');
+  await sleep(1200);
+  // 让对手在房主眼里彻底失去心跳：模拟公共 broker 丢包 / 对方直接拔网线
+  const bId = await B.eval('PN.app.room.me.id');
+  await A.eval('(()=>{ delete PN.app.room.peers[' + JSON.stringify(bId) + ']; PN.app.host.syncOnline(); return true; })()');
+  await sleep(1200);
+  const marked = await A.eval('PN.app.host.player(' + JSON.stringify(bId) + ').online');
+  assert(marked === false, '失联者被标记为离线（online=' + marked + '）');
+  // 关键：必须排了收尾定时器，否则对手永远等下去（卡死）
+  const timers = await A.eval('JSON.stringify(Object.keys(PN.app.host.timers).filter(k=>k.indexOf("drop_")===0))');
+  assert(JSON.parse(timers).length > 0, '失联后会安排收尾（drop 定时器：' + timers + '）');
+  await noErrors([A, B], '对手失联');
+  await A.dispose(); await B.dispose();
+};
+
 const only = process.argv[2];
 const cdp = await connect();
 const names = only ? [only] : Object.keys(S);

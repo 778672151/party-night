@@ -351,8 +351,25 @@
             // 而 fresh() 会把 state.mode 重置成 lobby —— 对局当场蒸发、所有人被弹回大厅。
             // 现在：只要本机已经有对局状态，就绝不因为 lastState 暂时缺失而丢弃它。
             var haveGame = self.state && self.state.mode && self.state.mode !== 'lobby' && self.state.players;
+            // 这个房间「本来就有房主」吗？room.meta 是 retained 的，刷新/重连时会先于 state 到达。
+            // 如果是，说明房间已经存在，绝不能 fresh() —— 那会用一份空大厅把房里正在进行的对局
+            // 整个覆盖掉（房主自己刷新页面 → 两端一起掉回房间，最常见的真实操作）。
+            var knownRoom = !!(self.room.meta && self.room.meta.host);
             if (self.room.lastState && self.room.lastState.players) self.host.adopt(self.room.lastState);
             else if (haveGame) self.host.state = self.state;   // 保住当前对局，等 retained 状态到了再 adopt
+            else if (knownRoom) {
+              // 房间已存在，state 还在路上：先什么都别做，等 onState 到达后 adopt。
+              // 但必须有个兜底：万一那份 retained 状态永远不来（例如手动输入了一个
+              // 早已解散、只剩 meta 的旧房号），不能让人永远卡在空白页。
+              var waitForState = function () {
+                if (!self.host || self.host.state) return;            // 状态已经到了，收工
+                if (self.room.lastState && self.room.lastState.players) { self.host.adopt(self.room.lastState); return; }
+                if (self.state && self.state.mode && self.state.mode !== 'lobby') { self.host.state = self.state; return; }
+                // 等够了还没有：按「全新房间」开局，至少让人能玩
+                self.host.fresh(id, name, emoji);
+              };
+              setTimeout(waitForState, 5000);
+            }
             else self.host.fresh(id, name, emoji);
           }
           self.render();
