@@ -104,7 +104,10 @@
         if (g.owners[seat] !== from) return;             // 不是你的座位（每人两家）
         if (seat !== g.seat) return;                     // 还没轮到这一家
         g.log = g.log.concat([{ seat: seat, kind: action.kind, tileId: action.tileId, end: action.end, side: action.side }]);
-        g.played = g.log.length;
+        // 注意：这里以前写的是 g.played = g.log.length —— 把「本局已出牌数」塞进了「已完成局数」
+        // 这个字段，于是打过 4 张牌后 played=4，第 1 局刚结束就 4>=3 直接终局（3 局的牌局
+        // 实际只打了 1 局）。客户端还拿 played 做 roundover 去重，所以它必须只表示「局数」。
+        g.acted = g.log.length;
         host.emit();
         return;
       }
