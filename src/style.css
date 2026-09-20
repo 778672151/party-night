@@ -140,6 +140,9 @@ input[type=range]{width:120px;accent-color:var(--acc)}
 /* 提示条 */
 .toasts{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:50;pointer-events:none;display:flex;flex-direction:column;
   gap:8px;align-items:center;pointer-events:none;width:min(92vw,560px)}
+/* 提示条不能压住游戏头：实测 toast(top:70) 会与 .ghead(top:51~126) 重叠，
+   把「第 N 回合 / 轮到你」这些关键信息盖住（截图可见）。游戏页把提示条挪到画布下方安全区。 */
+#pn-root:has(.ghead) ~ .toasts, body:has(.ghead) .toasts{top:auto;bottom:calc(env(safe-area-inset-bottom) + 84px)}
 .toast{background:var(--card);border:2px solid var(--stroke);padding:10px 18px;border-radius:999px;font-size:14px;
   font-weight:800;box-shadow:0 5px 0 rgba(107,85,136,.16),var(--soft);animation:qdrop .32s var(--spring)}
 .toast.good{border-color:var(--good);color:#1f8f68}

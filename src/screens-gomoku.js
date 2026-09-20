@@ -239,6 +239,16 @@
       wrap.appendChild(body);
       if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
       return wrap;
+    },
+
+    /** 离开屏幕就收摊（回到本屏时 bind() 会恢复 local.ui/local.cv）。
+     *  防御性收摊：模块级 1s 重画定时器目前靠 document.body.contains(local.cv) 守着，
+     *  实测切走后无残留消息/重画/报错（diag-timerleak.mjs）；收摊让它连空转都省掉，
+     *  也避免以后有人改掉那个守卫时踩回历史事故（切屏后读到别的游戏的 state.g 抛 TypeError）。 */
+    stop: function () {
+      local.ui = null;
+      local.cv = null;
+      local.hover = null;
     }
   };
 

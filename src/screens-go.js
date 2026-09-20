@@ -40,6 +40,38 @@
       if (cv) { cv.addEventListener('click', block, true); cv.addEventListener('pointerdown', block, true); cv.addEventListener('pointerup', block, true); }
       w.document.addEventListener('click', block, true);
       w.document.addEventListener('keydown', block, true);
+      // 真人在棋盘上点一下必须能落子。原作自身的 click 被上面捕获阶段拦掉了（输入只能由我们喂），
+      // 所以这里在**捕获阶段**把坐标翻回交叉点，转成一次 move 上报；否则棋盘完全点不动，
+      // 玩家只剩「停一手 / 认输」两个按钮可点（真人会以为游戏坏了）。
+      // 坐标换算与原作 eventPoint 完全一致（geometry: margin=w*(n<=9?0.091:0.067), step=(w-2m)/(n-1)），
+      // 仍然只认「离交叉点足够近」的点，避免误触。
+      // 注意：必须挂在 **document 的捕获阶段**、且排在 block 之后。
+      // 挂在 canvas 上没用 —— document 捕获阶段那句 stopPropagation() 会让事件根本到不了 canvas。
+      // （stopPropagation 只挡“传给别的节点”，不挡“同一节点上后注册的监听器”，所以这样能拿到。）
+      w.document.addEventListener('click', function (e) {
+        if (w.__pnAllow) return;
+        var cv = w.document.querySelector('canvas');
+        if (!cv || e.target !== cv) return;
+        var ui = S.ui, st = ui && ui.state, g = st && st.g;
+        if (!g || g.phase !== 'play') return;
+        if (g.players[g.turnIdx] !== ui.pid()) return;          // 不是你的回合，点了不算
+        var p = -1;
+        try {
+          var r = cv.getBoundingClientRect();
+          var n = (g.size || 19);
+          var margin = r.width * (n <= 9 ? 0.091 : 0.067);
+          var step = (r.width - 2 * margin) / (n - 1);
+          var x = Math.round((e.clientX - r.left - margin) / step);
+          var y = Math.round((e.clientY - r.top - margin) / step);
+          if (x >= 0 && y >= 0 && x < n && y < n) {
+            var dx = Math.abs(e.clientX - r.left - margin - x * step);
+            var dy = Math.abs(e.clientY - r.top - margin - y * step);
+            if (dx <= step * 0.5 && dy <= step * 0.5) p = y * n + x;
+          }
+        } catch (err) { p = -1; }
+        if (p < 0) return;
+        try { S.ui.send({ t: 'move', p: p }); } catch (err) {}
+      }, true);
       S.wiredOk = true;
     } catch (e) { S.err = String(e && e.message); }
   }

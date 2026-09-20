@@ -1,0 +1,12 @@
+import { connect, newPage, sleep, APP } from './lib.mjs';
+const cdp = await connect();
+const p = await newPage(cdp, APP);
+await sleep(2500);
+console.log('URL=' + await p.eval('location.href'));
+console.log('screen=' + await p.eval('(window.PN&&PN.app)?PN.app.screenName:"(no app)"'));
+const t = await p.eval('(document.body.innerText||"").split(String.fromCharCode(10)).join(" | ").slice(0,240)');
+console.log('body 片段=' + t);
+console.log('输入框: ' + await p.eval('JSON.stringify({name:!!document.querySelector("#pn-name"), tag:(document.querySelector("#pn-name")||{}).tagName||null, inputs:[].slice.call(document.querySelectorAll("input")).map(function(i){return i.id+"|"+i.type}).slice(0,6)})'));
+console.log('按钮: ' + await p.eval('JSON.stringify([].slice.call(document.querySelectorAll("button")).map(function(b){return b.id||b.textContent.trim()}).slice(0,10))'));
+console.log('PN 对象: ' + await p.eval('JSON.stringify({PN:typeof PN, app:!!(window.PN&&PN.app), root:!!document.querySelector("#pn-root")})'));
+await p.dispose(); cdp.close();

@@ -318,6 +318,12 @@
     if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10); this.local('id', id); }
     var code = (location.hash || '').replace('#', '').toUpperCase();
     var wantJoin = join || !!code;
+    // 这次到底是「我新建一个房间」还是「进一个已存在的房间（含刷新回来）」？
+    // 这个意图必须在建 room 之前记下来：建房时 claimHost() 会自己写入 meta，
+    // 之后再想从 meta 反推就分不清「我的新房」和「我刷新的旧房」了。
+    // 开新房 → 不该等 retained 状态（根本没有），必须立刻 fresh() 让自己入座；
+    // 带房号进/刷新 → 房间里可能已有对局，必须等 retained 状态，不能 fresh() 覆盖。
+    this._freshRoom = !wantJoin;
     var brokerIndex = Number(this.local('broker')) || 0;
     var build = function (c) {
       // 房号写回地址栏：这样「开房的人」刷新页面也能回到同一局（以前只有点链接进来的人有 #房号，
@@ -354,7 +360,12 @@
             // 这个房间「本来就有房主」吗？room.meta 是 retained 的，刷新/重连时会先于 state 到达。
             // 如果是，说明房间已经存在，绝不能 fresh() —— 那会用一份空大厅把房里正在进行的对局
             // 整个覆盖掉（房主自己刷新页面 → 两端一起掉回房间，最常见的真实操作）。
-            var knownRoom = !!(self.room.meta && self.room.meta.host);
+            // 只有「进一个已存在的房间」（带房号进来 / 刷新回来）才需要等 retained 状态。
+            // 判据用建房前记下的意图 _freshRoom，而不是 meta.host —— 因为开新房时 claimHost()
+            // 会自己写入 meta，用 meta 反推会把「我刚建的新房」也当成「别人的既有房间」，
+            // 于是新房间空等 retained 状态（根本没有）直到 5 秒兜底 fresh()，
+            // 表现为：房主开房后约 5 秒内名单是空的、界面一直显示「还差一个人」。
+            var knownRoom = !self._freshRoom && !!(self.room.meta && self.room.meta.host);
             if (self.room.lastState && self.room.lastState.players) self.host.adopt(self.room.lastState);
             else if (haveGame) self.host.state = self.state;   // 保住当前对局，等 retained 状态到了再 adopt
             else if (knownRoom) {

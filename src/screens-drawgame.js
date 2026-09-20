@@ -615,6 +615,13 @@
       if (!obj) return;
       if (obj.answer) local.myWord = obj.answer;
       applyReplay(obj);
+    },
+
+    /** 离开屏幕就收摊（回到本屏时 mounted→bindPaint 会恢复 local.ui）。
+     *  实测（diag-timerleak.mjs）：1.2s 的补发轮询在切到别的游戏后仍在发 x:ink-ask
+     *  （3.6s 内 3 条），对端被牵着回了 9 条 x:stroke —— 对端早就不在你画我猜里了。 */
+    stop: function () {
+      local.ui = null;
     }
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

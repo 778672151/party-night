@@ -56,6 +56,9 @@
       var C = PN.gameCommon;
       var g = state.g || {};
       var me = ui.pid();
+      // 这里要**无条件**记下 ui（以前只在作画分支里记，切走再切回来时会停在揭晓阶段，
+      // 模块级定时器就永远拿不到 ui —— stop() 之后必须由 render 恢复它）。
+      local.ui = ui;
       var other = partnerOf(state, me);
       var otherP = other ? ui.p(other) : null;
       var wrap = ui.el('div');
@@ -209,6 +212,14 @@
       var ui = this;
       if (!local.ink) return;
       local.ink.onInk(msg, from);
+    },
+
+    /** 离开屏幕就收摊（render 会无条件恢复 local.ui，见上）。
+     *  实测（diag-timerleak.mjs）：不收摊的话，1.2s 的补发轮询会在切到别的游戏后
+     *  继续为已卸载的画布发 x:ink-ask（3.6s 内 3 条），对端 room 层还被牵着回了 18 条
+     *  x:stroke 补发块 —— 对端早就不在那款游戏里了，纯属公共 broker 上的浪费流量。 */
+    stop: function () {
+      local.ui = null;
     },
 
     /* 私密回放：换回合/刷新/换主时房主把画布补回来 */

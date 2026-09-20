@@ -37,12 +37,14 @@ S.switch = async (cdp) => {
   let ok = true, why = '';
   for (const m of seq) {
     await A.eval('PN.app.send({t:"start", mode:' + JSON.stringify(m) + '})');
-    await sleep(700);
+    // ⚠️ QoS0：对端状态传播实测 409~1841ms（diag-gomoku-tap.mjs），读一次就判会假失败
+    //（曾实测 mine → A=mine B=lobby，其实只是 B 还没收到）。这里等 B 收敛，最多 5s。
+    try { await B.waitFor('PN.app.state.mode === ' + JSON.stringify(m), 'B 进入 ' + m, 5000); } catch (e) { }
     const a = await modeOf(A), b = await modeOf(B);
     if (a !== m || b !== m) { ok = false; why = m + ' → A=' + a + ' B=' + b; break; }
     // 立刻回大厅，再切下一个（最容易暴露旧局残留）
     await A.eval('PN.app.send({t:"lobby"})');
-    await sleep(500);
+    try { await B.waitFor('PN.app.state.mode === "lobby"', 'B 回大厅', 5000); } catch (e) { }
     const a2 = await modeOf(A);
     if (a2 !== 'lobby') { ok = false; why = '回大厅失败：' + a2; break; }
   }

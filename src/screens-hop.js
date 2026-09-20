@@ -192,7 +192,13 @@
   function doCharge(ui) {
     if (!isMine(ui)) return;
     var g = ui.state.g;
-    if (g.attempt.fly || g.attempt.ended || g.attempt.lives <= 0) return;
+    // 注意：这里**不能**再用 g.attempt.fly 做守卫。fly 是「上一次跳跃的落地动画」标记，
+    // 房主在任何一次起跳后都会把它设上，且只在**收到下一次 charge 时**才清掉
+    //（games/hop.js 里 `at.fly = null` 那句就在 charge 分支）。
+    // 客户端若因 fly 非空而不发 charge，房主就永远收不到 charge、fly 永远清不掉 →
+    // 第一次起跳之后**再按就没反应**（本局彻底卡死，队友永远轮不到）。
+    // 房主那边本来就支持「跳完立刻再蓄力」，所以这里只挡真正不能动的两种情况。
+    if (g.attempt.ended || g.attempt.lives <= 0) return;
     chargeStartAt = Date.now();
     ui.send({ t: 'charge' });
     clearInterval(powerTimer);
@@ -349,6 +355,15 @@
       wrap.appendChild(body);
       if (state.phase !== 'over') wrap.appendChild(ui.renderGameFooter());
       return wrap;
+    },
+
+    /** 离开屏幕就收摊。实测（diag-timerleak.mjs）powerTimer 目前有 isMine 守卫、
+     *  切走后会自清、无残留消息；但「按住不放就切走」的瞬间它还活着，
+     *  收摊把它和蓄力起点一起清掉，避免以后改动踩坑（canvas 节点 local.cv 是刻意复用的，不能清）。 */
+    stop: function () {
+      clearInterval(powerTimer);
+      powerTimer = 0;
+      chargeStartAt = 0;
     }
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
