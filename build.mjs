@@ -17,6 +17,7 @@ const scripts = [
   'src/toon.js',
   'src/room.js',
   'src/host.js',
+  'src/bots.js',
   ...readdirSync(join(root, 'src/games')).filter(f => f.endsWith('.js')).sort().map(f => 'src/games/' + f),
   'src/screens-common.js',
   'src/screens-drawgame.js',

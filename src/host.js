@@ -62,10 +62,18 @@
       var before = this.state.players.length;
       var prevP = this.player(from);
       var wasOffline = !prevP || !prevP.online; // 掉线的人回来了，也要广播一次
+      var known = !!prevP;                     // 先记下来：upsert 之后 player() 就非空了
       this.upsertPlayer(from);
+      // 真人进大厅：把机器人让出来的座位收走。2 人局里这条是**必需**的 ——
+      // 否则第二个真人进来发现名单里已经坐着一个机器人，两个真人反而开不了局。
+      // 只在大厅做（对局中途撤机器人会把牌局搞坏）。
+      var botsDropped = (!known && PN.bots) ? PN.bots.dropAll(this) : false;
       // 只有名单或在线状态真的变了才广播：以前每收到一次心跳就 emit 一次，
       // 四个人在大厅里等于每 1 秒把整棵树重建一次 —— 改昵称弹窗、设置面板全被冲掉。
-      if (this.syncOnline() || wasOffline || this.state.players.length !== before) this.emit();
+      // ⚠️ syncOnline() 必须**无条件**调用，不能写成 botsDropped || this.syncOnline()：
+      // || 会短路，机器人一被撤走就把整句后面的同步跳过了，房主自己的在线状态再也没机会修正。
+      var onlineChanged = this.syncOnline();
+      if (botsDropped || onlineChanged || wasOffline || this.state.players.length !== before) this.emit();
       return;
     }
     if (action.t === '_syncOnline') {
@@ -96,6 +104,15 @@
       var game = PN.games[mode];
       if (!game) return;
       var players = this.state.players.filter(function (p) { return p.online; });
+      // 一个人开局：这台游戏的机器人先补到最低人数（只有写了 botTurn 的游戏才有机器人，
+      // 没写大脑的仍走原来那句「人数不够」提示，不会塞进去一个不会动的假人）。
+      if (players.length < (game.minPlayers || 2) && PN.bots) {
+        if (PN.bots.fill(this, game)) {
+          players = this.state.players.filter(function (p) { return p.online; });
+          // 明确告诉玩家「对面是机器人」，别让人以为家里进了个陌生人。
+          this.toast('一个人也能玩：给你配了个机器人对手 🤖', 'good');
+        }
+      }
       if (players.length < (game.minPlayers || 2)) { this.toast('人数不够：' + game.name + ' 至少 ' + game.minPlayers + ' 人'); return; }
       // 双人游戏的人数上限要拦住，否则第三个人进来看不到自己的位置、规则也不成立
       if (game.maxPlayers && players.length > game.maxPlayers) {
@@ -185,6 +202,9 @@
     var list = this.room.roster(), map = {}, i, changed = false;
     for (i = 0; i < list.length; i++) map[list[i].id] = list[i].online;
     this.state.players.forEach(function (p) {
+      // 机器人不是网络玩家，永远不在花名册里 —— 不跳过它就会被判离线，
+      // 接着 markOffline 排 25 秒收尾，然后 onLeave 把它踢出对局（游戏直接卡住）。
+      if (p.bot) return;
       // 不在花名册里 = 早就掉线并被清理掉了（新房主 adopt 过来的旧 state 尤其常见），
       // 这种情况必须判离线，否则他会一直算在「等人描述 / 等人投票」里，全桌干等。
       var on = Object.prototype.hasOwnProperty.call(map, p.id) ? map[p.id] : false;
@@ -237,6 +257,9 @@
     this.state.ts = this.now();
     this.room.publishState(this.state);
     this.onStateChange(this.stateForUI());
+    // 广播完再看要不要让机器人出手。放在 onStateChange 之后：先让人看到「轮到机器人了」，
+    // 机器人再在 0.7~1.6 秒后落子（拟人；也让 UI 有机会渲染它的思考）。
+    if (PN.bots) PN.bots.onState(this);
   };
   Host.prototype.emitSoon = function (ms) {
     var self = this;
@@ -309,8 +332,19 @@
     this.state.mode = 'lobby';
     this.state.phase = 'lobby';
     this.state.g = {};
+    // 机器人是「这一局」的陪练，不是大厅常驻成员：回大厅就收走（下次开局按需再配）。
+    // ⚠️ 必须放在 mode 已经改成 'lobby' **之后** —— dropAll 有用 mode 守卫，
+    // 放在前面会被守卫挡掉（对局中途不许撤），于是机器人一路留到下一局，越堆越多。
+    if (PN.bots) PN.bots.dropAll(this);
     this.state.players.forEach(function (p) {
-      p.score = scores[p.id] || 0; p.streak = 0; p.wins = 0; p.online = !!self.room.peers[p.id];
+      p.score = scores[p.id] || 0; p.streak = 0; p.wins = 0;
+      // 在线状态不能在回大厅时「按 peers 反推」判死两个人：
+      //   · 机器人根本不在 peers 里；
+      //   · 跑这段代码的**房主自己**也可能还没被写进 peers
+      //     （peers[me.id] 是 room.roster() 里才补进去的，随机时机）。
+      // 两者都判在线：机器人在线是设计，房主在线是因为这段代码就是它在跑。
+      var isSelf = self.room.me && p.id === self.room.me.id;
+      p.online = (p.bot || isSelf) ? true : !!self.room.peers[p.id];
     });
     this.emit();
   };

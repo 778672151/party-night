@@ -2241,10 +2241,18 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
       var before = this.state.players.length;
       var prevP = this.player(from);
       var wasOffline = !prevP || !prevP.online; // 掉线的人回来了，也要广播一次
+      var known = !!prevP;                     // 先记下来：upsert 之后 player() 就非空了
       this.upsertPlayer(from);
+      // 真人进大厅：把机器人让出来的座位收走。2 人局里这条是**必需**的 ——
+      // 否则第二个真人进来发现名单里已经坐着一个机器人，两个真人反而开不了局。
+      // 只在大厅做（对局中途撤机器人会把牌局搞坏）。
+      var botsDropped = (!known && PN.bots) ? PN.bots.dropAll(this) : false;
       // 只有名单或在线状态真的变了才广播：以前每收到一次心跳就 emit 一次，
       // 四个人在大厅里等于每 1 秒把整棵树重建一次 —— 改昵称弹窗、设置面板全被冲掉。
-      if (this.syncOnline() || wasOffline || this.state.players.length !== before) this.emit();
+      // ⚠️ syncOnline() 必须**无条件**调用，不能写成 botsDropped || this.syncOnline()：
+      // || 会短路，机器人一被撤走就把整句后面的同步跳过了，房主自己的在线状态再也没机会修正。
+      var onlineChanged = this.syncOnline();
+      if (botsDropped || onlineChanged || wasOffline || this.state.players.length !== before) this.emit();
       return;
     }
     if (action.t === '_syncOnline') {
@@ -2275,6 +2283,15 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
       var game = PN.games[mode];
       if (!game) return;
       var players = this.state.players.filter(function (p) { return p.online; });
+      // 一个人开局：这台游戏的机器人先补到最低人数（只有写了 botTurn 的游戏才有机器人，
+      // 没写大脑的仍走原来那句「人数不够」提示，不会塞进去一个不会动的假人）。
+      if (players.length < (game.minPlayers || 2) && PN.bots) {
+        if (PN.bots.fill(this, game)) {
+          players = this.state.players.filter(function (p) { return p.online; });
+          // 明确告诉玩家「对面是机器人」，别让人以为家里进了个陌生人。
+          this.toast('一个人也能玩：给你配了个机器人对手 🤖', 'good');
+        }
+      }
       if (players.length < (game.minPlayers || 2)) { this.toast('人数不够：' + game.name + ' 至少 ' + game.minPlayers + ' 人'); return; }
       // 双人游戏的人数上限要拦住，否则第三个人进来看不到自己的位置、规则也不成立
       if (game.maxPlayers && players.length > game.maxPlayers) {
@@ -2364,6 +2381,9 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
     var list = this.room.roster(), map = {}, i, changed = false;
     for (i = 0; i < list.length; i++) map[list[i].id] = list[i].online;
     this.state.players.forEach(function (p) {
+      // 机器人不是网络玩家，永远不在花名册里 —— 不跳过它就会被判离线，
+      // 接着 markOffline 排 25 秒收尾，然后 onLeave 把它踢出对局（游戏直接卡住）。
+      if (p.bot) return;
       // 不在花名册里 = 早就掉线并被清理掉了（新房主 adopt 过来的旧 state 尤其常见），
       // 这种情况必须判离线，否则他会一直算在「等人描述 / 等人投票」里，全桌干等。
       var on = Object.prototype.hasOwnProperty.call(map, p.id) ? map[p.id] : false;
@@ -2416,6 +2436,9 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
     this.state.ts = this.now();
     this.room.publishState(this.state);
     this.onStateChange(this.stateForUI());
+    // 广播完再看要不要让机器人出手。放在 onStateChange 之后：先让人看到「轮到机器人了」，
+    // 机器人再在 0.7~1.6 秒后落子（拟人；也让 UI 有机会渲染它的思考）。
+    if (PN.bots) PN.bots.onState(this);
   };
   Host.prototype.emitSoon = function (ms) {
     var self = this;
@@ -2488,8 +2511,19 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
     this.state.mode = 'lobby';
     this.state.phase = 'lobby';
     this.state.g = {};
+    // 机器人是「这一局」的陪练，不是大厅常驻成员：回大厅就收走（下次开局按需再配）。
+    // ⚠️ 必须放在 mode 已经改成 'lobby' **之后** —— dropAll 有用 mode 守卫，
+    // 放在前面会被守卫挡掉（对局中途不许撤），于是机器人一路留到下一局，越堆越多。
+    if (PN.bots) PN.bots.dropAll(this);
     this.state.players.forEach(function (p) {
-      p.score = scores[p.id] || 0; p.streak = 0; p.wins = 0; p.online = !!self.room.peers[p.id];
+      p.score = scores[p.id] || 0; p.streak = 0; p.wins = 0;
+      // 在线状态不能在回大厅时「按 peers 反推」判死两个人：
+      //   · 机器人根本不在 peers 里；
+      //   · 跑这段代码的**房主自己**也可能还没被写进 peers
+      //     （peers[me.id] 是 room.roster() 里才补进去的，随机时机）。
+      // 两者都判在线：机器人在线是设计，房主在线是因为这段代码就是它在跑。
+      var isSelf = self.room.me && p.id === self.room.me.id;
+      p.online = (p.bot || isSelf) ? true : !!self.room.peers[p.id];
     });
     this.emit();
   };
@@ -2506,6 +2540,123 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
   Host.prototype.destroy = function () { this.clearAll(); };
 
   PN.Host = Host;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* ===== src/bots.js ===== */
+/* ===== 机器人对手（房主侧的虚拟玩家）=====
+ *
+ * 目的：让一个人也能开局（7 款原本 minPlayers:2 的游戏），而不是被一句「人数不够」挡住。
+ *
+ * 为什么做成「房主侧虚拟玩家」而不是「单机版」：
+ *   房主是权威，所有游戏都用 participants()/onlinePlayers() 决定谁在局里。
+ *   只要机器人是 state.players 里一个普通玩家 id，11 款游戏**一行都不用改**就能容纳它 ——
+ *   轮次判定、计分、终局名单、悔棋同意……全都照原样工作。
+ *
+ * 两个必须处理的危险点（否则机器人会被自己的房间踢出去）：
+ *   ① syncOnline() 按 room.roster() 判断在线，而机器人**不在花名册里**
+ *      → 会被判离线 → markOffline 排 25s 收尾 → onLeave 把机器人踢出对局。
+ *   ② goLobby() 用 !!room.peers[id] 复原在线状态，机器人同样会被判离线。
+ *   所以这三处都要显式跳过 p.bot（见 host.js 的 p.bot 判断）。
+ *
+ * 机器人怎么动：游戏自己实现 game.botTurn(host) → { pid, action } | null（纯函数，无副作用，
+ * 所以能在 node 里直接单元测试）。本模块只负责「排一个拟人延迟，然后以它的身份 dispatch」。
+ */
+(function (root) {
+  'use strict';
+  var PN = root.PN = root.PN || {};
+
+  var BOT_MIN_MS = 700, BOT_MAX_MS = 1600;   // 拟人思考延迟：太快不像人，太慢像卡了
+  var NAMES = ['小机灵', '阿飞', '点点', '老白', '皮蛋'];
+  var EMOJIS = ['🤖', '👾', '🛸', '🐧', '🦊'];
+  var TICK = '__bot';                        // 定时器名字（登记进 host.timers，会被 clearAll 清掉）
+
+  function isBotId(id) { return typeof id === 'string' && id.indexOf('bot:') === 0; }
+
+  /** 机器人玩家在 state.players 里的形状 —— 多一个 bot:true 供各处免疫判断。
+   *  分数/连胜字段和真人完全一样，这样计分板、终局名单不用特殊照顾。 */
+  function makePlayer(n) {
+    return {
+      id: 'bot:' + n,
+      name: NAMES[(n - 1) % NAMES.length],
+      emoji: EMOJIS[(n - 1) % EMOJIS.length],
+      score: 0, streak: 0, wins: 0, online: true, host: false, bot: true
+    };
+  }
+
+  function botsIn(host) {
+    return (host.state.players || []).filter(function (p) { return p.bot; });
+  }
+  function humansIn(host) {
+    return (host.state.players || []).filter(function (p) { return !p.bot && p.online; });
+  }
+
+  /** 把机器人补到游戏的最低人数。只补「差多少」，不多塞一个。
+   *  返回是否真的改动过 state（调用方据此决定要不要广播）。 */
+  function fill(host, game) {
+    if (!game || !game.botTurn) return false;          // 该游戏还没写大脑：不硬塞，维持原提示
+    var need = (game.minPlayers || 2) - humansIn(host).length;
+    if (need <= 0) return false;
+    // ⚠️ 判据必须是**具体的 id 有没有**，不能是「已有几个机器人」。
+    // 用数量推算会漏：只要机器人的增删不是严格按 1,2,3 顺序发生（真人掉线又回来、
+    // 换房主 adopt、中途有人进出），数量就会和 id 对不上，于是重复加出 bot:2、bot:3…
+    // （实测：连开 4 局，机器人从 1 个涨到 2 个、名单 3 人。）
+    // 按 id 幂等就没有这个问题：要几个就保证 bot:1..bot:need 都在，一个不多一个不少。
+    var changed = false;
+    for (var n = 1; n <= need; n++) {
+      var exists = false;
+      for (var i = 0; i < host.state.players.length; i++) {
+        if (host.state.players[i].id === 'bot:' + n) { exists = true; break; }
+      }
+      if (!exists) { host.state.players.push(makePlayer(n)); changed = true; }
+    }
+    return changed;
+  }
+
+  /** 把机器人全部撤掉（大厅专用）。两处会用到，语义都是同一件事：
+   *   ① 有真人进大厅 → 让出座位（2 人局里，否则两个真人反而开不了局）；
+   *   ② 回大厅 → 收走陪练（机器人是「这一局」的，不是大厅常驻成员）。
+   *  对局中途**不能**撤，那会直接把牌局搞坏 —— 所以这里用 mode 守卫。 */
+  function dropAll(host) {
+    if (!host.state || host.state.mode !== 'lobby') return false;
+    var before = host.state.players.length;
+    host.state.players = host.state.players.filter(function (p) { return !p.bot; });
+    return host.state.players.length !== before;
+  }
+
+  /** 每次 state 变化后调用：轮到机器人就把它的动作排进定时器。
+   *  用 timers[TICK] 是否存在来判断「已经排过一个还没跑」，这样 clearAll 一旦清掉定时器，
+   *  状态自动归零，不会出现「标志位还立着、机器人永远不动了」的死锁。 */
+  function onState(host) {
+    if (!host || !host.state) return;
+    var mode = host.state.mode;
+    if (!mode || mode === 'lobby') return;
+    var game = PN.games[mode];
+    if (!game || typeof game.botTurn !== 'function') return;
+    if (host.timers[TICK]) return;                     // 已经排了，别重复排
+    var t;
+    try { t = game.botTurn(host); } catch (e) { return; }
+    if (!t || !t.pid || !t.action) return;
+    var delay = BOT_MIN_MS + Math.floor(Math.random() * (BOT_MAX_MS - BOT_MIN_MS));
+    // 用 host.after 登记：换局/回大厅时 clearAll 会清掉，绝不会跨局打一枪
+    host.after(TICK, delay, function () {
+      if (host.state.mode !== mode) return;            // 期间换游戏了：这一手作废
+      var t2;
+      try { t2 = game.botTurn(host); } catch (e) { return; }
+      if (!t2 || !t2.pid || !t2.action) { onState(host); return; }
+      host.dispatch(t2.action, t2.pid);
+    });
+  }
+
+  PN.bots = {
+    isBotId: isBotId,
+    botsIn: botsIn,
+    humansIn: humansIn,
+    fill: fill,
+    dropAll: dropAll,
+    onState: onState,
+    BOT_MIN_MS: BOT_MIN_MS,
+    BOT_MAX_MS: BOT_MAX_MS
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ===== src/games/codraw.js ===== */
@@ -3827,6 +3978,86 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
     return true;
   }
 
+  /* ===== 机器人棋力（纯函数，见 src/bots.js）=====
+   * 窗口评估法：把「我正在考虑落的那颗子」当中心，四个方向各取 9 格，
+   * 编成一行 我=1 / 对方=2 / 空=0 / 墙=3 的字，再用棋型表打分。
+   * 这是五子棋评估最省事又够准的写法。够陪人玩，不追求最强。 */
+  var PATTERNS = [
+    [/11111/g, 500000],                                              // 连五
+    [/011110/g, 50000],                                              // 活四
+    [/11110|01111|11011|10111|11101/g, 8000],                        // 冲四
+    [/01110|010110|011010/g, 7000],                                  // 活三
+    [/11100|00111|11010|01011|10110|01101|10011|11001|10101/g, 900], // 眠三
+    [/00110|01100|01010/g, 300],                                     // 活二
+    [/11000|00011|10100|00101|10010|01001/g, 60]                     // 眠二
+  ];
+
+  /** 把 (x,y) 当成「me 的子」放上去，四方向窗口打分求和 */
+  function scoreAt(board, n, x, y, me) {
+    var total = 0;
+    for (var d = 0; d < 4; d++) {
+      var s = '';
+      for (var k = -4; k <= 4; k++) {
+        if (k === 0) { s += '1'; continue; }
+        var nx = x + DIRS[d][0] * k, ny = y + DIRS[d][1] * k;
+        if (!inB(n, nx, ny)) { s += '3'; continue; }   // 棋盘外算「堵」，边上的四不算活四
+        var v = board[ny * n + nx];
+        s += v === EMPTY ? '0' : (v === me ? '1' : '2');
+      }
+      for (var p = 0; p < PATTERNS.length; p++) {
+        var m = s.match(PATTERNS[p][0]);
+        if (m) total += m.length * PATTERNS[p][1];
+      }
+    }
+    return total;
+  }
+
+  /** 选落点：① 我能连五就直接赢 ② 对方能连五就必须堵 ③ 否则按「自己成形 − 0.85×对方成形」挑 */
+  function bestMove(g, me) {
+    var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
+    // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
+    // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
+    var any = false;
+    for (var q = 0; q < board.length; q++) if (board[q] !== EMPTY) { any = true; break; }
+    if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
+    // 候选只取「已有子附近 2 格内」的空点：又快又不会跑到空旷角落自己玩
+    var cands = [], x, y, i;
+    for (y = 0; y < n; y++) for (x = 0; x < n; x++) {
+      if (board[y * n + x] !== EMPTY) continue;
+      var near = false;
+      for (var dy = -2; dy <= 2 && !near; dy++) for (var dx = -2; dx <= 2; dx++) {
+        var ny = y + dy, nx = x + dx;
+        if (inB(n, nx, ny) && board[ny * n + nx] !== EMPTY) { near = true; break; }
+      }
+      if (near) cands.push([x, y]);
+    }
+    if (!cands.length) return null;   // 满盘（或全被堵死）：没有可下的点，交给调用方处理
+    // ① 自己能赢
+    for (i = 0; i < cands.length; i++) {
+      x = cands[i][0]; y = cands[i][1];
+      board[y * n + x] = me;
+      var win = checkWin(board, n, x, y);
+      board[y * n + x] = EMPTY;
+      if (win) return [x, y];
+    }
+    // ② 对方下一步能赢 → 必须先堵（有两个胜点时堵哪个都输，挑第一个）
+    for (i = 0; i < cands.length; i++) {
+      x = cands[i][0]; y = cands[i][1];
+      board[y * n + x] = opp;
+      var lose = checkWin(board, n, x, y);
+      board[y * n + x] = EMPTY;
+      if (lose) return [x, y];
+    }
+    // ③ 成形分：自己进攻略高于替对方防守
+    var best = cands[0], bestScore = -Infinity;
+    for (i = 0; i < cands.length; i++) {
+      x = cands[i][0]; y = cands[i][1];
+      var sc = scoreAt(board, n, x, y, me) - 0.85 * scoreAt(board, n, x, y, opp);
+      if (sc > bestScore) { bestScore = sc; best = [x, y]; }
+    }
+    return best;
+  }
+
   var game = {
     id: ID,
     name: NAME,
@@ -3916,6 +4147,22 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
 
       // 新人/重连：棋盘在 state 里，自己就同步了（这里是留个口子做兜底日志）
       if (action.t === '_joined' || action.t === 'hi') return;
+    },
+
+    /* ===== 机器人对手：纯函数，只读 g，不改任何状态 ===== */
+    botTurn: function (host) {
+      var g = host.g();
+      if (!g || g.phase !== 'play') return null;
+      var me = null, i;
+      for (i = 0; i < 2; i++) if (PN.bots && PN.bots.isBotId(g.players[i])) { me = g.players[i]; break; }
+      if (!me) return null;
+      // 对方请求悔棋：机器人一律同意（这是陪人玩，不是较劲）
+      if (g.pending && g.pending.by !== me) return { pid: me, action: { t: 'undo-answer', ok: true } };
+      if (g.pending) return null;                       // 自己提的悔棋，等对方答
+      if (colorOf(g, me) !== g.turn) return null;       // 没轮到机器人
+      var mv = bestMove(g, colorOf(g, me));
+      if (!mv) return null;
+      return { pid: me, action: { t: 'place', x: mv[0], y: mv[1] } };
     },
 
     /** 换主：状态全在 g 里，重挂即可 —— 只有 pending（悔棋请求）要清掉，免得卡住 */
@@ -4975,6 +5222,22 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
     });
   }
 
+  /* ===== 机器人对手（纯函数，只读 g / _pv，不改状态）=====
+   * 默契题问的是「你们俩谁更可能…」，机器人也只能**猜** —— 它不知道真人会选哪个，
+   * 所以随机挑一个选项，和真人一样赌默契。这不是放水，是这类题唯一诚实的玩法。 */
+  function botPick(host) {
+    var g = host.g();
+    if (!g || !g.cur || g.cur.phase !== 'answer') return null;
+    if (!PN.bots) return null;
+    var me = null, i;
+    for (i = 0; i < (g.players || []).length; i++) if (PN.bots.isBotId(g.players[i])) { me = g.players[i]; break; }
+    if (!me) return null;
+    if (_pv.answers[me] !== undefined) return null;              // 这题已经答过了，不能改
+    var n = (g.cur.options || []).length;
+    if (!n) return null;
+    return { pid: me, action: { t: 'answer', i: Math.floor(Math.random() * n) } };
+  }
+
   /** 结算 */
   function finish(host) {
     var g = host.g();
@@ -5004,6 +5267,8 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
     meta: { group: 'online', tags: ['问答', '默契'] },
     minPlayers: 2,
     maxPlayers: 2,
+
+    botTurn: function (host) { return botPick(host); },
 
     init: function (host) {
       var s = host.state;
@@ -5200,8 +5465,11 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.24';
       list.push({
         kind: 'online', id: k, emoji: g.emoji, title: g.name, desc: g.blurb,
         group: m.group || 'online', tags: m.tags || [], origin: m.origin || null,
-        players: g.maxPlayers && g.maxPlayers > (g.minPlayers || 2)
-          ? (g.minPlayers || 2) + '–' + g.maxPlayers : ((g.minPlayers || 2) + '')
+        // 有机器人大脑的游戏，一个人也开得起来 —— 在人数后面点出来。
+        // 否则单看「2 人」会以为必须等第二个人，根本不会去点开始。
+        players: (g.maxPlayers && g.maxPlayers > (g.minPlayers || 2)
+          ? (g.minPlayers || 2) + '–' + g.maxPlayers : ((g.minPlayers || 2) + ''))
+          + (typeof g.botTurn === 'function' ? ' · 单人可玩' : '')
       });
     }
     var minis = (PN.Banks && PN.Banks.mini) ? PN.Banks.mini() : [];

@@ -117,6 +117,22 @@
     });
   }
 
+  /* ===== 机器人对手（纯函数，只读 g / _pv，不改状态）=====
+   * 默契题问的是「你们俩谁更可能…」，机器人也只能**猜** —— 它不知道真人会选哪个，
+   * 所以随机挑一个选项，和真人一样赌默契。这不是放水，是这类题唯一诚实的玩法。 */
+  function botPick(host) {
+    var g = host.g();
+    if (!g || !g.cur || g.cur.phase !== 'answer') return null;
+    if (!PN.bots) return null;
+    var me = null, i;
+    for (i = 0; i < (g.players || []).length; i++) if (PN.bots.isBotId(g.players[i])) { me = g.players[i]; break; }
+    if (!me) return null;
+    if (_pv.answers[me] !== undefined) return null;              // 这题已经答过了，不能改
+    var n = (g.cur.options || []).length;
+    if (!n) return null;
+    return { pid: me, action: { t: 'answer', i: Math.floor(Math.random() * n) } };
+  }
+
   /** 结算 */
   function finish(host) {
     var g = host.g();
@@ -146,6 +162,8 @@
     meta: { group: 'online', tags: ['问答', '默契'] },
     minPlayers: 2,
     maxPlayers: 2,
+
+    botTurn: function (host) { return botPick(host); },
 
     init: function (host) {
       var s = host.state;

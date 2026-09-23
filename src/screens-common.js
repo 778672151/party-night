@@ -109,8 +109,11 @@
       list.push({
         kind: 'online', id: k, emoji: g.emoji, title: g.name, desc: g.blurb,
         group: m.group || 'online', tags: m.tags || [], origin: m.origin || null,
-        players: g.maxPlayers && g.maxPlayers > (g.minPlayers || 2)
-          ? (g.minPlayers || 2) + '–' + g.maxPlayers : ((g.minPlayers || 2) + '')
+        // 有机器人大脑的游戏，一个人也开得起来 —— 在人数后面点出来。
+        // 否则单看「2 人」会以为必须等第二个人，根本不会去点开始。
+        players: (g.maxPlayers && g.maxPlayers > (g.minPlayers || 2)
+          ? (g.minPlayers || 2) + '–' + g.maxPlayers : ((g.minPlayers || 2) + ''))
+          + (typeof g.botTurn === 'function' ? ' · 单人可玩' : '')
       });
     }
     var minis = (PN.Banks && PN.Banks.mini) ? PN.Banks.mini() : [];

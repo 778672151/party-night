@@ -96,6 +96,86 @@
     return true;
   }
 
+  /* ===== 机器人棋力（纯函数，见 src/bots.js）=====
+   * 窗口评估法：把「我正在考虑落的那颗子」当中心，四个方向各取 9 格，
+   * 编成一行 我=1 / 对方=2 / 空=0 / 墙=3 的字，再用棋型表打分。
+   * 这是五子棋评估最省事又够准的写法。够陪人玩，不追求最强。 */
+  var PATTERNS = [
+    [/11111/g, 500000],                                              // 连五
+    [/011110/g, 50000],                                              // 活四
+    [/11110|01111|11011|10111|11101/g, 8000],                        // 冲四
+    [/01110|010110|011010/g, 7000],                                  // 活三
+    [/11100|00111|11010|01011|10110|01101|10011|11001|10101/g, 900], // 眠三
+    [/00110|01100|01010/g, 300],                                     // 活二
+    [/11000|00011|10100|00101|10010|01001/g, 60]                     // 眠二
+  ];
+
+  /** 把 (x,y) 当成「me 的子」放上去，四方向窗口打分求和 */
+  function scoreAt(board, n, x, y, me) {
+    var total = 0;
+    for (var d = 0; d < 4; d++) {
+      var s = '';
+      for (var k = -4; k <= 4; k++) {
+        if (k === 0) { s += '1'; continue; }
+        var nx = x + DIRS[d][0] * k, ny = y + DIRS[d][1] * k;
+        if (!inB(n, nx, ny)) { s += '3'; continue; }   // 棋盘外算「堵」，边上的四不算活四
+        var v = board[ny * n + nx];
+        s += v === EMPTY ? '0' : (v === me ? '1' : '2');
+      }
+      for (var p = 0; p < PATTERNS.length; p++) {
+        var m = s.match(PATTERNS[p][0]);
+        if (m) total += m.length * PATTERNS[p][1];
+      }
+    }
+    return total;
+  }
+
+  /** 选落点：① 我能连五就直接赢 ② 对方能连五就必须堵 ③ 否则按「自己成形 − 0.85×对方成形」挑 */
+  function bestMove(g, me) {
+    var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
+    // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
+    // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
+    var any = false;
+    for (var q = 0; q < board.length; q++) if (board[q] !== EMPTY) { any = true; break; }
+    if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
+    // 候选只取「已有子附近 2 格内」的空点：又快又不会跑到空旷角落自己玩
+    var cands = [], x, y, i;
+    for (y = 0; y < n; y++) for (x = 0; x < n; x++) {
+      if (board[y * n + x] !== EMPTY) continue;
+      var near = false;
+      for (var dy = -2; dy <= 2 && !near; dy++) for (var dx = -2; dx <= 2; dx++) {
+        var ny = y + dy, nx = x + dx;
+        if (inB(n, nx, ny) && board[ny * n + nx] !== EMPTY) { near = true; break; }
+      }
+      if (near) cands.push([x, y]);
+    }
+    if (!cands.length) return null;   // 满盘（或全被堵死）：没有可下的点，交给调用方处理
+    // ① 自己能赢
+    for (i = 0; i < cands.length; i++) {
+      x = cands[i][0]; y = cands[i][1];
+      board[y * n + x] = me;
+      var win = checkWin(board, n, x, y);
+      board[y * n + x] = EMPTY;
+      if (win) return [x, y];
+    }
+    // ② 对方下一步能赢 → 必须先堵（有两个胜点时堵哪个都输，挑第一个）
+    for (i = 0; i < cands.length; i++) {
+      x = cands[i][0]; y = cands[i][1];
+      board[y * n + x] = opp;
+      var lose = checkWin(board, n, x, y);
+      board[y * n + x] = EMPTY;
+      if (lose) return [x, y];
+    }
+    // ③ 成形分：自己进攻略高于替对方防守
+    var best = cands[0], bestScore = -Infinity;
+    for (i = 0; i < cands.length; i++) {
+      x = cands[i][0]; y = cands[i][1];
+      var sc = scoreAt(board, n, x, y, me) - 0.85 * scoreAt(board, n, x, y, opp);
+      if (sc > bestScore) { bestScore = sc; best = [x, y]; }
+    }
+    return best;
+  }
+
   var game = {
     id: ID,
     name: NAME,
@@ -185,6 +265,22 @@
 
       // 新人/重连：棋盘在 state 里，自己就同步了（这里是留个口子做兜底日志）
       if (action.t === '_joined' || action.t === 'hi') return;
+    },
+
+    /* ===== 机器人对手：纯函数，只读 g，不改任何状态 ===== */
+    botTurn: function (host) {
+      var g = host.g();
+      if (!g || g.phase !== 'play') return null;
+      var me = null, i;
+      for (i = 0; i < 2; i++) if (PN.bots && PN.bots.isBotId(g.players[i])) { me = g.players[i]; break; }
+      if (!me) return null;
+      // 对方请求悔棋：机器人一律同意（这是陪人玩，不是较劲）
+      if (g.pending && g.pending.by !== me) return { pid: me, action: { t: 'undo-answer', ok: true } };
+      if (g.pending) return null;                       // 自己提的悔棋，等对方答
+      if (colorOf(g, me) !== g.turn) return null;       // 没轮到机器人
+      var mv = bestMove(g, colorOf(g, me));
+      if (!mv) return null;
+      return { pid: me, action: { t: 'place', x: mv[0], y: mv[1] } };
     },
 
     /** 换主：状态全在 g 里，重挂即可 —— 只有 pending（悔棋请求）要清掉，免得卡住 */
