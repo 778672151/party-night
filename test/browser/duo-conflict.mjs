@@ -1,6 +1,6 @@
 // 双人专项：操作冲突 + 显示错位（只读检查，不改业务代码）
 //   node test/browser/duo-conflict.mjs
-import { connect, createRoom, joinRoom, waitPlayers, sleep, assert } from './lib.mjs';
+import { connect, createRoom, joinRoom, waitPlayers, sleep, settle, assert } from './lib.mjs';
 
 const cdp = await connect();
 const A = await createRoom(cdp, '小桃');
@@ -58,21 +58,48 @@ assert(mA === 'gomoku', '非房主的 start 被拒绝（最终仍是房主选的
 
 /* ========== 4. 操作冲突：同一回合双方同时落子 ========== */
 console.log('\n--- 4. 操作冲突：同一回合双方同时落子 ---');
-const g0 = JSON.parse(await A.eval('JSON.stringify({players:PN.app.state.g.players,turn:PN.app.state.g.turn,moves:PN.app.state.g.moves.length})'));
+const g0 = JSON.parse(await A.eval('JSON.stringify({players:PN.app.state.g.players,turn:PN.app.state.g.turn})'));
 const meA = await A.eval('PN.app.room.me.id');
 const blackIsA = g0.players[0] === meA;
-// 只有该黑方走子，两人同时抢着发
 const pBlack = blackIsA ? A : B, pWhite = blackIsA ? B : A;
+const dump = (page) => page.eval('JSON.stringify({turn:PN.app.state.g.turn,moves:PN.app.state.g.moves.map(m=>({c:m.color,x:m.x,y:m.y})),board:PN.app.state.g.board.filter(v=>v!==0).length})');
+
+// ---- 4a. 确定性断言：不是你的回合，**单独**发也必须被拒绝 ---------------------------
+// （旧写法把这条混在"双方同时抢发"里，于是结论取决于谁的网络包先到 —— 见 4b 说明。）
+await pWhite.eval('PN.app.send({t:"place", x:9, y:9})');
+const gRej = JSON.parse(await settle(() => dump(A), (v) => JSON.parse(v).moves.length === 0));
+await sleep(800);   // 再多观察一会儿，确认它"一直没有"生效，而不是"暂时还没到"
+assert(gRej.moves.length === 0, '不是你的回合时单独落子被拒绝（实际 ' + gRej.moves.length + ' 手）');
+assert(gRej.board === 0, '被拒的落子没有留在棋盘上（实际 ' + gRej.board + ' 颗）');
+assert(gRej.turn === g0.turn, '被拒后回合没有推进');
+
+// ---- 4b. 双方同时抢发：允许两种收敛结果，但都必须是一段**合法**着法序列 -------------
+// 关键：QoS0 + 公共 broker 下，黑方的包可能比白方先到 —— 那样黑先落子、轮次转白，
+// 白方这一手就**理应**被接受（2 手）。旧断言写死 moves===1，只在"白方包先到被拒"时成立，
+// 于是一条正确的规则被当成了缺陷（实测 8 次里 4 次红）。这里改为断言真正的不变量。
 await Promise.all([
   pBlack.eval('PN.app.send({t:"place", x:1, y:1})'),
   pWhite.eval('PN.app.send({t:"place", x:9, y:9})'),
 ]);
-await sleep(1500);
-const g1 = JSON.parse(await A.eval('JSON.stringify({turn:PN.app.state.g.turn,moves:PN.app.state.g.moves.length,board:PN.app.state.g.board.filter(v=>v!==0).length})'));
-const g1b = JSON.parse(await B.eval('JSON.stringify({turn:PN.app.state.g.turn,moves:PN.app.state.g.moves.length,board:PN.app.state.g.board.filter(v=>v!==0).length})'));
+// 等抢发真正收敛（QoS0 下最多要等一个 ACT_RETRY_MS 重传周期），不要睡死 1500ms 就判。
+// 关键：必须等**两端读数一致**才算收敛 —— 只等房主就问对端，仍会读到"对端还没收到"而假红
+// （§7.3：跨端断言必须等对端收敛；之前只 settle 了 A 就立刻读 B，8 次里红了 5 次）。
+const bothAgree = async () => {
+  const [a, b] = await Promise.all([dump(A), dump(B)]);
+  return JSON.stringify([a, b]);
+};
+await settle(bothAgree, (v) => {
+  const [a, b] = JSON.parse(v);
+  return JSON.parse(a).moves.length >= 1 && a === b;
+});
+const g1 = JSON.parse(await dump(A));
+const g1b = JSON.parse(await dump(B));
 console.log('  抢子后：房主 ' + JSON.stringify(g1) + ' / 加入者 ' + JSON.stringify(g1b));
-assert(g1.moves === 1, '只有该走的一方落子生效（实际 ' + g1.moves + ' 手）');
-assert(g1.board === 1, '棋盘上只有 1 颗子（没被抢成 2 颗）');
+assert(g1.moves.length >= 1 && g1.moves.length <= 2, '抢发后生效 1~2 手（实际 ' + g1.moves.length + ' 手）');
+assert(g1.moves[0] && g1.moves[0].c === 1, '先落子的必是黑方（gomoku 黑恒为 1）');
+assert(g1.moves.every((m, i) => i === 0 || m.c !== g1.moves[i - 1].c), '同一方不可能连走两手（黑白交替）');
+assert(new Set(g1.moves.map(m => m.x + ',' + m.y)).size === g1.moves.length, '没有同一格被落两次');
+assert(g1.board === g1.moves.length, '棋盘上的子数与着法数一致（实际 ' + g1.board + ' 颗）');
 assert(JSON.stringify(g1) === JSON.stringify(g1b), '两端棋盘/回合完全一致');
 
 /* ========== 5. 操作冲突：开局瞬间两人同时抢换游戏 ========== */

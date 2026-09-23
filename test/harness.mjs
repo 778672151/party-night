@@ -68,7 +68,13 @@ export async function makeTable(specs) {
   const players = [];
   for (let i = 0; i < specs.length; i++) {
     players.push(await mk(specs[i][0], specs[i][1], specs[i][2]));
-    if (i === 0) await sleepUntil(() => players[0].isHost, 15000, '房主当选');
+    // 空房自我选举：冷连接 ~1.5s，之后应当很快当选（实测 ~4.2s）。
+    // 曾经的 15000 之所以必然超时，是因为 room.js 有一条缺陷：_election 的「持续判死」门槛
+    // （4e1fe48 加入，防心跳抖动误抢主）被无条件套用到了**全新空房**上 —— 屋里压根没有房主可保护，
+    // 却要白等一个 OFFLINE_MS(13s)，实测开房 4.0s → 20.2s，线上同样如此（CLICK→当选 20213ms）。
+    // 该缺陷已修（_election 现在用 knowsHost 判定），本预算 30s 只是给弱网留余量。
+    // 放宽的是**驱动超时预算**，不是产品断言本身。
+    if (i === 0) await sleepUntil(() => players[0].isHost, 30000, '房主当选');
   }
   const table = {
     code, players, wait, sleepUntil,

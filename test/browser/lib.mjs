@@ -254,6 +254,35 @@ export async function waitPlayers(host, n, timeout = 40000) {
   await sleep(400);
 }
 
+/**
+ * 等一个跨端断言真正收敛，而不是「睡固定时长再读」。
+ *
+ * 为什么必须有它：动作走 QoS0，房主未回执就会按 ACT_RETRY_MS(1500ms) 重传。
+ * 以前测试习惯 `await sleep(1500)` 再读 —— 恰好卡在一个重传周期上，于是同样一段正确的代码，
+ * 有时读到已生效、有时读到还没生效（实测 duo-conflict §4：8 次里 4 次读到 0 手/2 手而假红）。
+ * 判定条件应该由调用方给出「什么算稳定」，本函数只负责轮询到稳定为止。
+ *
+ * @param read () => 要观察的值（可以是 async，内部会 await）
+ * @param ok   (value) => boolean —— 这个读数算不算「已经是想要的结果」
+ * @param opts { timeout = 12000, interval = 250 }
+ * @returns 稳定（且满足 ok）后的读数；超时则返回最后一次读数，由调用方断言给结论
+ */
+export async function settle(read, ok, opts = {}) {
+  const { timeout = 12000, interval = 250 } = opts;
+  const t0 = Date.now();
+  let prev = await read();
+  while (Date.now() - t0 < timeout) {
+    await sleep(interval);
+    const cur = await read();
+    // 连续两次读数完全相同 ⇒ 重传窗口已经走完，这一刻的值才是最终值
+    const settled = JSON.stringify(cur) === JSON.stringify(prev);
+    if (settled && ok(cur)) return cur;
+    prev = cur;
+  }
+  // 超时不算失败：交回最后一次读数，让调用方的断言给出结论（失败信息才有上下文）
+  return await read();
+}
+
 /** 反复点直到状态满足条件：大厅随时可能被一条状态消息重建，单次点击可能落空 */
 export async function clickUntil(page, sel, cond, label, tries = 4, perTry = 6000) {
   for (let i = 0; i < tries; i++) {

@@ -285,10 +285,17 @@
     if (hostAlive && !metaDead) return;
     // 心跳丢一两拍不等于房主死了（公共 broker QoS0 会丢包）。要求持续一个离线周期都判死才抢主，
     // 否则一次抖动就会把对局抢过来并用 fresh() 重置成大厅（用户看到的就是“突然退回房间”）。
-    if (!hostAlive) {
+    //
+    // 但「持续判死」只对**已知房主**有意义 —— 它防的是“房主还在，只是心跳抖了一下”。
+    // 全新空房（hostId 与 meta 都没有、屋里只有自己）根本没有房主可保护，套用这个门槛
+    // 只会让开房的人白白多等一个离线周期：实测开房 4.0s → 20.2s，而这段时间里谁都当不上房主、
+    // 一局都开不了（线上 v1.14.23 实测 CLICK→当选 = 20213ms）。
+    // 判据用「是否知道过房主」而非「hostAlive」，d16 的防抖语义因此原样保留。
+    var knowsHost = !!(this.hostId || this.meta);
+    if (!hostAlive && knowsHost) {
       if (!this._claimSeen) { this._claimSeen = now(); return; }
       if (now() - this._claimSeen < OFFLINE_MS) return;
-    } else {
+    } else if (hostAlive) {
       this._claimSeen = 0;
     }
     if (alive[0] !== this.me.id) return;
