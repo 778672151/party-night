@@ -123,7 +123,7 @@ node test/browser/hop-stress.mjs   # 连点20/满蓄力/双方同按/打到终�
 node test/browser/chaos.mjs        # 12 个场景
 node test/browser/duo-human.mjs    # 两身份+真人专项；基线 16/16
 node test/browser/stress-all.mjs   # 10 款游戏的破坏性输入；基线 141 通过 / 0 失败
-node test/browser/duo-conflict.mjs # 操作冲突+显示错位；基线 8/8 全绿（修掉竞态假红后）
+node test/browser/duo-conflict.mjs # 操作冲突+显示错位；基线 6 次全绿（修掉瞬时重排假红后）
 ```
 
 ### 5.3 测试驱动规范（`test/browser/lib.mjs`）
@@ -282,8 +282,24 @@ bash tools/pn-browser-libs.sh     # 幂等：已存在则直接跳过
    · `screens-mine.js`：唯一的 `setTimeout` 是**每个格子按钮自己的局部变量**（长按插旗），
      且 pointerup / pointercancel / pointerleave 三处都会 clearTimeout —— 无泄漏。
    结论：8 个已实现 `stop()` 的屏幕覆盖了所有真正持定时器/动画循环的屏幕，无需再加。
-4. **可选（需用户明确批准，属新功能）**：给 7 款没有单机版的游戏（codraw/drawgame/tacit/gomoku/domino/go + 五子棋）加 AI 对手。
-5. **不要做**：不要重构架构、不要引入依赖、不要改"复用原作"的策略、不要动 `mini/` 里的第三方文件。
+4. ~~查两个偶发假红的根因~~ **已查清并修复**（2026-09-23，只改测试，未动业务代码）：
+   · **`realinput.mjs` 偶发假红（实测 6 次里红 4 次）** —— 根因是「开完局 sleep 固定秒数就动手」：
+     开局的 state 走 QoS0，晚到是常态。于是 ① state 还没到就读 `state.g.moves` → 抛
+     `Cannot read properties of null`；② 要操作的那一端界面还没武装（十字键 `disabled`、
+     画家端词卡还没渲染、骨牌 iframe 还没推进完）就点下去 → 断言「0→0」假红。
+     修法：新增 `waitGameReady(page, mode)` 等**本端**真的进入这一局；读结果一律用 `settle()` 等收敛；
+     要操作哪一端就等**那一端自己**的控件就绪（§7.2）。实测：**改前 6 次红 4 次 → 改后 8 次全绿**。
+   · **`duo-conflict.mjs` §2「长昵称」偶发假红（实测 3 次红 2 次）** —— 根因与昵称**无关**：
+     改视口后重排需要时间，而**越界是瞬时的**（逐 200ms 采样 6 秒：越界点 0/30、2/30、3/30，
+     全部落在改视口后的 600~1000ms）。命中的是大厅游戏卡片 `.gcard`（`l=-2/r=392`）。
+     已单独验证这**不是产品缺陷**：视口稳定后 `docW=clientW=vw=390`、`hScroll=false`、卡片 `l=0 r=390`，
+     没有任何真实溢出。修法：等两端布局**稳定**后仍越界才算错位。实测：**改前 3 次红 2 次 → 改后 6 次全绿**。
+   · **`hop-real.mjs` 的「偶发假红」其实是我误报** —— 它从来没有失败过（每次 `EXIT=0`）：
+     文件里那句 `✗没反应` 只是**每一跳的打印**，真正的判定是文件末尾的三条 `assert`（`eff > 0` 等）。
+     之前用 `grep '✗'` 统计失败，把这个中性诊断行也数进去了。已把该记号改成 `(本跳无状态变化)`
+     并加了一行汇总，避免后人再误读。**特此更正我上一轮「hop-real 有既有偶发假红」的说法。**
+5. **可选（需用户明确批准，属新功能）**：给 7 款没有单机版的游戏（codraw/drawgame/tacit/gomoku/domino/go + 五子棋）加 AI 对手。
+6. **不要做**：不要重构架构、不要引入依赖、不要改"复用原作"的策略、不要动 `mini/` 里的第三方文件。
 
 ---
 

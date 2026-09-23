@@ -1,7 +1,7 @@
 // 其余 10 款游戏的「真人输入」实测：全走真鼠标/真键盘，不用 PN.app.send
 //   node test/browser/realinput.mjs [game]
 // 判定：真人操作必须让权威状态前进；否则是真 bug。
-import { connect, createRoom, joinRoom, waitPlayers, sleep, APP } from './lib.mjs';
+import { connect, createRoom, joinRoom, waitPlayers, waitGameReady, settle, sleep, APP } from './lib.mjs';
 
 const only = process.argv[2] || null;
 let pass = 0, fail = 0;
@@ -139,7 +139,9 @@ async function testSoko() {
   console.log('=== 推箱子（真键盘 + 真点方向键）===');
   const { A, B, meA, P } = await mk();
   await A.eval('PN.app.send({t:"start", mode:"soko"})');
-  await sleep(4000);
+  // 不要 sleep 固定秒数就动手：state 走 QoS0，晚到是常态（§7.3）。
+  // 等「本端界面真的进了这一局」再点，否则会点到还没 arm 的按钮 → 断言 0→0 假红。
+  await waitGameReady(A, 'soko');
   const g0 = await G(A, 'JSON.stringify({phase:PN.app.state.g.phase,players:PN.app.state.g.players,turnIdx:PN.app.state.g.turnIdx,log:(PN.app.state.g.log||[]).length,iframe:!!document.querySelector("iframe")})');
   console.log('  iframe=' + g0.iframe + ' 日志=' + g0.log);
   chk(g0.iframe, '原作 iframe 已挂载');
@@ -148,13 +150,28 @@ async function testSoko() {
   console.log('  十字键数量=' + hasPad);
   const before = (await G(A, 'JSON.stringify({log:(PN.app.state.g.log||[]).length})')).log;
   if (hasPad > 0) {
+    // 选「该谁操作」的正确姿势（§7.2 的完整版）：
+    //   ① 谁是当前该走的人 —— 由**房主**的 turnIdx 决定（房主是权威，客户端只渲染）；
+    //   ② 出手之前，等**那一端自己界面**上的十字键真的可用（!disabled）再点。
+    // 只做 ①：客户端 state 可能还没到，点了它自己也 disabled，等于没点 → 日志 0→0 假红。
+    // 只做 ②（我之前那版「谁的灯亮就点谁」）：换人瞬间**另一端**的滞后状态可能还亮着，
+    //   就会被选错端，房主照样拒绝 → 同样 0→0。所以必须 ①+② 一起。
+    const enabledOn = (p) => p.eval('(function(){var bs=document.querySelectorAll("[data-dir]");for(var i=0;i<bs.length;i++){if(!bs[i].disabled)return true;}return false;})()');
     for (const d of ['up', 'left', 'right', 'down']) {
-      const cur = await G(A, 'JSON.stringify({turnIdx:PN.app.state.g.turnIdx,players:PN.app.state.g.players,log:(PN.app.state.g.log||[]).length})');
+      const cur = await G(A, 'JSON.stringify({turnIdx:PN.app.state.g.turnIdx,players:PN.app.state.g.players})');
       const p = P[cur.players[cur.turnIdx]];
+      // 等它自己界面武装好（最多 12s）；若它一直不亮，就跳过这一下，别拿空 DOM 硬点
+      const armed = await settle(() => enabledOn(p), (v) => v === true, { timeout: 12000 });
+      if (!armed) { console.log('  （' + d + '：该走的一端界面未武装，跳过）'); continue; }
       await tap(p, '[data-dir="' + d + '"]');
       await sleep(900);
     }
-    const after = (await G(A, 'JSON.stringify({log:(PN.app.state.g.log||[]).length})')).log;
+    // 点完之后等日志真的前进（QoS0 回包晚到，读一次就判会假红）
+    const afterS = await settle(
+      () => A.eval('JSON.stringify((PN.app.state.g.log||[]).length)'),
+      (v) => JSON.parse(v) > before,
+      { timeout: 12000 });
+    const after = JSON.parse(afterS);
     chk(after > before, '真点十字键真的推了一步（日志 ' + before + '→' + after + '）');
   } else {
     console.log('  （无十字键，改用键盘）');
@@ -250,7 +267,7 @@ async function testCube() {
   console.log('=== 魔方接力（真点转动按钮）===');
   const { A, B, meA, P } = await mk();
   await A.eval('PN.app.send({t:"start", mode:"cube"})');
-  await sleep(2600);
+  await waitGameReady(A, 'cube');
   const g0 = await G(A, 'JSON.stringify({phase:PN.app.state.g.phase,players:PN.app.state.g.players,turnIdx:PN.app.state.g.turnIdx,log:(PN.app.state.g.log||[]).length,btns:document.querySelectorAll("[data-face],[data-move],.cube-btn").length})');
   console.log('  转动按钮=' + g0.btns + ' phase=' + g0.phase);
   chk(g0.btns >= 6, '有可点的转动按钮（' + g0.btns + '）');
@@ -277,12 +294,14 @@ async function testGo() {
   console.log('=== 围棋（真鼠标点棋盘）===');
   const { A, B, meA, P } = await mk();
   await A.eval('PN.app.send({t:"start", mode:"go"})');
-  await sleep(2600);
+  await waitGameReady(A, 'go');
   const g0 = await G(A, 'JSON.stringify({phase:PN.app.state.g.phase,players:PN.app.state.g.players,turnIdx:PN.app.state.g.turnIdx,size:PN.app.state.g.size,log:(PN.app.state.g.log||[]).length})');
   console.log('  phase=' + g0.phase + ' 日志=' + g0.log);
   // iframe 里的棋盘
   const hasIframe = await A.eval('!!document.querySelector("iframe")');
   console.log('  iframe=' + hasIframe);
+  // .sk-stage 可能还没挂上（状态/iframe 晚到）——等它出现，别让 scrollIntoView 在 null 上抛异常
+  await A.waitFor('!!document.querySelector(".sk-stage")', '围棋舞台已挂载', 20000);
   await A.eval('document.querySelector(".sk-stage").scrollIntoView({block:"center"})'); await sleep(400);
   await A.eval('(()=>{var d=document.querySelector("iframe").contentDocument;var cv=d.querySelector("canvas");if(cv)cv.scrollIntoView({block:"center"});return true;})()'); await sleep(400);
   const geo = JSON.parse(await A.eval('JSON.stringify((function(){var f=document.querySelector("iframe"),d=f.contentDocument,cv=d.querySelector("canvas");var fr=f.getBoundingClientRect(),cr=cv.getBoundingClientRect();return {x:Math.round(fr.x+cr.left),y:Math.round(fr.y+cr.top),w:Math.round(cr.width),ih:innerHeight};})())'));
@@ -312,7 +331,7 @@ async function testDomino() {
   console.log('=== 骨牌顶牛（真点按钮）===');
   const { A, B, meA, P } = await mk();
   await A.eval('PN.app.send({t:"start", mode:"domino"})');
-  await sleep(3000);
+  await waitGameReady(A, 'domino');
   const g0 = await G(A, 'JSON.stringify({phase:PN.app.state.g.phase,players:PN.app.state.g.players,turnIdx:PN.app.state.g.turnIdx,log:(PN.app.state.g.log||[]).length,buttons:document.querySelectorAll("button").length})');
   console.log('  phase=' + g0.phase + ' 按钮=' + g0.buttons + ' iframe=' + await A.eval('!!document.querySelector("iframe")'));
   // 真点「重开本关」类按钮（一定存在且无害）
@@ -323,16 +342,20 @@ async function testDomino() {
   const clickReady = () => A.eval('(function(){var d=document.querySelector("iframe").contentDocument; var es=[].slice.call(d.querySelectorAll("button,[onclick]")); for(var i=0;i<es.length;i++){var oc=es[i].getAttribute("onclick")||""; if(oc.indexOf("localPlayerReady")>=0){es[i].click(); return true;}} return false;})()');
   const clickAdvance = () => A.eval('(function(){var d=document.querySelector("iframe").contentDocument; var es=[].slice.call(d.querySelectorAll("button")); var kws=["开始对局","摇色子下一局"]; for(var k=0;k<kws.length;k++){for(var i=0;i<es.length;i++){var t=(es[i].textContent||"").trim(); if(t.indexOf(kws[k])>=0 && !es[i].disabled && es[i].offsetParent!==null){es[i].click(); return t;}}} return "none";})()');
   const logOf = () => A.eval('(PN.app.state.g.log||[]).length');
+  // 原作开局推进是**异步**的（桥接 tick → showDiceRoll → rollDice → startGameWithDealer），
+  // 而且要真人反复点「我是玩家，开始」。写死循环次数（原为 8 次 × 1.4s）在 broker 慢时不够用，
+  // 于是偶发 0→0；这里改成**按时间预算轮询**，直到日志真的推进为止。
   const b0 = await logOf();
   let advancedBy = 'none';
-  for (let k = 0; k < 8; k++) {
-    // 先把画面上的推进按钮点掉（真人看到就会点），再点设备确认
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
     const a = await clickAdvance();
     if (a !== 'none') advancedBy = a;
     await clickReady();
-    await sleep(1400);
+    await sleep(1000);
     if (await logOf() > b0) break;
   }
+  // 等日志稳定（推进后可能还有后续步骤）
   await sleep(1000);
   const b1 = await logOf();
   chk(b1 > b0, '真点原作按钮推进了骨牌对局（日志 ' + b0 + '→' + b1 + '，最后点的是「' + advancedBy + '」）');
@@ -348,17 +371,26 @@ async function testDrawgame() {
   console.log('=== 你画我猜（真点选词 + 真画 + 真打字）===');
   const { A, B, meA, P } = await mk();
   await A.eval('PN.app.send({t:"start", mode:"drawgame"})');
-  await sleep(2600);
+  await waitGameReady(A, 'drawgame');
   const g0 = await G(A, 'JSON.stringify({sp:PN.app.state.phase,cur:(PN.app.state.g.cur||{}).phase,painter:(PN.app.state.g.cur||{}).painter,words:document.querySelectorAll("[data-word]").length,input:!!document.querySelector(".dg-input input")})');
   console.log('  本轮=' + g0.cur + ' 词卡=' + g0.words + ' 输入框=' + g0.input);
   // 注意：词卡只在**画家**那一端（猜词者看不到词），所以要在画家端查——
   // 早先在 A 端查词卡得到 0 张，是测试看错了端，不是产品问题。
   const painterPage = g0.painter === meA ? A : B;
+  // ⚠️ 关键：上面只等了 **A** 进入 drawgame，可词卡渲染在**画家自己那一端**。
+  // 若画家是 B，B 的 state 可能还没到、词卡还是 0 张 —— 直接读就会假红（实测「画家能看到词卡（0 张）」偶发）。
+  // 所以必须等「我马上要操作的那一端」自己的界面就绪（§7.2/§7.3 的同一原则：谁挨操作等谁）。
+  await painterPage.waitFor('document.querySelectorAll("[data-word]").length >= 2', '画家端出现词卡', 25000);
   const painterWords = await painterPage.eval('document.querySelectorAll("[data-word]").length');
   const pick = await painterPage.box('[data-word]');
   chk(painterWords >= 2 && !!pick, '画家能看到词卡（' + painterWords + ' 张）');
-  if (pick) { await painterPage.mouse('mouseMoved', pick.x, pick.y, { button: 'none' }); await painterPage.mouse('mousePressed', pick.x, pick.y, { buttons: 1, button: 'left', clickCount: 1 }); await painterPage.mouse('mouseReleased', pick.x, pick.y, { buttons: 0, button: 'left', clickCount: 1 }); await sleep(1500); }
-  const g1 = await G(A, 'JSON.stringify({cur:(PN.app.state.g.cur||{}).phase})');
+  if (pick) { await painterPage.mouse('mouseMoved', pick.x, pick.y, { button: 'none' }); await painterPage.mouse('mousePressed', pick.x, pick.y, { buttons: 1, button: 'left', clickCount: 1 }); await painterPage.mouse('mouseReleased', pick.x, pick.y, { buttons: 0, button: 'left', clickCount: 1 }); }
+  // 选词结果也要等收敛，不要睡固定时长后读一次
+  const g1s = await settle(
+    () => A.eval('JSON.stringify({cur:(PN.app.state.g.cur||{}).phase})'),
+    (v) => JSON.parse(v).cur === 'draw',
+    { timeout: 12000 });
+  const g1 = JSON.parse(g1s);
   chk(g1.cur === 'draw', '真点词卡进入作画阶段（' + g1.cur + '）');
   // 画家真拖拽画一笔
   let drew = false;
@@ -366,6 +398,8 @@ async function testDrawgame() {
   await sleep(1000);
   // 猜词者真打字 + 回车
   const guesser = g0.painter === meA ? B : A;
+  // 同理：输入框长在**猜词者自己那一端**，等它出现再点
+  await guesser.waitFor('!!document.querySelector(".dg-input input")', '猜词端出现输入框', 25000);
   const inp = await guesser.box('.dg-input input');
   chk(!!inp, '猜词者有输入框');
   if (inp) {

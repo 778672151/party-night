@@ -40,9 +40,24 @@ const nmA = await A.eval('(()=>{const e=document.querySelector(".player .nm");if
 const nmB = await B.eval('(()=>{const e=document.querySelector(".player .nm");if(!e)return null;const r=e.getBoundingClientRect();return JSON.stringify({txt:e.textContent,w:Math.round(r.width),scrollW:e.scrollWidth})})()');
 console.log('  房主端名片：' + nmA);
 console.log('  加入者端名片：' + nmB);
-const lo2 = await layout(A), lo2b = await layout(B);
-console.log('  长昵称后 房主越界=' + JSON.stringify(lo2.bad) + ' 加入者越界=' + JSON.stringify(lo2b.bad));
-assert(lo2.bad.length === 0 && lo2b.bad.length === 0, '长昵称不导致两端越界错位');
+// ⚠️ 不能 sleep 固定时长就读一次：改视口后重排要一会儿才稳定，而且**越界是瞬时的**。
+// 实测（逐 200ms 采样 6 秒）：同一份正确代码，越界采样点 0/30、2/30、3/30 —— 全都落在
+// 改视口后的 600~1000ms 那一小段，命中的是**大厅游戏卡片 .gcard**（l=-2/r=392，390 宽视口
+// 出现/收起滚动条时的一点宽度差），跟"长昵称"根本无关。读一次就判 → 假红（实测 3 次里红 2 次）。
+// 正确判据：等两端布局**稳定**后仍然越界，才算真的错位。
+const stableBad = async () => {
+  const read = async () => {
+    const [a, b] = await Promise.all([layout(A), layout(B)]);
+    return JSON.stringify([a.bad, b.bad]);
+  };
+  return JSON.parse(await settle(read, (v) => {
+    const [a, b] = JSON.parse(v);
+    return a.length === 0 && b.length === 0;   // 连续两次都无越界才算稳
+  }, { timeout: 10000 }));
+};
+const [lo2bad, lo2bbad] = await stableBad();
+console.log('  长昵称后（等布局稳定）房主越界=' + JSON.stringify(lo2bad) + ' 加入者越界=' + JSON.stringify(lo2bbad));
+assert(lo2bad.length === 0 && lo2bbad.length === 0, '长昵称不导致两端越界错位');
 
 /* ========== 3. 操作冲突：两人同时点开始（不同游戏） ========== */
 console.log('\n--- 3. 操作冲突：房主与加入者同时发 start（不同游戏） ---');

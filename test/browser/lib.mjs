@@ -283,6 +283,23 @@ export async function settle(read, ok, opts = {}) {
   return await read();
 }
 
+/**
+ * 等「本端已经真的在玩这一局」再动手 —— 取代「开完局 sleep 固定秒数就操作」。
+ *
+ * 为什么必须有它：开局的 state 走 QoS0 广播，晚到是常态（实测进房/重连 400ms~6s+），
+ * 而 old 写法是 `start(); await sleep(2600); 然后直接读 state.g.moves` ——
+ * state 还没到就读到 null（实测 realinput 偶发 `Cannot read properties of null (reading 'moves')`），
+ * 或者按钮还没 arm 就点下去（点了没反应 → 断言 0→0 假红）。
+ * 判定条件是「本端自己界面上的前置条件成立」，不是猜一个时长（§7.3 的同一原则）。
+ */
+export async function waitGameReady(page, mode, timeout = 25000) {
+  await page.waitFor(
+    'PN.app && PN.app.state && PN.app.state.mode === ' + JSON.stringify(mode) +
+    ' && !!PN.app.state.g && (PN.app.screenName === ' + JSON.stringify(mode) + ')',
+    '本端进入 ' + mode, timeout);
+  await sleep(300);
+}
+
 /** 反复点直到状态满足条件：大厅随时可能被一条状态消息重建，单次点击可能落空 */
 export async function clickUntil(page, sel, cond, label, tries = 4, perTry = 6000) {
   for (let i = 0; i < tries; i++) {

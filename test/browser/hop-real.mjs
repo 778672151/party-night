@@ -74,7 +74,10 @@ for (let step = 0; step < 60; step++) {
   }
   const moved = after && (after.idx !== before.idx || after.score !== before.score || after.lives !== before.lives || after.round !== before.round || after.ended);
   if (moved) eff++;
-  console.log('  第' + (jumps) + '跳 ' + label + (useSpace ? ' [空格]' : ' [鼠标]') + ' 按住' + hold + 'ms → idx ' + before.idx + '→' + after.idx + ' 分 ' + before.score + '→' + after.score + ' 命 ' + before.lives + '→' + after.lives + ' 回合 ' + before.round + '→' + after.round + '  ' + (moved ? '✓生效' : '✗没反应'));
+  // ⚠️ 这里打印的记号**不是断言**（本套件的判定是文件末尾的 eff > 0 等三条 assert）。
+  // 以前把没变化的这一跳打成 '✗没反应'，结果 grep '✗' 会把它当成失败 —— 实测被误读过一次。
+  // 换成明确的中性记号，避免和真正的断言失败混淆。
+  console.log('  第' + (jumps) + '跳 ' + label + (useSpace ? ' [空格]' : ' [鼠标]') + ' 按住' + hold + 'ms → idx ' + before.idx + '→' + after.idx + ' 分 ' + before.score + '→' + after.score + ' 命 ' + before.lives + '→' + after.lives + ' 回合 ' + before.round + '→' + after.round + '  ' + (moved ? '✓生效' : '(本跳无状态变化)'));
 }
 
 const fin = await readG(A);
@@ -88,6 +91,7 @@ for (let w = 0; w < 50; w++) {
   await sleep(200);
 }
 console.log('对端: phase=' + finB.phase + ' round=' + finB.round + ' totals=' + JSON.stringify(finB.totals));
+console.log('（汇总：' + eff + '/' + jumps + ' 跳有状态变化；下面是判定）');
 assert(jumps > 0, '真人输入能触发跳跃（共 ' + jumps + ' 次）');
 assert(eff > 0, '真人输入真的生效（' + eff + '/' + jumps + ' 次有状态变化）');
 assert(fin.phase === finB.phase, '两端 phase 一致');
