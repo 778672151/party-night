@@ -122,6 +122,8 @@ node test/browser/hop-real2.mjs    # 轻点/提前收工/终局/再来一局/中
 node test/browser/hop-stress.mjs   # 连点20/满蓄力/双方同按/打到终局；基线 4 次全过
 node test/browser/chaos.mjs        # 12 个场景
 node test/browser/duo-human.mjs    # 两身份+真人专项；基线 16/16
+node test/browser/stress-all.mjs   # 10 款游戏的破坏性输入；基线 141 通过 / 0 失败
+node test/browser/duo-conflict.mjs # 操作冲突+显示错位；基线 8/8 全绿（修掉竞态假红后）
 ```
 
 ### 5.3 测试驱动规范（`test/browser/lib.mjs`）
@@ -258,9 +260,28 @@ bash tools/pn-browser-libs.sh     # 幂等：已存在则直接跳过
 
 1. ~~查 `integration-drawgame.mjs` 为何在 broker 正常时仍"房主当选"超时~~ **已查明并修复并发布**（v1.14.24；含一个线上真回归：开房 20.2s → 4.5s，线上已核对）。
    ~~duo-conflict 的既存红项~~ 也已查清并修复（是竞态测试，不是产品缺陷；现 8/8 全绿）。
-2. **把真机输入纳入常规回归**：`realinput.mjs` 已覆盖 11 款游戏的"正常输入"；
-   建议补**破坏性输入**（连点/长按/满蓄力/双方同时操作/中途刷新）到每一款，参考 `hop-stress.mjs`。
-3. **核实剩余屏幕的 `stop()`**：`screens-common` 用了 `setInterval`；逐个确认其余屏幕是否需要收摊（见 §4.2）。
+2. ~~把破坏性真机输入纳入常规回归~~ **已完成**（2026-09-23，未随 v1.14.24 发布，在下一次发布里）：
+   新增 `test/browser/stress-all.mjs`，对**每一款**联机游戏跑四条破坏性输入 ——
+     ① 连点 20 次（真人手抖） ② 长按 2 秒（超过任何蓄力上限） ③ 双方同按（抢） ④ 一端中途刷新（最高频真实操作）
+   每条之后断言与游戏无关的不变量：**不崩 / 两端无 JS 报错 / 两端收敛一致（等收敛再读）/ 破坏完仍能回大厅**。
+   ```bash
+   node test/browser/stress-all.mjs            # 全部 10 款，基线 141 通过 / 0 失败
+   node test/browser/stress-all.mjs gomoku     # 单款
+   node test/browser/hop-stress.mjs            # 第 11 款（跳一跳）已有专属破坏性套件，4 个场景全绿
+   ```
+   覆盖：gomoku · memory · mine · soko · tacit · codraw · cube · go · domino · drawgame（+ hop）。
+   写这套件时踩到并已修的**测试自身**的坑（都不是产品缺陷，记下来省得后人重踩）：
+     · `cube` 的控件是 `[data-face]`；`go` 是 `[data-go=pass|resign|reset]`；`domino` 可见控件只有 `[data-reset=1]`，牌局推进在 iframe 里点 `localPlayerReady`。
+     · `drawgame` 的画布**没有 class/id**，且选词/作画控件**只在画手那一端** —— 拿 A 端硬点必然失败。
+       套件为此加了 `actor()`：像真人一样「谁手里有控件谁操作」。
+     · 顶栏「回大厅」按钮**没有稳定选择器**（ui.js 用 `this.el` 建，只有文案），测试按文案找。
+3. ~~核实剩余屏幕的 `stop()`~~ **已核实，结论：都不需要加**（见 §4.2 的判据 = 「模块级 setInterval」）：
+   · `screens-common.js` 确实有 `setInterval`，但它是**全局单例**（建一次、走到底），回调只改
+     `[data-deadline]` 元素的 textContent/color，**从不读 `state.g`** —— 切游戏后既不会读到错字段，也不会叠加定时器。
+   · `screens-memory.js` / `screens-tacit.js`：**完全没有定时器**。
+   · `screens-mine.js`：唯一的 `setTimeout` 是**每个格子按钮自己的局部变量**（长按插旗），
+     且 pointerup / pointercancel / pointerleave 三处都会 clearTimeout —— 无泄漏。
+   结论：8 个已实现 `stop()` 的屏幕覆盖了所有真正持定时器/动画循环的屏幕，无需再加。
 4. **可选（需用户明确批准，属新功能）**：给 7 款没有单机版的游戏（codraw/drawgame/tacit/gomoku/domino/go + 五子棋）加 AI 对手。
 5. **不要做**：不要重构架构、不要引入依赖、不要改"复用原作"的策略、不要动 `mini/` 里的第三方文件。
 
