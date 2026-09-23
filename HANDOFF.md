@@ -26,10 +26,10 @@
 - 线上：https://778672151.github.io/party-night/
 - 仓库：https://github.com/778672151/party-night
 - 本地：`/home/zuoye/派对游戏/`（`pwd` 确认；**不要**用 deepseek-harness 的 checkout 路径）
-- **当前 HEAD：`0669aeb`**（本地 = 远端 = tag `v1.14.23`）。
-  代码工作树在交接时是干净的；**本文件（HANDOFF.md）自身的这次更新是唯一未提交的改动**（`git status --short` 只应出现 `M HANDOFF.md`）。
-- **VERSION：`1.14.23`**；`index.html` 与 `dist/party-night.html` md5 都是 `6936155aca0e4872ed7cd7b18eae5d80`
-- **线上已核对**：抓 https://778672151.github.io/party-night/ 实测 md5 与本地一致，且三处修复确实在线
+- **当前 HEAD：`16c6001`**（本地 = 远端 = tag `v1.14.24`）。工作树干净。
+- **VERSION：`1.14.24`**；`index.html` 与 `dist/party-night.html` md5 都是 `889d86dc1ddb3a28c40e7beca9008c71`
+- **线上已核对**：抓 https://778672151.github.io/party-night/ 实测 md5 与本地一致，
+  且**真机实测线上开房 `CLICK→当选房主` = 4508ms**（v1.14.23 时为 20213ms，见 §8）。
 
 **玩法**：11 款联机游戏 + 16 款小游戏。
 - 联机（`src/games/`，房主权威）：`drawgame` 你画我猜 · `tacit` 默契大考验 · `memory` 合作翻牌 · `codraw` 心有灵犀 · `gomoku` 五子棋 · `hop` 跳一跳 · `mine` 扫雷 · `soko` 鲸鱼推箱子 · `cube` 魔方接力 · `go` 围棋 · `domino` 骨牌顶牛
@@ -106,13 +106,15 @@ node test/style-check.mjs
 ```
 catalog 22/0 · codraw 34/0 · d12-secretcache 3/0 · d14-emitsoon 2/0 · d15-dropgrace 3/0
 gomoku 35/0 · hop 51/0 · memory 29/0 · mine 41/0 · mini 11/0 · playall 51/0
+（注：memory 的计数会在 29 与 24 之间跳 —— 它有约 1/15 的概率走到「前两张刚好是一对」的随机分支，
+ 该分支用 1 条断言替换 6 条。**两种情况都是 0 失败**，不要把它当回归。见 §7 与 test/memory-test.mjs:112。）
 soko 37/0 · tacit 31/0 · toon 42/0 · version 17/0 · wire 16/0
 regress-fixes 24/0 · d16-claim-wipe 5/0 · d17-timer-leak 4/0 · d18-offline-stall 5/0 · d19-refresh-wipe 10/0
 style-check 全部通过
 ```
 
 ### 5.2 真浏览器测试（102 个文件在 `test/browser/`）
-先起环境（见 §6），然后：
+先起环境（见 §6；运行库可直接跑 `bash tools/pn-browser-libs.sh`），然后：
 ```bash
 node test/browser/realinput.mjs    # 11 款联机游戏真实鼠标/键盘；基线 39 通过 / 0 失败
 node test/browser/hop-real.mjs     # 跳一跳真鼠标按住/真空格；基线连续 3 次全绿（25/25、25/25、27/27）
@@ -164,7 +166,11 @@ export LD_LIBRARY_PATH=/tmp/pn-libs/root/usr/lib/x86_64-linux-gnu:/tmp/pn-libs/r
   --use-angle=swiftshader-webgl about:blank
 ```
 `/tmp` 是易失的，环境重置后**要重建** `/tmp/pn-libs/root`。
-（本节状态：2026-09-23 16:10 实测 `/tmp/pn-libs/root` 已丢失、需重建 —— 这是我复核时发现的，如实记录。）
+**已封装成一键脚本**（2026-09-23 加，免 root，自动探测包地址）：
+```bash
+bash tools/pn-browser-libs.sh     # 幂等：已存在则直接跳过
+```
+（上面那一大段手工步骤保留作为原理说明；日常直接用脚本即可。）
 
 ### 6.3 公共 broker 会间歇性抖动
 - 特征：`等待超时: XXX 连上 broker` / `阿泽 落在了另一台公共服务器` / `连续 5 次都没能和房主进到同一个房间`。
@@ -192,7 +198,7 @@ export LD_LIBRARY_PATH=/tmp/pn-libs/root/usr/lib/x86_64-linux-gnu:/tmp/pn-libs/r
 
 ## 8. 当前状态与已知问题
 
-**已发布 v1.14.23**（HEAD `0669aeb`，已推送 + 打 tag `v1.14.23`，工作树干净，线上已核对）。本版修了 6 类产品缺陷，其中 4 类有真机复现证据：
+**v1.14.23（历史版本，HEAD `0669aeb`）** 修了 6 类产品缺陷，其中 4 类有真机复现证据：
 1. 跳一跳"跳一次之后彻底玩不了"（`at.fly` 与 `charge` 互相等待的死锁）—— 改 `src/screens-hop.js` 的 `doCharge` 守卫
 2. 围棋"真人点棋盘完全无效"（原作 click 被捕获拦掉、无人转发）—— 改 `src/screens-go.js`，在 document 捕获阶段补转发
 3. 房主开房后约 5 秒内自己不在名单里（`_freshRoom` 意图判断）—— 改 `src/ui.js`，5064ms → 2ms
@@ -200,7 +206,10 @@ export LD_LIBRARY_PATH=/tmp/pn-libs/root/usr/lib/x86_64-linux-gnu:/tmp/pn-libs/r
 5. 4 个屏幕补 `stop()`（切游戏后旧定时器抛 TypeError）
 6. `chaos.mjs` QoS0 时序假失败（改等对端收敛）
 
-**§11.1 已查明并修复（2026-09-23，未提交/未发布）**：
+**已发布 v1.14.24**（HEAD `16c6001`，已推送 + tag `v1.14.24`，线上已核对）。本版修了 1 个**线上真回归** +
+2 处失效测试契约（详见 §8 下文与提交信息）：
+
+**§11.1 已查明并修复（2026-09-23，已随 v1.14.24 发布）**：
 - `test/integration-drawgame.mjs` 的 `等待超时: 房主当选` **不是环境抖动，是两个真问题叠在一起**：
   1. **产品缺陷（真回归，线上 v1.14.23 仍存在）**：`src/room.js` 的 `_election` 把「持续判死」门槛
      （`4e1fe48` 为防心跳抖动误抢主而加，需持续判死 `OFFLINE_MS`=13s）**无条件套用到了全新空房上**。
@@ -224,7 +233,7 @@ export LD_LIBRARY_PATH=/tmp/pn-libs/root/usr/lib/x86_64-linux-gnu:/tmp/pn-libs/r
 
 | 资料 | 管什么 | 状态 |
 | --- | --- | --- |
-| **本文件 HANDOFF.md** | 交接入口（唯一权威） | ✅ 已更新到 v1.14.23 |
+| **本文件 HANDOFF.md** | 交接入口（唯一权威） | ✅ 已更新到 v1.14.24 |
 | `README.md` | 玩家向说明、启动方式、游戏清单 | ⚠️ :358 的"4 个游戏"是历史沿革，非现状 |
 | `HANDOFF-KIMI.md` | 前一轮给另一个 AI 的交接（含 4 处改动逐条取证） | ✅ 内容有效，但它是**上一轮**视角，本文件为准 |
 | `NEXT-ROUND.md` / `PHASE-REPORT.md` / `AUDIT-AND-DEVELOP.md` | 更早阶段报告 | ⚠️ 历史文档，可能过时，**以代码与测试实测为准** |
@@ -236,18 +245,19 @@ export LD_LIBRARY_PATH=/tmp/pn-libs/root/usr/lib/x86_64-linux-gnu:/tmp/pn-libs/r
 
 ## 10. 你的第一步（建议顺序）
 
-1. **只读核对**（不要改业务文件）：`pwd` → `git rev-parse --short HEAD`（应是 `0669aeb`）→ `git status --short`（应干净）→ `cat VERSION`（应 `1.14.23`）→ `md5sum index.html dist/party-night.html`（两个应都是 `6936155aca0e…`）。
+1. **只读核对**（不要改业务文件）：`pwd` → `git rev-parse --short HEAD`（应是 `16c6001`）→ `git status --short`（应干净）→ `cat VERSION`（应 `1.14.24`）→ `md5sum index.html dist/party-night.html`（两个应都是 `889d86dc1ddb…`）。
    有差异就**先报告差异**，不要自行"修好"。
 2. 读 `README.md` + `src/ui.js` + `src/host.js`，建立架构认知（≈20 分钟）。
 3. 跑 §5.1 的 node 套件，对照基线确认零回归。
-4. 需要真机验收时，按 §6 起服务 + 浏览器（`/tmp/pn-libs/root` 可能要重建）。
+4. 需要真机验收时，按 §6 起服务 + 浏览器（先跑 `bash tools/pn-browser-libs.sh` 重建运行库）。
 5. 然后进入下面第 11 节的任务。
 
 ---
 
 ## 11. 建议的下一步工作（按优先级）
 
-1. ~~查 `integration-drawgame.mjs` 为何在 broker 正常时仍"房主当选"超时~~ **已查明并修复**（见 §8；含一个线上真回归：开房 20.2s → 4.2s）。
+1. ~~查 `integration-drawgame.mjs` 为何在 broker 正常时仍"房主当选"超时~~ **已查明并修复并发布**（v1.14.24；含一个线上真回归：开房 20.2s → 4.5s，线上已核对）。
+   ~~duo-conflict 的既存红项~~ 也已查清并修复（是竞态测试，不是产品缺陷；现 8/8 全绿）。
 2. **把真机输入纳入常规回归**：`realinput.mjs` 已覆盖 11 款游戏的"正常输入"；
    建议补**破坏性输入**（连点/长按/满蓄力/双方同时操作/中途刷新）到每一款，参考 `hop-stress.mjs`。
 3. **核实剩余屏幕的 `stop()`**：`screens-common` 用了 `setInterval`；逐个确认其余屏幕是否需要收摊（见 §4.2）。
