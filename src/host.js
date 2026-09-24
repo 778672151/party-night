@@ -299,6 +299,12 @@
   Host.prototype.clearAll = function () {
     for (var k in this.timers) if (Object.prototype.hasOwnProperty.call(this.timers, k)) { clearTimeout(this.timers[k]); clearInterval(this.timers[k]); }
     this.timers = {};
+    // 当局世代号：clearAll 是每次换局 / 回大厅 / 换房主都会经过的地方。
+    // 定时器回调里带上调度时的世代号，就能看出「我这一手是不是已经过期」——
+    // 只比对 mode 不够用：**重开同一款游戏时 mode 一模一样**，
+    // 万一某条路径没清掉定时器（本项目历史上真出过泄漏，见 test/d17-timer-leak.mjs），
+    // 旧回调就会把上一局的动作打到新局上。
+    this._gen = (this._gen || 0) + 1;
   };
 
   Host.prototype.sendSecret = function (pid, obj) {

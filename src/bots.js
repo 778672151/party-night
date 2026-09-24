@@ -92,8 +92,14 @@
     try { t = game.botTurn(host); } catch (e) { return; }
     if (!t || !t.pid || !t.action) return;
     var delay = BOT_MIN_MS + Math.floor(Math.random() * (BOT_MAX_MS - BOT_MIN_MS));
-    // 用 host.after 登记：换局/回大厅时 clearAll 会清掉，绝不会跨局打一枪
+    // 用 host.after 登记：换局/回大厅时 clearAll 会清掉，正常路径绝不会跨局打一枪。
+    // 但只判 mode 是不够的：**重开同一款游戏时 mode 完全一样**，万一某个路径没清掉
+    // 定时器（本项目历史上就出过定时器泄漏，见 test/d17-timer-leak.mjs），
+    // 这一手就会打到新局上。所以再带一个「这一局」的世代号：
+    // host._gen 由 clearAll 递增，而 clearAll 正是每次换局/回大厅都会走的地方。
+    var gen = host._gen || 0;
     host.after(TICK, delay, function () {
+      if ((host._gen || 0) !== gen) return;            // 已经换过局了：这一手作废
       if (host.state.mode !== mode) return;            // 期间换游戏了：这一手作废
       var t2;
       try { t2 = game.botTurn(host); } catch (e) { return; }
