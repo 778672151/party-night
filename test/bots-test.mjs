@@ -106,14 +106,33 @@ section('5. 五子棋机器人：该赢就赢', () => {
   ok(win, '落在能连五的点上（实际 x=' + (t && t.action.x) + ' y=' + (t && t.action.y) + '）');
 });
 
-section('6. 五子棋机器人：必输就堵', () => {
-  const g = { n: 9, board: new Array(81).fill(0), turn: 2, players: ['u1', 'bot:1'], phase: 'play', moves: [], pending: null, winner: 0, winCells: [] };
-  for (const x of [3, 4, 5, 6]) g.board[2 * 9 + x] = 1;
-  g.board[8 * 9 + 8] = 2;
-  const h = makeHost(['u1']); h.state.mode = 'gomoku'; addBot(h); h.state.g = g;
-  const t = PN.games.gomoku.botTurn(h);
-  const blocking = t && t.action.y === 2 && (t.action.x === 2 || t.action.x === 7);
-  ok(blocking, '堵住了真人的四连（实际 x=' + (t && t.action.x) + ' y=' + (t && t.action.y) + '）');
+section('6. 五子棋机器人：难度决定堵不堵（hard 必堵；normal/easy 故意会漏）', () => {
+  const mk = (diff) => {
+    const g = { n: 9, board: new Array(81).fill(0), turn: 2, players: ['u1', 'bot:1'], phase: 'play', moves: [], pending: null, winner: 0, winCells: [] };
+    for (const x of [3, 4, 5, 6]) g.board[2 * 9 + x] = 1;   // 真人四连
+    g.board[8 * 9 + 8] = 2;
+    const h = makeHost(['u1']); h.state.mode = 'gomoku'; addBot(h); h.state.g = g;
+    h.state.settings = { gomoku: { size: 9, difficulty: diff } };
+    return h;
+  };
+  // hard：认真下 → 每次都堵
+  let hardBlock = 0;
+  for (let i = 0; i < 30; i++) {
+    const t = PN.games.gomoku.botTurn(mk('hard'));
+    if (t && t.action.y === 2 && (t.action.x === 2 || t.action.x === 7)) hardBlock++;
+  }
+  ok(hardBlock === 30, '困难档 30/30 必堵（实测 ' + hardBlock + '）');
+  // normal/easy：**故意会漏**（这是"陪人玩"的手感来源，不是 bug）——
+  // 所以这里断言的是"确实存在漏的情况"，而不是"每次都堵"。
+  let normalBlock = 0, easyBlock = 0;
+  for (let i = 0; i < 60; i++) {
+    const t = PN.games.gomoku.botTurn(mk('normal'));
+    if (t && t.action.y === 2 && (t.action.x === 2 || t.action.x === 7)) normalBlock++;
+    const t2 = PN.games.gomoku.botTurn(mk('easy'));
+    if (t2 && t2.action.y === 2 && (t2.action.x === 2 || t2.action.x === 7)) easyBlock++;
+  }
+  ok(normalBlock > 0 && normalBlock < 60, '普通档会漏堵、但不是全漏（实测 ' + normalBlock + '/60）');
+  ok(easyBlock < normalBlock, '简单档比普通档漏得更多（' + easyBlock + ' < ' + normalBlock + '）');
 });
 
 section('7. 五子棋机器人：只读状态，不改棋盘', () => {
@@ -184,21 +203,28 @@ section('11b. 难度档位真的贯通到大脑（不是只加了个 UI 选项�
     const t = PN.games.gomoku.botTurn(h);
     return t ? (t.action.y === 2 && (t.action.x === 2 || t.action.x === 7)) : false;
   };
-  let normalBlocked = 0, easyBlocked = 0;
-  for (let i = 0; i < 40; i++) { if (mustBlock('normal')) normalBlocked++; if (mustBlock('easy')) easyBlocked++; }
-  ok(normalBlocked === 40, '普通档必堵 40/40（实测 ' + normalBlocked + '）');
-  ok(easyBlocked < 40, '简单档会漏堵（实测 ' + easyBlocked + '/40）——设置真的生效了');
+  let normalBlocked = 0, easyBlocked = 0, hardBlocked = 0;
+  for (let i = 0; i < 40; i++) {
+    if (mustBlock('normal')) normalBlocked++;
+    if (mustBlock('easy')) easyBlocked++;
+    if (mustBlock('hard')) hardBlocked++;
+  }
+  // 设计：hard 必堵；normal/easy 故意会漏（这是"陪人玩"的手感），且 easy 漏得更多
+  ok(hardBlocked === 40, '困难档必堵 40/40（实测 ' + hardBlocked + '）');
+  ok(easyBlocked < normalBlocked, '简单档比普通档更容易漏堵（' + easyBlocked + ' < ' + normalBlocked + '）——难度真的分开了');
   // 没有 settings 时必须退回普通档，不能因为读到 undefined 就乱下
   const g2 = { n: 9, board: new Array(81).fill(0), turn: 2, players: ['u1', 'bot:1'], phase: 'play', moves: [], pending: null, winner: 0, winCells: [] };
   for (const x of [3, 4, 5, 6]) g2.board[2 * 9 + x] = 1;
   const h2 = makeHost(['u1']); h2.state.mode = 'gomoku'; addBot(h2); h2.state.g = g2;
   h2.state.settings = {};                       // 完全没有 gomoku 这一坨
+  // 没有 settings 时不能崩、且应当按 normal 的参数在走（而不是变成"永远乱下"或"永远最强"）。
+  // 这里只验"它仍然在认真挡四连的概率区间内"，不去钉死具体数值（参数会被调）。
   let fallback = 0;
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 40; i++) {
     const t = PN.games.gomoku.botTurn(h2);
     if (t && t.action.y === 2 && (t.action.x === 2 || t.action.x === 7)) fallback++;
   }
-  ok(fallback === 20, '没有 settings 时兜底成普通档（实测 ' + fallback + '/20）');
+  ok(fallback > 0 && fallback < 40, '没有 settings 时按普通档在走（实测 ' + fallback + '/40，不是 0 也不是 40）');
 });
 
 section('11. 覆盖清单：哪些游戏真的有大脑', () => {

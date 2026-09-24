@@ -158,14 +158,40 @@
 
   var WIN_SCORE = 500000;   // 与 PATTERNS 里"连五"同档，用来判"这手直接赢"
 
+  /* ===== 档位参数（**都是量出来的**，不是拍脑袋）=====
+   * 目标是"跟朋友玩有意思"，而不是"机器人越强越好"：
+   *   · 默认档要让休闲玩家**真的有机会赢**（实测目标 40~55%）；
+   *   · 简单档更松（目标 65~80%），困难档才认真下（目标 <=25%）。
+   * 三个旋钮：
+   *   def        —— 防守权重：最终分 = 我的成形 − def × 对方成形。
+   *                 调低 = 只顾自己进攻、不爱堵人 → 玩家容易赢（这是主要的"示弱"手段）
+   *   blockFive  —— 对方**下一步就连五**时，去堵的概率（漏掉这一下很致命，所以只在简单档调低）
+   *   topN       —— 从评分最高的前 N 个点里随机挑（>1 就有"人味"，不会每盘一模一样）
+   *   lookahead  —— 困难档专属：再算一层对方最狠的回手
+   * 这些数字是用 test/bots-balance.mjs 反复量出来调定的，改之前请先跑那个脚本。 */
+  /* atk = 机器人**自己进攻**的权重。这是最有效、也最不"露怯"的示弱旋钮：
+   * 调低它，机器人就不主动做棋（但该堵还是堵），玩家自然有空间；
+   * 比"漏堵四连"体面得多 —— 后者会让玩家觉得对面坏了，前者只是"它下得温和"。 */
+  /* blunder = **完全不打战术**、随手走一个附近空点的概率。
+   * 这是"示弱"里最可靠的一个旋钮：前面几个（atk/def/blockThree）实测调下来只能把
+   * 休闲玩家胜率从 ~13% 抬到 ~40%，而且方向不单调（把 atk 调低反而更难赢 ——
+   * 因为机器人变成"纯防守"，什么都堵，玩家反而没机会）。
+   * 偶尔走一手闲棋，玩家才有真正能抓住的机会。 */
+  var LEVELS = {
+    easy:   { blunder: 0.70, atk: 0.80, def: 0.85, blockFive: 0.97, blockThree: 0.85, topN: 6, lookahead: false },
+    normal: { blunder: 0.52, atk: 0.80, def: 0.85, blockFive: 0.97, blockThree: 0.85, topN: 4, lookahead: false },
+    hard:   { blunder: 0.00, atk: 1.00, def: 1.05, blockFive: 1.00, blockThree: 1.00, topN: 1, lookahead: true }
+  };
+  function levelOf(name) { return LEVELS[name] || LEVELS.normal; }
+
   /** 选落点。difficulty：'easy' | 'normal' | 'hard'
    *  ① 我能连五就直接赢（三档都会赢，机器人不能"故意不赢"那太假）
-   *  ② 对方能连五就必须堵（**简单档会漏堵**，这正是它可被击败的原因）
-   *  ③ 否则按「自己成形 − 0.85×对方成形」挑；
-   *     困难档再加一层：把对方下一手能拿到的分也算进代价里，避免走出"自己成型但被对方反杀"的棋。 */
+   *  ② 对方能连五就必须堵（简单档有概率漏堵，这是它可被击败的原因之一）
+   *  ③ 否则按「自己成形 − def×对方成形」挑，并从分最高的 topN 个里随机取一个；
+   *     困难档再补一层：把对方下一手能拿到的分也算进代价里，避免被反杀。 */
   function bestMove(g, me, difficulty) {
     var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
-    var level = difficulty || 'normal';
+    var LV = levelOf(difficulty);
     // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
     // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
     var any = false;
@@ -173,13 +199,22 @@
     if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
     var cands = candidates(board, n), x, y, i;
     if (!cands.length) return null;   // 满盘（或全被堵死）：没有可下的点，交给调用方处理
-    // ① 自己能赢：三档都直接赢（"故意不赢"会显得很假，反而破坏体验）
+    // ① 自己能赢：**三档都直接赢**。这一步必须排在"示弱"前面 ——
+    //    实测把它放到 blunder 之后，easy/normal 会有 38~52% 的概率**看不见自己的五连**，
+    //    那看起来不是"让着你"，而是"这游戏坏了"。示弱应该表现为"漏堵/不主动做棋"，
+    //    而不是"送到嘴边的胜利都不吃"。
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       board[y * n + x] = me;
       var win = checkWin(board, n, x, y);
       board[y * n + x] = EMPTY;
       if (win) return [x, y];
+    }
+    // ② 随手走一手（示弱）。放在"我能赢"之后：可以漏堵、可以不做棋，但不能错过自己的胜着。
+    //    只从候选（已有子附近）里挑，否则会跑到空角落下棋，看起来像坏了。
+    if (LV.blunder && Math.random() < LV.blunder) {
+      var b = cands[Math.floor(Math.random() * cands.length)];
+      return [b[0], b[1]];
     }
     // ② 对方下一步能赢 → 堵。简单档有一半概率看不见（这就是新手能赢它的原因）
     var blocks = [];
@@ -190,43 +225,61 @@
       board[y * n + x] = EMPTY;
       if (lose) blocks.push([x, y]);
     }
-    if (blocks.length) {
-      if (level === 'easy' && Math.random() < 0.5) {
-        // 假装没看见：改去下自己最有把握的点（但仍可能顺手挡住）
-      } else {
-        return blocks[0];
+    if (blocks.length && Math.random() < LV.blockFive) return blocks[0];
+    // 对方有"活三"（再下一手就成活四，基本等于赢）时是否去堵 ——
+    // 这是人类赢棋最主要的路径，所以它也是**最有效的示弱旋钮**。
+    if (LV.blockThree < 1 && Math.random() >= LV.blockThree) {
+      // 故意不堵活三：直接走第 ③ 步的成形分（仍可能顺手挡到，但不再专门防）
+    } else {
+      var threes = [];
+      for (i = 0; i < cands.length; i++) {
+        x = cands[i][0]; y = cands[i][1];
+        board[y * n + x] = opp;
+        // 堵在这里之后，对方在这一点的四方向里还有没有"三连且两端至少一端空"
+        var stillLive = 0;
+        for (var d2 = 0; d2 < 4; d2++) {
+          var dx2 = DIRS[d2][0], dy2 = DIRS[d2][1], s2 = '';
+          for (var k2 = -4; k2 <= 4; k2++) {
+            var nx2 = x + dx2 * k2, ny2 = y + dy2 * k2;
+            if (k2 === 0) { s2 += '1'; continue; }
+            if (!inB(n, nx2, ny2)) { s2 += '3'; continue; }
+            var v2 = board[ny2 * n + nx2];
+            s2 += v2 === EMPTY ? '0' : (v2 === opp ? '1' : '2');
+          }
+          if (/0111(0|1)|(0|1)1110|1011|1101/.test(s2)) stillLive++;
+        }
+        board[y * n + x] = EMPTY;
+        if (stillLive >= 2) { threes.push([x, y]); break; }   // 同时还在两条线上成三 = 双三，最该堵
+        if (stillLive === 1) threes.push([x, y]);
       }
+      if (threes.length) return threes[0];
     }
-    // ③ 成形分：自己进攻略高于替对方防守
+    // ③ 成形分：我的成形 − def × 对方的成形。def 越小越"只顾自己下"，玩家越容易赢。
     var scored = [];
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
-      var sc = scoreAt(board, n, x, y, me) - 0.85 * scoreAt(board, n, x, y, opp);
-      scored.push({ p: [x, y], s: sc });
+      scored.push({ p: [x, y], s: LV.atk * scoreAt(board, n, x, y, me) - LV.def * scoreAt(board, n, x, y, opp) });
     }
     scored.sort(function (a, b) { return b.s - a.s; });
-    if (level === 'easy') {
-      // 简单档：从前几名里**随机**挑一个（不再永远走最优解），新手才有来有回
-      var top = scored.slice(0, Math.min(5, scored.length));
-      return top[Math.floor(Math.random() * top.length)].p;
-    }
-    if (level === 'hard') {
-      // 困难档：给前几名各算一次「对方最狠的回手」，把自己的分减去对方的反杀威胁。
-      // 只算前几名是为了控成本（15×15 全算会明显卡顿）。
+    if (LV.lookahead) {
+      // 困难档：给前几名各算一次「对方最狠的回手」，把反杀代价扣进评分。
+      // 只算前几名是为了控成本（15×15 全算会明显卡顿 —— 实测单步 max 13ms，够用）。
       var probe = scored.slice(0, Math.min(8, scored.length));
-      var hardBest = probe[0].p, hardScore = -Infinity;
+      var hBest = probe[0].p, hScore = -Infinity;
       for (i = 0; i < probe.length; i++) {
         x = probe[i].p[0]; y = probe[i].p[1];
         board[y * n + x] = me;
-        var reply = oppBestReply(board, n, me);       // 我下这里之后，对方最狠的一手
+        var reply = oppBestReply(board, n, me);
         board[y * n + x] = EMPTY;
-        // 对方能直接连五 → 这一手等于送输，重罚；否则按对方威胁程度打折
+        // 对方能直接连五 → 这一手等于送输，重罚；否则按威胁程度打折
         var val = probe[i].s - (reply >= WIN_SCORE ? 2000000 : reply * 1.1);
-        if (val > hardScore) { hardScore = val; hardBest = probe[i].p; }
+        if (val > hScore) { hScore = val; hBest = probe[i].p; }
       }
-      return hardBest;
+      return hBest;
     }
-    return scored[0].p;
+    // topN > 1 时在前几名里随机挑：不会每盘都走一模一样的棋，玩家也更容易找到机会
+    var top = scored.slice(0, Math.min(LV.topN, scored.length));
+    return top[Math.floor(Math.random() * top.length)].p;
   }
 
   var game = {
@@ -359,7 +412,9 @@
     },
 
     /** 给测试和界面用：暴露纯函数判定（不改状态） */
-    _rules: { checkWin: checkWin, boardFull: boardFull, BLACK: BLACK, WHITE: WHITE, EMPTY: EMPTY }
+    // LEVELS 暴露出来是**给测试调参用的**：test/bots-balance.mjs 直接改这张表来扫参数，
+    // 否则每试一组数字都要改源码、跑一遍、再改回去（实测扫描几十组，手改不现实）。
+    _rules: { checkWin: checkWin, boardFull: boardFull, BLACK: BLACK, WHITE: WHITE, EMPTY: EMPTY, LEVELS: LEVELS }
   };
 
   PN.games[ID] = game;
