@@ -95,6 +95,10 @@ input{font:inherit}
 .player .em{font-size:30px}
 .player .nm{font-size:13px;font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .player .sc{font-size:11px;color:var(--ink2)}
+/* 机器人标识：房间里冒出一个"小机灵"时，必须一眼看出它不是真人 */
+.player.bot{border-color:var(--acc2,var(--acc));background:#f3f0ff}
+.player .bot-tag,.sbrow .bot-tag{margin-left:5px;font-size:9px;padding:1px 5px;border-radius:6px;background:var(--acc);color:#fff;vertical-align:middle}
+.sbrow.bot{background:#f3f0ff;border-color:var(--acc)}
 .player.me{border-color:var(--acc);background:#fff0f6;box-shadow:0 4px 0 rgba(255,143,184,.35)}
 .player.host:after{content:"房主";position:absolute;top:-8px;right:-4px;font-size:9px;padding:2px 7px;
   border-radius:999px;background:var(--yellow);color:#7a5a00;font-weight:900;border:2px solid var(--stroke)}

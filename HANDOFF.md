@@ -349,9 +349,14 @@ bash tools/pn-browser-libs.sh     # 幂等：已存在则直接跳过
 
 ### 13.5 怎么验
 ```bash
-node test/bots-test.mjs          # 38/0 纯函数单测（造局、只读性、边界）
-node test/bots-integration.mjs   # 31/0 集成（真 Host dispatch + 受控时钟跑完整局）
-node test/browser/bot-solo.mjs   # 真浏览器：一个人点一下 → 真和机器人下完一局
+node test/bots-test.mjs              # 41/0 纯函数单测（造局、只读性、难度贯通、边界）
+node test/bots-integration.mjs       # 37/0 集成（真 Host dispatch + 受控时钟跑完整局）
+node test/bots-adversarial.mjs       # 24/0 对抗性：重复 emit / 跨局 / 换房主 / 人走了 / 不越权
+node test/bots-strength.mjs          # 10/0 棋力量：必堵必赢的**行为**探针
+node test/browser/bot-solo.mjs       # 真浏览器：一个人点一下 → 真和机器人下完一局 + 牌桌标注
+node test/browser/bot-tacit.mjs      # 真浏览器：单人默契局，机器人会作答、能揭晓
+node test/browser/bot-difficulty.mjs # 真浏览器：难度面板 → state → 引擎，全程贯通
+node test/browser/bot-refresh.mjs    # 真浏览器：局中刷新后机器人必须继续动
 ```
 浏览器实测：一个人点开始 → `mode=gomoku`、名单里有 `bot:1`、`phase=over`、真落了 9~12 手、0 个 JS 报错。
 另：`realinput` 39/0、`duo-conflict` 0 失败（**真人双人局没被机器人影响**）、`solo-switch` 全过。
@@ -361,6 +366,38 @@ node test/browser/bot-solo.mjs   # 真浏览器：一个人点一下 → 真和�
 该测试的 ② 段据此改成断言"真的开起来 + 名单里有在线机器人 + 回大厅后机器人被收走"，
 比原来那条**更强**（原来只断言"看到提示"）。测试里也修了一个前提问题：② 把房主留在对局里，
 ③ 却假设两人都在大厅 —— 现在 ② 末尾显式回大厅。
+
+### 13.7 后续四轮迭代：修掉 3 个真缺陷 / 量出来的结论（2026-09-24）
+
+四轮都是「先写会失败的测试 → 再看是不是真 bug」，抓到 **3 个真缺陷**：
+
+1. **跨局打一枪**（迭代1）：调度机器人时只比对 `host.state.mode` 判「这手过期没」，
+   而**重开同一款游戏时 mode 一模一样** —— 只要有一条路径没清掉定时器
+   （本项目历史上真出过泄漏，见 `test/d17-timer-leak.mjs`），上一局的动作就会打到新局上。
+   修法：`clearAll()` 维护**当局世代号** `host._gen`，回调带上调度时的世代号，对不上就作废。
+
+2. **刷新后机器人僵住**（迭代3，浏览器实测复现）：单人局里房主刷新，state 靠 retained 回来了，
+   但**定时器随旧页面死了**；而"把 state 挂上 host"的三条路径都是**裸赋值**，
+   压根不触发 `bots.onState` → 刷新之后机器人整局不再动，用户看到的是"轮到机器人然后永远卡住"。
+   修法：新增 `Host.prototype.attach(state, keepHostId)` 作为**唯一**的状态接管入口
+   （接管 + 按需改 hostId + 跑 resume + **再问一次轮到机器人了吗**），`adopt()` 改为复用它，
+   ui.js 三处裸赋值全部改走 attach。现在 `grep 'host.state = ' src/ui.js` 无结果。
+
+3. **默认值不显示**（迭代2）：设置面板按 `settings[mode][key]` 高亮，
+   不预置默认值就**一个都不亮**，玩家看不出默认是什么。修法：`host.fresh` 预置
+   `settings.gomoku = { size: 15, difficulty: 'normal' }`（与引擎兜底一致）。
+
+**量出来的结论（别再用胜率当棋力指标）**：9×9 上**先手几乎必胜** ——
+实测 hard vs hard 黑 20 白 0、normal vs normal 黑 20 白 0，连 easy vs easy 都是黑 13 白 7。
+所以档位强弱要用**行为探针**衡量（各 40 次）：必堵四连 easy 21/40、normal 40/40、hard 40/40；
+必胜局面三档都 40/40 直接连五（"故意不赢"会显得很假）。
+
+**踩过的三个测试自坑（记录以免重犯）**：
+· 对局中**大厅名册根本不渲染**（`.player` 一个都没有），玩家名字只出现在计分板 `.sbrow` 里 ——
+  第一版机器人标识只加在大厅名册，等于永远看不到。现在两处都有。
+· 四条恒真断言（`had ? true : true`、`x ? y : true`）等于没写，已改成真断言；
+  其中一条改成「抓住那个还没跑的旧回调直接执行它」，这才验到了**异常路径**。
+· 测试辅助函数（`humansTurn`/`humanMove`）只在某个文件里定义，跨文件复制时漏带 → 抛异常。
 
 ---
 

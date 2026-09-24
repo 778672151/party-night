@@ -59,9 +59,11 @@
     var out = '<div class="card"><div class="center" style="font-weight:800;margin-bottom:10px">' + (title || '🏆 终局计分') + '</div><div class="scoreboard">';
     for (var i = 0; i < players.length; i++) {
       var p = players[i];
-      out += '<div class="sbrow' + (i === 0 ? ' top' : '') + '">' +
+      // 计分板是**游戏内**唯一列出玩家的地方（大厅名册在对局里根本不渲染），
+      // 所以机器人标识必须也在这儿，否则玩家在牌桌上看到一个"小机灵"会以为是陌生人。
+      out += '<div class="sbrow' + (i === 0 ? ' top' : '') + (p.bot ? ' bot' : '') + '">' +
         '<span class="rank">' + (i + 1) + '</span><span class="em">' + (p.emoji || '🙂') + '</span>' +
-        '<span class="nm">' + esc(p.name) + (p.id === winnerId ? ' 👑' : '') + '</span>' +
+        '<span class="nm">' + esc(p.name) + (p.bot ? '<span class="bot-tag">机器人</span>' : '') + (p.id === winnerId ? ' 👑' : '') + '</span>' +
         '<span class="pts">' + (p.score || 0) + ' 分</span></div>';
     }
     return out + '</div></div>';

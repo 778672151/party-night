@@ -69,6 +69,19 @@ const fin = JSON.parse(await A.eval('JSON.stringify({moves:(PN.app.state.g.moves
 console.log('  结束时：moves=' + fin.moves + ' phase=' + fin.phase);
 assert(fin.moves > before.moves, '对局真的推进了（机器人落过子，moves ' + before.moves + '→' + fin.moves + '）');
 
+console.log('=== 3b. 机器人必须在牌桌上被标出来（不能让人以为是陌生人）===');
+// ⚠️ 对局中**大厅名册根本不渲染**（.player 一个都没有），玩家的名字只出现在计分板 .sbrow 里。
+// 所以这里查的是计分板 —— 我第一版查 .player 得到空数组，是查错了地方。
+const rows = JSON.parse(await A.eval("JSON.stringify([].slice.call(document.querySelectorAll('.sbrow')).map(function(el){return { text:(el.textContent||'').trim(), isBot:el.classList.contains('bot'), tag:(el.querySelector('.bot-tag')||{}).textContent||null };}))"));
+console.log('  计分板=' + JSON.stringify(rows));
+assert(rows.length >= 2, '计分板列出了双方（实际 ' + rows.length + ' 行）');
+const botRow = rows.filter(r => r.isBot)[0];
+assert(!!botRow, '有一行被标成机器人（.sbrow.bot）');
+assert(botRow && botRow.tag === '机器人', '那一行带「机器人」标签（实测 ' + (botRow ? botRow.tag : '无') + '）');
+// 真人的那一行不能被误标
+const humanRows = rows.filter(r => !r.isBot);
+assert(humanRows.every(r => !r.tag), '真人那几行没有被误标成机器人');
+
 console.log('=== 4. 无 JS 报错 ===');
 const errs = JSON.parse(await A.consoleErrors());
 assert(errs.length === 0, '单人对局全程无 JS 报错' + (errs[0] ? ' 例:' + errs[0] : ''));

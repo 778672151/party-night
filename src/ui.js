@@ -575,9 +575,10 @@
     var cameByLink = !!sessionStorage.getItem('pn_via_link') && !!location.hash;
     var lonely = cameByLink && (s.players || []).length <= 1;
     var playersHtml = sorted.map(function (p) {
-      return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.online ? '' : ' off') + '">' +
+      // 机器人明确标出来：不然房间里冒出个"小机灵"会让人以为是陌生人进来了
+      return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.bot ? ' bot' : '') + (p.online ? '' : ' off') + '">' +
         '<span class="em">' + (p.emoji || '🙂') + '</span>' +
-        '<span class="nm">' + p.name + '</span>' +
+        '<span class="nm">' + p.name + (p.bot ? '<span class="bot-tag">机器人</span>' : '') + '</span>' +
         '<span class="sc">' + (p.score || 0) + ' 分</span>' +
         '</div>';
     }).join('');

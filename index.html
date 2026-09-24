@@ -103,6 +103,10 @@ input{font:inherit}
 .player .em{font-size:30px}
 .player .nm{font-size:13px;font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .player .sc{font-size:11px;color:var(--ink2)}
+/* 机器人标识：房间里冒出一个"小机灵"时，必须一眼看出它不是真人 */
+.player.bot{border-color:var(--acc2,var(--acc));background:#f3f0ff}
+.player .bot-tag,.sbrow .bot-tag{margin-left:5px;font-size:9px;padding:1px 5px;border-radius:6px;background:var(--acc);color:#fff;vertical-align:middle}
+.sbrow.bot{background:#f3f0ff;border-color:var(--acc)}
 .player.me{border-color:var(--acc);background:#fff0f6;box-shadow:0 4px 0 rgba(255,143,184,.35)}
 .player.host:after{content:"房主";position:absolute;top:-8px;right:-4px;font-size:9px;padding:2px 7px;
   border-radius:999px;background:var(--yellow);color:#7a5a00;font-weight:900;border:2px solid var(--stroke)}
@@ -5496,9 +5500,11 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
     var out = '<div class="card"><div class="center" style="font-weight:800;margin-bottom:10px">' + (title || '🏆 终局计分') + '</div><div class="scoreboard">';
     for (var i = 0; i < players.length; i++) {
       var p = players[i];
-      out += '<div class="sbrow' + (i === 0 ? ' top' : '') + '">' +
+      // 计分板是**游戏内**唯一列出玩家的地方（大厅名册在对局里根本不渲染），
+      // 所以机器人标识必须也在这儿，否则玩家在牌桌上看到一个"小机灵"会以为是陌生人。
+      out += '<div class="sbrow' + (i === 0 ? ' top' : '') + (p.bot ? ' bot' : '') + '">' +
         '<span class="rank">' + (i + 1) + '</span><span class="em">' + (p.emoji || '🙂') + '</span>' +
-        '<span class="nm">' + esc(p.name) + (p.id === winnerId ? ' 👑' : '') + '</span>' +
+        '<span class="nm">' + esc(p.name) + (p.bot ? '<span class="bot-tag">机器人</span>' : '') + (p.id === winnerId ? ' 👑' : '') + '</span>' +
         '<span class="pts">' + (p.score || 0) + ' 分</span></div>';
     }
     return out + '</div></div>';
@@ -9241,9 +9247,10 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
     var cameByLink = !!sessionStorage.getItem('pn_via_link') && !!location.hash;
     var lonely = cameByLink && (s.players || []).length <= 1;
     var playersHtml = sorted.map(function (p) {
-      return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.online ? '' : ' off') + '">' +
+      // 机器人明确标出来：不然房间里冒出个"小机灵"会让人以为是陌生人进来了
+      return '<div class="player ' + (p.id === self.pid() ? 'me' : '') + (p.id === s.hostId ? ' host' : '') + (p.bot ? ' bot' : '') + (p.online ? '' : ' off') + '">' +
         '<span class="em">' + (p.emoji || '🙂') + '</span>' +
-        '<span class="nm">' + p.name + '</span>' +
+        '<span class="nm">' + p.name + (p.bot ? '<span class="bot-tag">机器人</span>' : '') + '</span>' +
         '<span class="sc">' + (p.score || 0) + ' 分</span>' +
         '</div>';
     }).join('');
