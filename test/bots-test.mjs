@@ -173,6 +173,34 @@ section('10. 默契大考验机器人：该答就答、答过就不改', () => {
   ok(PN.games.tacit.botTurn(h4) === null, '没有机器人时返回 null');
 });
 
+section('11b. 难度档位真的贯通到大脑（不是只加了个 UI 选项）', () => {
+  // 同一个「必须堵四连」的局面，换不同 settings 跑：
+  //   normal/hard 必堵；easy 有概率漏堵 —— 说明 settings.gomoku.difficulty 真的被读到了。
+  const mustBlock = (diff) => {
+    const g = { n: 9, board: new Array(81).fill(0), turn: 2, players: ['u1', 'bot:1'], phase: 'play', moves: [], pending: null, winner: 0, winCells: [] };
+    for (const x of [3, 4, 5, 6]) g.board[2 * 9 + x] = 1;   // 真人（黑）四连，机器人（白）必须堵
+    const h = makeHost(['u1']); h.state.mode = 'gomoku'; addBot(h); h.state.g = g;
+    h.state.settings = { gomoku: { size: 9, difficulty: diff } };
+    const t = PN.games.gomoku.botTurn(h);
+    return t ? (t.action.y === 2 && (t.action.x === 2 || t.action.x === 7)) : false;
+  };
+  let normalBlocked = 0, easyBlocked = 0;
+  for (let i = 0; i < 40; i++) { if (mustBlock('normal')) normalBlocked++; if (mustBlock('easy')) easyBlocked++; }
+  ok(normalBlocked === 40, '普通档必堵 40/40（实测 ' + normalBlocked + '）');
+  ok(easyBlocked < 40, '简单档会漏堵（实测 ' + easyBlocked + '/40）——设置真的生效了');
+  // 没有 settings 时必须退回普通档，不能因为读到 undefined 就乱下
+  const g2 = { n: 9, board: new Array(81).fill(0), turn: 2, players: ['u1', 'bot:1'], phase: 'play', moves: [], pending: null, winner: 0, winCells: [] };
+  for (const x of [3, 4, 5, 6]) g2.board[2 * 9 + x] = 1;
+  const h2 = makeHost(['u1']); h2.state.mode = 'gomoku'; addBot(h2); h2.state.g = g2;
+  h2.state.settings = {};                       // 完全没有 gomoku 这一坨
+  let fallback = 0;
+  for (let i = 0; i < 20; i++) {
+    const t = PN.games.gomoku.botTurn(h2);
+    if (t && t.action.y === 2 && (t.action.x === 2 || t.action.x === 7)) fallback++;
+  }
+  ok(fallback === 20, '没有 settings 时兜底成普通档（实测 ' + fallback + '/20）');
+});
+
 section('11. 覆盖清单：哪些游戏真的有大脑', () => {
   const withBot = Object.keys(PN.games).filter(id => typeof PN.games[id].botTurn === 'function').sort();
   ok(withBot.indexOf('gomoku') >= 0, '五子棋有机器人大脑');

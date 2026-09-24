@@ -164,7 +164,11 @@
       players: [],
       settings: {
         roomName: '',
-        drawgame: { rounds: 6, drawSec: 90, roundsPerSet: 3 }
+        drawgame: { rounds: 6, drawSec: 90, roundsPerSet: 3 },
+        // 五子棋的默认值写在这儿，是为了让大厅设置面板**显示出真正的默认**
+        // （面板按 settings[mode][key] 高亮当前项，不预置就一个都不亮，玩家看不出默认是什么）。
+        // 数值必须和 gomoku init / botTurn 里的兜底一致：size 15、difficulty 'normal'。
+        gomoku: { size: 15, difficulty: 'normal' }
       },
       log: [],
       g: {},

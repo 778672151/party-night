@@ -130,16 +130,9 @@
     return total;
   }
 
-  /** 选落点：① 我能连五就直接赢 ② 对方能连五就必须堵 ③ 否则按「自己成形 − 0.85×对方成形」挑 */
-  function bestMove(g, me) {
-    var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
-    // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
-    // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
-    var any = false;
-    for (var q = 0; q < board.length; q++) if (board[q] !== EMPTY) { any = true; break; }
-    if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
-    // 候选只取「已有子附近 2 格内」的空点：又快又不会跑到空旷角落自己玩
-    var cands = [], x, y, i;
+  /** 候选落点：已有子附近 2 格内的空点（又快，也不会跑到空旷角落自己玩） */
+  function candidates(board, n) {
+    var cands = [], x, y;
     for (y = 0; y < n; y++) for (x = 0; x < n; x++) {
       if (board[y * n + x] !== EMPTY) continue;
       var near = false;
@@ -149,8 +142,38 @@
       }
       if (near) cands.push([x, y]);
     }
+    return cands;
+  }
+
+  /** 这一步下完之后，对方最狠的一手能拿到多少分（只用来给"困难"做一层保险） */
+  function oppBestReply(board, n, me) {
+    var opp = me === BLACK ? WHITE : BLACK;
+    var list = candidates(board, n), best = 0;
+    for (var i = 0; i < list.length; i++) {
+      var s = scoreAt(board, n, list[i][0], list[i][1], opp);
+      if (s > best) best = s;
+    }
+    return best;
+  }
+
+  var WIN_SCORE = 500000;   // 与 PATTERNS 里"连五"同档，用来判"这手直接赢"
+
+  /** 选落点。difficulty：'easy' | 'normal' | 'hard'
+   *  ① 我能连五就直接赢（三档都会赢，机器人不能"故意不赢"那太假）
+   *  ② 对方能连五就必须堵（**简单档会漏堵**，这正是它可被击败的原因）
+   *  ③ 否则按「自己成形 − 0.85×对方成形」挑；
+   *     困难档再加一层：把对方下一手能拿到的分也算进代价里，避免走出"自己成型但被对方反杀"的棋。 */
+  function bestMove(g, me, difficulty) {
+    var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
+    var level = difficulty || 'normal';
+    // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
+    // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
+    var any = false;
+    for (var q = 0; q < board.length; q++) if (board[q] !== EMPTY) { any = true; break; }
+    if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
+    var cands = candidates(board, n), x, y, i;
     if (!cands.length) return null;   // 满盘（或全被堵死）：没有可下的点，交给调用方处理
-    // ① 自己能赢
+    // ① 自己能赢：三档都直接赢（"故意不赢"会显得很假，反而破坏体验）
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       board[y * n + x] = me;
@@ -158,22 +181,52 @@
       board[y * n + x] = EMPTY;
       if (win) return [x, y];
     }
-    // ② 对方下一步能赢 → 必须先堵（有两个胜点时堵哪个都输，挑第一个）
+    // ② 对方下一步能赢 → 堵。简单档有一半概率看不见（这就是新手能赢它的原因）
+    var blocks = [];
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       board[y * n + x] = opp;
       var lose = checkWin(board, n, x, y);
       board[y * n + x] = EMPTY;
-      if (lose) return [x, y];
+      if (lose) blocks.push([x, y]);
+    }
+    if (blocks.length) {
+      if (level === 'easy' && Math.random() < 0.5) {
+        // 假装没看见：改去下自己最有把握的点（但仍可能顺手挡住）
+      } else {
+        return blocks[0];
+      }
     }
     // ③ 成形分：自己进攻略高于替对方防守
-    var best = cands[0], bestScore = -Infinity;
+    var scored = [];
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       var sc = scoreAt(board, n, x, y, me) - 0.85 * scoreAt(board, n, x, y, opp);
-      if (sc > bestScore) { bestScore = sc; best = [x, y]; }
+      scored.push({ p: [x, y], s: sc });
     }
-    return best;
+    scored.sort(function (a, b) { return b.s - a.s; });
+    if (level === 'easy') {
+      // 简单档：从前几名里**随机**挑一个（不再永远走最优解），新手才有来有回
+      var top = scored.slice(0, Math.min(5, scored.length));
+      return top[Math.floor(Math.random() * top.length)].p;
+    }
+    if (level === 'hard') {
+      // 困难档：给前几名各算一次「对方最狠的回手」，把自己的分减去对方的反杀威胁。
+      // 只算前几名是为了控成本（15×15 全算会明显卡顿）。
+      var probe = scored.slice(0, Math.min(8, scored.length));
+      var hardBest = probe[0].p, hardScore = -Infinity;
+      for (i = 0; i < probe.length; i++) {
+        x = probe[i].p[0]; y = probe[i].p[1];
+        board[y * n + x] = me;
+        var reply = oppBestReply(board, n, me);       // 我下这里之后，对方最狠的一手
+        board[y * n + x] = EMPTY;
+        // 对方能直接连五 → 这一手等于送输，重罚；否则按对方威胁程度打折
+        var val = probe[i].s - (reply >= WIN_SCORE ? 2000000 : reply * 1.1);
+        if (val > hardScore) { hardScore = val; hardBest = probe[i].p; }
+      }
+      return hardBest;
+    }
+    return scored[0].p;
   }
 
   var game = {
@@ -278,7 +331,8 @@
       if (g.pending && g.pending.by !== me) return { pid: me, action: { t: 'undo-answer', ok: true } };
       if (g.pending) return null;                       // 自己提的悔棋，等对方答
       if (colorOf(g, me) !== g.turn) return null;       // 没轮到机器人
-      var mv = bestMove(g, colorOf(g, me));
+      var diff = ((host.state.settings || {}).gomoku || {}).difficulty || 'normal';
+      var mv = bestMove(g, colorOf(g, me), diff);
       if (!mv) return null;
       return { pid: me, action: { t: 'place', x: mv[0], y: mv[1] } };
     },

@@ -2343,7 +2343,11 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
       players: [],
       settings: {
         roomName: '',
-        drawgame: { rounds: 6, drawSec: 90, roundsPerSet: 3 }
+        drawgame: { rounds: 6, drawSec: 90, roundsPerSet: 3 },
+        // 五子棋的默认值写在这儿，是为了让大厅设置面板**显示出真正的默认**
+        // （面板按 settings[mode][key] 高亮当前项，不预置就一个都不亮，玩家看不出默认是什么）。
+        // 数值必须和 gomoku init / botTurn 里的兜底一致：size 15、difficulty 'normal'。
+        gomoku: { size: 15, difficulty: 'normal' }
       },
       log: [],
       g: {},
@@ -2478,6 +2482,12 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
   Host.prototype.clearAll = function () {
     for (var k in this.timers) if (Object.prototype.hasOwnProperty.call(this.timers, k)) { clearTimeout(this.timers[k]); clearInterval(this.timers[k]); }
     this.timers = {};
+    // 当局世代号：clearAll 是每次换局 / 回大厅 / 换房主都会经过的地方。
+    // 定时器回调里带上调度时的世代号，就能看出「我这一手是不是已经过期」——
+    // 只比对 mode 不够用：**重开同一款游戏时 mode 一模一样**，
+    // 万一某条路径没清掉定时器（本项目历史上真出过泄漏，见 test/d17-timer-leak.mjs），
+    // 旧回调就会把上一局的动作打到新局上。
+    this._gen = (this._gen || 0) + 1;
   };
 
   Host.prototype.sendSecret = function (pid, obj) {
@@ -2637,8 +2647,14 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
     try { t = game.botTurn(host); } catch (e) { return; }
     if (!t || !t.pid || !t.action) return;
     var delay = BOT_MIN_MS + Math.floor(Math.random() * (BOT_MAX_MS - BOT_MIN_MS));
-    // 用 host.after 登记：换局/回大厅时 clearAll 会清掉，绝不会跨局打一枪
+    // 用 host.after 登记：换局/回大厅时 clearAll 会清掉，正常路径绝不会跨局打一枪。
+    // 但只判 mode 是不够的：**重开同一款游戏时 mode 完全一样**，万一某个路径没清掉
+    // 定时器（本项目历史上就出过定时器泄漏，见 test/d17-timer-leak.mjs），
+    // 这一手就会打到新局上。所以再带一个「这一局」的世代号：
+    // host._gen 由 clearAll 递增，而 clearAll 正是每次换局/回大厅都会走的地方。
+    var gen = host._gen || 0;
     host.after(TICK, delay, function () {
+      if ((host._gen || 0) !== gen) return;            // 已经换过局了：这一手作废
       if (host.state.mode !== mode) return;            // 期间换游戏了：这一手作废
       var t2;
       try { t2 = game.botTurn(host); } catch (e) { return; }
@@ -4012,16 +4028,9 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
     return total;
   }
 
-  /** 选落点：① 我能连五就直接赢 ② 对方能连五就必须堵 ③ 否则按「自己成形 − 0.85×对方成形」挑 */
-  function bestMove(g, me) {
-    var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
-    // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
-    // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
-    var any = false;
-    for (var q = 0; q < board.length; q++) if (board[q] !== EMPTY) { any = true; break; }
-    if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
-    // 候选只取「已有子附近 2 格内」的空点：又快又不会跑到空旷角落自己玩
-    var cands = [], x, y, i;
+  /** 候选落点：已有子附近 2 格内的空点（又快，也不会跑到空旷角落自己玩） */
+  function candidates(board, n) {
+    var cands = [], x, y;
     for (y = 0; y < n; y++) for (x = 0; x < n; x++) {
       if (board[y * n + x] !== EMPTY) continue;
       var near = false;
@@ -4031,8 +4040,38 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
       }
       if (near) cands.push([x, y]);
     }
+    return cands;
+  }
+
+  /** 这一步下完之后，对方最狠的一手能拿到多少分（只用来给"困难"做一层保险） */
+  function oppBestReply(board, n, me) {
+    var opp = me === BLACK ? WHITE : BLACK;
+    var list = candidates(board, n), best = 0;
+    for (var i = 0; i < list.length; i++) {
+      var s = scoreAt(board, n, list[i][0], list[i][1], opp);
+      if (s > best) best = s;
+    }
+    return best;
+  }
+
+  var WIN_SCORE = 500000;   // 与 PATTERNS 里"连五"同档，用来判"这手直接赢"
+
+  /** 选落点。difficulty：'easy' | 'normal' | 'hard'
+   *  ① 我能连五就直接赢（三档都会赢，机器人不能"故意不赢"那太假）
+   *  ② 对方能连五就必须堵（**简单档会漏堵**，这正是它可被击败的原因）
+   *  ③ 否则按「自己成形 − 0.85×对方成形」挑；
+   *     困难档再加一层：把对方下一手能拿到的分也算进代价里，避免走出"自己成型但被对方反杀"的棋。 */
+  function bestMove(g, me, difficulty) {
+    var n = g.n, board = g.board, opp = me === BLACK ? WHITE : BLACK;
+    var level = difficulty || 'normal';
+    // 空盘就下天元。判据用**棋盘**而不是 g.moves：moves 只是记账数组，
+    // 只要有一方是从中间接手的局面（换房主 / 测试构造），两者就可能不一致。
+    var any = false;
+    for (var q = 0; q < board.length; q++) if (board[q] !== EMPTY) { any = true; break; }
+    if (!any) return [Math.floor(n / 2), Math.floor(n / 2)];
+    var cands = candidates(board, n), x, y, i;
     if (!cands.length) return null;   // 满盘（或全被堵死）：没有可下的点，交给调用方处理
-    // ① 自己能赢
+    // ① 自己能赢：三档都直接赢（"故意不赢"会显得很假，反而破坏体验）
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       board[y * n + x] = me;
@@ -4040,22 +4079,52 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
       board[y * n + x] = EMPTY;
       if (win) return [x, y];
     }
-    // ② 对方下一步能赢 → 必须先堵（有两个胜点时堵哪个都输，挑第一个）
+    // ② 对方下一步能赢 → 堵。简单档有一半概率看不见（这就是新手能赢它的原因）
+    var blocks = [];
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       board[y * n + x] = opp;
       var lose = checkWin(board, n, x, y);
       board[y * n + x] = EMPTY;
-      if (lose) return [x, y];
+      if (lose) blocks.push([x, y]);
+    }
+    if (blocks.length) {
+      if (level === 'easy' && Math.random() < 0.5) {
+        // 假装没看见：改去下自己最有把握的点（但仍可能顺手挡住）
+      } else {
+        return blocks[0];
+      }
     }
     // ③ 成形分：自己进攻略高于替对方防守
-    var best = cands[0], bestScore = -Infinity;
+    var scored = [];
     for (i = 0; i < cands.length; i++) {
       x = cands[i][0]; y = cands[i][1];
       var sc = scoreAt(board, n, x, y, me) - 0.85 * scoreAt(board, n, x, y, opp);
-      if (sc > bestScore) { bestScore = sc; best = [x, y]; }
+      scored.push({ p: [x, y], s: sc });
     }
-    return best;
+    scored.sort(function (a, b) { return b.s - a.s; });
+    if (level === 'easy') {
+      // 简单档：从前几名里**随机**挑一个（不再永远走最优解），新手才有来有回
+      var top = scored.slice(0, Math.min(5, scored.length));
+      return top[Math.floor(Math.random() * top.length)].p;
+    }
+    if (level === 'hard') {
+      // 困难档：给前几名各算一次「对方最狠的回手」，把自己的分减去对方的反杀威胁。
+      // 只算前几名是为了控成本（15×15 全算会明显卡顿）。
+      var probe = scored.slice(0, Math.min(8, scored.length));
+      var hardBest = probe[0].p, hardScore = -Infinity;
+      for (i = 0; i < probe.length; i++) {
+        x = probe[i].p[0]; y = probe[i].p[1];
+        board[y * n + x] = me;
+        var reply = oppBestReply(board, n, me);       // 我下这里之后，对方最狠的一手
+        board[y * n + x] = EMPTY;
+        // 对方能直接连五 → 这一手等于送输，重罚；否则按对方威胁程度打折
+        var val = probe[i].s - (reply >= WIN_SCORE ? 2000000 : reply * 1.1);
+        if (val > hardScore) { hardScore = val; hardBest = probe[i].p; }
+      }
+      return hardBest;
+    }
+    return scored[0].p;
   }
 
   var game = {
@@ -4160,7 +4229,8 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
       if (g.pending && g.pending.by !== me) return { pid: me, action: { t: 'undo-answer', ok: true } };
       if (g.pending) return null;                       // 自己提的悔棋，等对方答
       if (colorOf(g, me) !== g.turn) return null;       // 没轮到机器人
-      var mv = bestMove(g, colorOf(g, me));
+      var diff = ((host.state.settings || {}).gomoku || {}).difficulty || 'normal';
+      var mv = bestMove(g, colorOf(g, me), diff);
       if (!mv) return null;
       return { pid: me, action: { t: 'place', x: mv[0], y: mv[1] } };
     },
@@ -9294,6 +9364,8 @@ window.PN = window.PN || {}; window.PN.VERSION = '1.14.25';
       rows.push(seg('每人命数', 'lives', [[1, '1 条命'], [3, '3 条命'], [5, '5 条命']]));
     } else if (mode === 'gomoku') {
       rows.push(seg('棋盘', 'size', [[9, '9×9 快棋'], [13, '13×13'], [15, '15×15 标准']]));
+      // 只有一个人时对面就是机器人，所以难度要能选（房上的 settings.gomoku.difficulty）
+      rows.push(seg('机器人', 'difficulty', [['easy', '简单'], ['normal', '普通'], ['hard', '困难']]));
     } else if (mode === 'codraw') {
       rows.push(seg('题数', 'rounds', [[2, '2 题'], [3, '3 题'], [4, '4 题']]));
       rows.push(seg('每题作画', 'sec', [[45, '45 秒'], [60, '60 秒'], [90, '90 秒']]));

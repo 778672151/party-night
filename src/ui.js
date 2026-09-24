@@ -709,6 +709,8 @@
       rows.push(seg('每人命数', 'lives', [[1, '1 条命'], [3, '3 条命'], [5, '5 条命']]));
     } else if (mode === 'gomoku') {
       rows.push(seg('棋盘', 'size', [[9, '9×9 快棋'], [13, '13×13'], [15, '15×15 标准']]));
+      // 只有一个人时对面就是机器人，所以难度要能选（房上的 settings.gomoku.difficulty）
+      rows.push(seg('机器人', 'difficulty', [['easy', '简单'], ['normal', '普通'], ['hard', '困难']]));
     } else if (mode === 'codraw') {
       rows.push(seg('题数', 'rounds', [[2, '2 题'], [3, '3 题'], [4, '4 题']]));
       rows.push(seg('每题作画', 'sec', [[45, '45 秒'], [60, '60 秒'], [90, '90 秒']]));
