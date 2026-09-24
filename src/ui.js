@@ -367,7 +367,10 @@
             // 表现为：房主开房后约 5 秒内名单是空的、界面一直显示「还差一个人」。
             var knownRoom = !self._freshRoom && !!(self.room.meta && self.room.meta.host);
             if (self.room.lastState && self.room.lastState.players) self.host.adopt(self.room.lastState);
-            else if (haveGame) self.host.state = self.state;   // 保住当前对局，等 retained 状态到了再 adopt
+            // 保住当前对局，等 retained 状态到了再 adopt。
+            // 必须走 host.attach 而不是裸赋值：裸赋值会让机器人错过"该我走了吗"这一问，
+            // 刷新之后（定时器已随旧页面消失）机器人就再也不动了。
+            else if (haveGame) self.host.attach(self.state, true);
             else if (knownRoom) {
               // 房间已存在，state 还在路上：先什么都别做，等 onState 到达后 adopt。
               // 但必须有个兜底：万一那份 retained 状态永远不来（例如手动输入了一个
@@ -375,7 +378,7 @@
               var waitForState = function () {
                 if (!self.host || self.host.state) return;            // 状态已经到了，收工
                 if (self.room.lastState && self.room.lastState.players) { self.host.adopt(self.room.lastState); return; }
-                if (self.state && self.state.mode && self.state.mode !== 'lobby') { self.host.state = self.state; return; }
+                if (self.state && self.state.mode && self.state.mode !== 'lobby') { self.host.attach(self.state, true); return; }
                 // 等够了还没有：按「全新房间」开局，至少让人能玩
                 self.host.fresh(id, name, emoji);
               };
@@ -393,8 +396,9 @@
           // 必须把这份权威状态**采纳**进来，否则 host.state 永远为空，等待兜底最终会 fresh()
           // 把对局洗掉 —— 这正是「刷新后整局丢失」在被拉长的时序下再次出现的原因。
           if (self.room.isHost && self.host && !self.host.state && state && state.players) {
-            self.host.state = JSON.parse(JSON.stringify(state));
-            self.host.state.hostId = self.room.me.id;
+            // 走 attach 而不是裸赋值：这里正是「刷新后房主重新拿到 retained 状态」那条路，
+            // 裸赋值不会触发 bots.onState，机器人就永远不动了。
+            self.host.attach(state);
           }
           self.render();
         },

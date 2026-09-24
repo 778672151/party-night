@@ -359,13 +359,24 @@
     this.emit();
   };
 
-  /** 借宿到已有 state（新当选房主继续游戏） */
-  Host.prototype.adopt = function (state) {
-    this.clearAll();
+  /** 直接接管一份已有的 state（刷新后被 retained 状态拉回来 / 等状态到齐后补挂）。
+   *  和 adopt() 的区别：不重新广播、不动 hostId 之外的东西。
+   *  **必须走这里而不是裸赋值 host.state**：裸赋值会让机器人错过"该我走了吗"这一问，
+   *  于是刷新/接手之后机器人整局都不动（定时器随旧页面死了，又没人重新排）。 */
+  Host.prototype.attach = function (state, keepHostId) {
+    if (!state) return this.state;
     this.state = JSON.parse(JSON.stringify(state));
-    this.state.hostId = this.room.me.id;
+    if (!keepHostId) this.state.hostId = this.room.me.id;
     var game = PN.games[this.state.mode];
     if (game && game.resume) game.resume(this);
+    if (PN.bots) PN.bots.onState(this);
+    return this.state;
+  };
+
+  /** 借宿到已有 state（新当选房主继续游戏） */
+  Host.prototype.adopt = function (state) {
+    this.clearAll();                       // 换房主：旧定时器全部作废（世代号也随之 +1）
+    this.attach(state);                    // 接管状态 + 问一次"轮到机器人了吗"
     this.emit();
   };
   Host.prototype.destroy = function () { this.clearAll(); };

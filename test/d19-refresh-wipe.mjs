@@ -14,13 +14,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
 const hostBlock = ui.slice(ui.indexOf('onHost: function (isHost)'), ui.indexOf('onState: function (state)'));
 ok(hostBlock.length > 0, '前置：找得到 onHost 回调');
 ok(/knownRoom/.test(hostBlock), 'D19：onHost 里有「房间已存在」判定（knownRoom）');
-// 只看真正的决策链（按行）：adopt → keep → knownRoom 等待 → fresh 兜底，顺序不能乱
+// 只看真正的决策链（按行）：adopt → keep → knownRoom 等待 → fresh 兜底，顺序不能乱。
+// "keep" 这一步的写法从 self.host.state = ... 换成了 self.host.attach(self.state, true)：
+// 裸赋值不会触发 bots.onState，刷新后机器人会僵住；attach 是同一件事的正确入口。
+// 语义没变（本文件第 2 段的 decide() 行为断言一字未改），所以这里只跟着换锚点。
 const chain = hostBlock.split('\n')
-  .filter(l => /^\s*(if|else)\b/.test(l) && /(adopt\(|self\.host\.state|knownRoom|fresh\()/.test(l))
+  .filter(l => /^\s*(if|else)\b/.test(l) && /(adopt\(|self\.host\.attach\(self\.state|knownRoom|fresh\()/.test(l))
   .map(l => l.trim());
 console.log('   决策链: ' + JSON.stringify(chain));
 const seq = chain.join(' | ');
-const order = ['adopt(', 'self.host.state', 'knownRoom)', 'fresh('].map(k => seq.indexOf(k));
+const order = ['adopt(', 'self.host.attach(self.state', 'knownRoom)', 'fresh('].map(k => seq.indexOf(k));
 ok(order.every(i => i >= 0) && order[0] < order[1] && order[1] < order[2] && order[2] < order[3],
   'D19：决策链顺序为 adopt → keep → knownRoom 等待 → fresh 兜底（位置 ' + order.join(' < ') + '）');
 

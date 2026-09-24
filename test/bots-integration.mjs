@@ -222,5 +222,58 @@ section('9. 边界：真人进来时若正处于对局，机器人不动（不�
   ok(h.g().players.join(',') === gPlayers.join(','), 'g.players 没被中途插人破坏');
 });
 
+/* 这两个小助手只在文件内部用：判断"现在轮到真人了吗" / 替真人落一子。
+ * 注意 g.players[0] 执黑、[1] 执白（见 gomoku 的 colorOf）。 */
+function humansTurn(host) {
+  const g = host.g();
+  const botColor = String(g.players[0]).indexOf('bot:') === 0 ? 1 : 2;
+  return g.turn !== botColor;
+}
+function humanMove(host, id) {
+  const g = host.g();
+  for (let i = 0; i < g.board.length; i++) {
+    if (g.board[i] === 0) { host.dispatch({ t: 'place', x: i % g.n, y: Math.floor(i / g.n) }, id); return true; }
+  }
+  return false;
+}
+
+section('10. 刷新/接手：attach() 之后机器人必须继续动（定时器随旧页面死了）', () => {
+  // 造一个「轮到机器人」的局面（模拟刷新前那一刻）
+  const h1 = makeHost(['u1']);
+  h1.dispatch({ t: 'start', mode: 'gomoku' }, 'u1');
+  let g = 0;
+  while (!humansTurn(h1) && g++ < 30) runHostTimers(h1);
+  if (h1.g().phase === 'play' && humansTurn(h1)) humanMove(h1, 'u1');
+  const snap = JSON.parse(JSON.stringify(h1.state));
+  ok(h1.g().phase !== 'play' || !humansTurn(h1), '前提：快照停在轮到机器人');
+
+  // 新页面（定时器全没了）拿到这份 retained 状态 → 必须走 attach
+  const h2 = makeHost(['u1']);
+  h2.attach(snap, true);
+  ok(!!h2.timers['__bot'], 'attach() 之后立刻重排了机器人定时器');
+
+  // 裸赋值（错误做法）不会排定时器 —— 把这条反例也钉住，防止以后有人改回去
+  const h3 = makeHost(['u1']);
+  h3.state = JSON.parse(JSON.stringify(snap));
+  ok(!h3.timers['__bot'], '裸赋值 host.state 不会排定时器（所以刷新后机器人会僵住 —— 这就是当初的 bug）');
+
+  const before = h2.g().moves.length;
+  runHostTimers(h2);
+  ok(h2.g().moves.length > before, 'attach 之后机器人真的动了（' + before + '→' + h2.g().moves.length + '）');
+});
+
+section('11. attach 不会把 hostId 抢错', () => {
+  // 本文件的 makeHost(ids) 没有 hostId 参数，me.id 恒为 ids[0]（= 'u1'）。
+  // 所以「认自己为房主」的期望值是 'u1'，不是别的 —— 快照里故意写个 'someone-else' 才验得出来。
+  const h = makeHost(['u1', 'u2']);
+  const meId = 'u1';
+  const mkSnap = () => ({ v: 3, mode: 'lobby', phase: 'lobby', players: [], settings: {}, log: [], g: {}, hostId: 'someone-else', ts: 0 });
+  h.attach(mkSnap(), true);
+  ok(h.state.hostId === 'someone-else', 'keepHostId=true 时保留快照里的原 hostId（实测 ' + h.state.hostId + '）');
+  // attach 会深拷贝，所以每次都要新造一份快照
+  h.attach(mkSnap());
+  ok(h.state.hostId === meId, '不传 keepHostId 时认自己为房主（实测 ' + h.state.hostId + '，应为 ' + meId + '）');
+});
+
 console.log('\n===== 结果：' + pass + ' 通过 / ' + fail + ' 失败 =====');
 process.exit(fail ? 1 : 0);
